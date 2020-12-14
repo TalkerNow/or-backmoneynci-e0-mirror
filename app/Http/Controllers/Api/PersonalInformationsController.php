@@ -29,7 +29,10 @@ class PersonalInformationsController extends Controller
      */
     public function store(Request $request)
     {
-        return PersonalInformations::create($request->all());
+        $result = PersonalInformations::create($request->all());
+        return response()->json([
+                    'user_id' => $result->id
+                ]);
     }
 
     /**
@@ -62,8 +65,8 @@ class PersonalInformationsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        if ($auth->role != "admin" && $auth->id != $user->id)
-            return response()->json(['error' => 'Unauthorized'], 401);
+//        if ($auth->role != "admin" && $auth->id != $user->id)
+//            return response()->json(['error' => 'Unauthorized'], 401);
 
         $request->validate([
             'civility' => 'nullable',

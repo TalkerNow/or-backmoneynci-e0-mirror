@@ -16,16 +16,21 @@ class UsersController extends Controller
      */
     public function index()
     {
-        $users = User::all();
-        $infos = PersonalInformations::all();
-
         try {
             $auth = auth()->userOrFail();
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        if ($auth->role != "admin")
-            return response()->json(['error' => 'Unauthorized'], 401);
+//        if ($auth->role != "admin")
+//            return response()->json(['error' => 'Unauthorized'], 401);
+
+        if($auth->role == "admin"){
+            $users = User::all();
+            $infos = PersonalInformations::all();
+        }else{
+            $users = User::where('parent_id', $auth->id)->get();
+            $infos = PersonalInformations::where('parent_id', $auth->id)->get();
+        }
 
         foreach ($users as $user) {
             foreach ($infos as $info) {
@@ -55,8 +60,8 @@ class UsersController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        if ($auth->role != "admin" && $auth->id != $user->id)
-            return response()->json(['error' => 'Unauthorized'], 401);
+//        if ($auth->role != "admin" && $auth->id != $user->id)
+//            return response()->json(['error' => 'Unauthorized'], 401);
 
         $user["personal_informations"] = $info;
         return $user->toJson(JSON_PRETTY_PRINT);
@@ -80,8 +85,8 @@ class UsersController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        if ($auth->role != "admin" && $auth->id != $user->id)
-            return response()->json(['error' => 'Unauthorized'], 401);
+//        if ($auth->role != "admin" && $auth->id != $user->id)
+//            return response()->json(['error' => 'Unauthorized'], 401);
         $user->update($request->all());
         if(isset($request->p_password))
             $user->update(['password'=>Hash::make($request->p_password)]);
@@ -109,8 +114,8 @@ class UsersController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        if ($auth->role != "admin")
-            return response()->json(['error' => 'Unauthorized'], 401);
+//        if ($auth->role != "admin")
+//            return response()->json(['error' => 'Unauthorized'], 401);
 
         $personal_information->delete();
         $user->delete();

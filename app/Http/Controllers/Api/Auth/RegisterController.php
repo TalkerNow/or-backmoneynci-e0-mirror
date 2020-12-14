@@ -28,11 +28,10 @@ class RegisterController extends Controller
         $name = $request->name;
         $email    = $request->email;
         $password = $request->password;
-        $user     = User::create(['name' => $name, 'email' => $email, 'p_password' =>$password,'password' => Hash::make($password)]);
+        $user     = User::create(['name' => $name, 'email' => $email, 'p_password' =>$password,'password' => Hash::make($password), 'role' =>$request->role,'parent_id' =>$request->parent_id]);
         $id = $user->id;
         $creds = $request->only(['email', 'password']);
         $token = auth()->attempt($creds);
         return response()->json(['accessToken' => $token, 'user' => ['email' => $email, 'id' => $id, 'name' => $name]]);
     }
-
 }

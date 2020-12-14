@@ -18,17 +18,21 @@ class DocumentsController extends Controller
      */
     public function index()
     {
-        $doc = Documents::all();
-        $services = Services::all();
-        $servtab = array();
-
         try {
             $auth = auth()->userOrFail();
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        if ($auth->role != "admin")
-            return response()->json(['error' => 'Unauthorized'], 401);
+//        if ($auth->role != "admin")
+//            return response()->json(['error' => 'Unauthorized'], 401);
+
+        if($auth->role == "admin") {
+            $doc = Documents::all();
+            $services = Services::all();
+            $servtab = array();
+        }else{
+            $doc = Documents::where('parent_id', $auth->id);
+        }
 
         foreach ($doc as $do) {
             foreach ($services as $service) {
@@ -54,8 +58,8 @@ class DocumentsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        if ($auth->role != "admin")
-            return response()->json(['error' => 'Unauthorized'], 401);
+//        if ($auth->role != "admin")
+//            return response()->json(['error' => 'Unauthorized'], 401);
 
         return view('create');
     }
@@ -73,8 +77,8 @@ class DocumentsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        if ($auth->role != "admin")
-            return response()->json(['error' => 'Unauthorized'], 401);
+//        if ($auth->role != "admin")
+//            return response()->json(['error' => 'Unauthorized'], 401);
 
         $newdoc = Documents::create([
             'link_to_documents' => $request['link_to_documents'],
@@ -83,6 +87,7 @@ class DocumentsController extends Controller
             'comment' => $request['comment'],
             'advanced_payment' => $request['advanced_payment'],
             'user_id' => $request['user_id'],
+            'parent_id' => $request['parent_id'],
             'id' => $request['id'],
             'values' => $request['values']
         ]);
@@ -112,8 +117,8 @@ class DocumentsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        if ($auth->role != "admin" && $auth->id != $doc->user_id)
-            return response()->json(['error' => 'Unauthorized'], 401);
+//        if ($auth->role != "admin" && $auth->id != $doc->user_id)
+//            return response()->json(['error' => 'Unauthorized'], 401);
 
         $doc["services"] = $service;
         return $doc->toJSON(JSON_PRETTY_PRINT);
@@ -136,8 +141,8 @@ class DocumentsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        if ($auth->role != "admin")
-            return response()->json(['error' => 'Unauthorized'], 401);
+//        if ($auth->role != "admin")
+//            return response()->json(['error' => 'Unauthorized'], 401);
 
         return $doc;
     }
@@ -155,8 +160,8 @@ class DocumentsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        if ($auth->role != "admin")
-            return response()->json(['error' => 'Unauthorized'], 401);
+//        if ($auth->role != "admin")
+//            return response()->json(['error' => 'Unauthorized'], 401);
         return view('edit', compact('document'));
     }
 
@@ -179,8 +184,8 @@ class DocumentsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        if ($auth->role != "admin")
-            return response()->json(['error' => 'Unauthorized'], 401);
+//        if ($auth->role != "admin")
+//            return response()->json(['error' => 'Unauthorized'], 401);
 
         $doc->update($request->all());
 //        if ($request->advanced_payment)
@@ -205,8 +210,8 @@ class DocumentsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        if ($auth->role != "admin")
-            return response()->json(['error' => 'Unauthorized'], 401);
+//        if ($auth->role != "admin")
+//            return response()->json(['error' => 'Unauthorized'], 401);
         $this->delete_services($id);
         $doc->delete();
         return "Document Deleted !";
