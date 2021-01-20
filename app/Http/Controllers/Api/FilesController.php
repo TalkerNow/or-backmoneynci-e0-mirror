@@ -40,6 +40,7 @@ class FilesController extends Controller
 
     public function uploadFiles(Request $request){
         $image_urls = [];
+        $user_id = $request->user_id;
         foreach($request->files as $file){
             $size = $file->getSize();
             if ($size > 5000000) return false;
@@ -47,8 +48,9 @@ class FilesController extends Controller
             $filename = $file->getClientOriginalName();
             $file_path = public_path(). "/img/".$filename;
 
-            if (file_exists($file_path))
-                return response()->json(['data'=>['success' => false]]);
+            if (file_exists($file_path)) {
+                unlink($file_path);
+            }
 
             $file->move(public_path() . '/img', $filename);
 
@@ -60,10 +62,8 @@ class FilesController extends Controller
             if (!file_exists($file_path) || !is_readable($file_path))
                 return response()->json(['data'=>['success' => false]]);
             else {
-                $user = auth()->user();
-
                 $file = new Files();
-                $file->user_id = $user->id;
+                $file->user_id = $user_id;
                 $file->filename = $filename;
                 $file->url = $image_url;
 

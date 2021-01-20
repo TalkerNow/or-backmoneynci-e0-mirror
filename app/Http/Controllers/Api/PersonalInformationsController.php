@@ -31,7 +31,7 @@ class PersonalInformationsController extends Controller
     {
         $result = PersonalInformations::create($request->all());
         return response()->json([
-                    'user_id' => $result->id
+                    'user_id' => $request->id
                 ]);
     }
 

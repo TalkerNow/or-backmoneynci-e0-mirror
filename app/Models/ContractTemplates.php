@@ -16,6 +16,6 @@ class ContractTemplates extends Model
      * @var array
      */
     protected $fillable = [
-        'id', 'name', 'values'
+        'id', 'name', 'values','general_condition'
     ];
 }

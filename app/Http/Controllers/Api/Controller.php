@@ -62,7 +62,7 @@ class Controller extends BaseController
     {
         $docs = array();
 
-        foreach (Documents::all() as $tmp)
+        foreach (Documents::with(['user'])->get() as $tmp)
             if ($tmp->user_id == $id) {
                 array_push($docs, $tmp);
             }

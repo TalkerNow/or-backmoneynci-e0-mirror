@@ -71,37 +71,32 @@ class TasksController extends Controller
 
     public function customer_tasks(Request $request)
     {
-        try {
-            $auth = auth()->userOrFail();
-        } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
-            return response()->json(['error' => $e->getMessage()], 401);
-        }
 //        if ($auth->role != "admin")
 //            return response()->json(['error' => 'Unauthorized'], 401);
 
         $filter = $request->filter;
         if ($filter == "all") {
             $tasks = Tasks::with(['taskCustomer'])
-                ->Where('customer_id', $auth->id)
+                ->Where('customer_id', $request->user_id)
                 ->orderBy('end_date', 'desc')->get();
         } else if ($filter == "completed") {
             $tasks = Tasks::with(['taskCustomer'])
-                ->Where('customer_id', $auth->id)
+                ->Where('customer_id', $request->user_id)
                 ->Where('isCompleted', true)
                 ->orderBy('end_date', 'desc')->get();
         } else if ($filter == "unread") {
             $tasks = Tasks::with(['taskCustomer'])
-                ->Where('customer_id', $auth->id)
+                ->Where('customer_id', $request->user_id)
                 ->Where('isRead', false)
                 ->orderBy('end_date', 'desc')->get();
         } else if ($filter == "important") {
             $tasks = Tasks::with(['taskCustomer'])
-                ->Where('customer_id', $auth->id)
+                ->Where('customer_id', $request->user_id)
                 ->Where('isImportant', true)
                 ->orderBy('end_date', 'desc')->get();
         } else {
             $tasks = Tasks::with(['taskCustomer'])
-                ->Where('customer_id', $auth->id)
+                ->Where('customer_id', $request->user_id)
                 ->Where('type', $filter)
                 ->orderBy('end_date', 'desc')->get();
         }

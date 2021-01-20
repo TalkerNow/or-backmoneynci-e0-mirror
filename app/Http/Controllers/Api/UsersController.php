@@ -120,4 +120,9 @@ class UsersController extends Controller
         $personal_information->delete();
         $user->delete();
     }
+    public function set_user_subscribe_services(Request $request){
+        User::where('id', $request->user_id)->limit(1)->update([
+            'subscribe_services' => $request->subscribe_services]);
+        return true;
+    }
 }

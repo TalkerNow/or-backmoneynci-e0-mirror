@@ -18,6 +18,6 @@ class Documents extends Model
         'link_to_documents', 'type', 'document_state', 'date', 'comment', 'advanced_payment', 'id', 'user_id','values'
     ];
     public function user() {
-        return $this->belongsTo('app\Models\User', 'user_id');
+        return $this->belongsTo('App\Models\User', 'user_id');
     }
 }

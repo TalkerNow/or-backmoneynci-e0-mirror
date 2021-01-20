@@ -27,11 +27,11 @@ class DocumentsController extends Controller
 //            return response()->json(['error' => 'Unauthorized'], 401);
 
         if($auth->role == "admin") {
-            $doc = Documents::all();
+            $doc = Documents::with(['user'])->get();
             $services = Services::all();
             $servtab = array();
         }else{
-            $doc = Documents::where('parent_id', $auth->id);
+            $doc = Documents::with(['user'])->where('parent_id', $auth->id)->get();
         }
 
         foreach ($doc as $do) {
@@ -96,6 +96,13 @@ class DocumentsController extends Controller
             $newdoc["services"] = $this->get_selected_services("template", $newdoc['id'], true);
             $newdoc["advanced_payment"] = $this->get_selected_total("template", $newdoc['id']);
         }
+        // if user status is null, set the pending('En attente')
+        $user = User::where('id', $request['user_id'])->get();
+        if(count($user) > 0 && $user[0]->status == null) {
+            User::where(['id' => $request['user_id']])
+                ->limit(1)
+                ->update(['status' => 'En attente']);
+        }
         return $newdoc->toJSON(JSON_PRETTY_PRINT);
     }
 
@@ -132,19 +139,16 @@ class DocumentsController extends Controller
      */
     public function show_by_user($user_id)
     {
-        $doc = $this->get_documents_by_user_id($user_id);
+        $docs = array();
+        foreach (Documents::with(['user'])->get() as $tmp)
+            if ($tmp->user_id == $user_id) {
+                array_push($docs, $tmp);
+            }
 
-        if ($doc == null)
+        if ($docs == null)
             return response()->json(['error' => 'Document does not exist'], 500);
-        try {
-            $auth = auth()->userOrFail();
-        } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
-            return response()->json(['error' => $e->getMessage()], 401);
-        }
-//        if ($auth->role != "admin")
-//            return response()->json(['error' => 'Unauthorized'], 401);
 
-        return $doc;
+        return $docs;
     }
 
     /**
