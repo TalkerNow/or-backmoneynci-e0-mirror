@@ -1,0 +1,197 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Api\Controller;
+use App\Models\PersonalInformations;
+use App\Models\Documents;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use DB;
+use DateTime;
+class StatisticsController extends Controller
+{
+    public function getStatistics(Request $request)
+    {
+//        $query = "select * from documents";
+//        $result = DB::select($query);
+//        foreach($result as $item){
+//            $document = Documents::find($item->id);
+//            $document->pre_payment = $document->advanced_payment * 0.75;
+//            $document->end_payment = $document->advanced_payment * 0.25;
+//            $document->save();
+//        }
+    //----- get clients ------
+        $query = "select * from users where role != 'admin'";
+        $result = DB::select($query);
+        $total_client_count = count($result);
+
+        $query = "select min(created_at) as min_date, max(created_at) as max_date from users where role != 'admin'";
+        $result = DB::select($query);
+        $clients_count_list = [];
+        if(count($result) > 0) {
+            $min_date = new DateTime($result[0]->min_date);
+            $max_date = new DateTime($result[0]->max_date);
+            $diff_days = $min_date->diff($max_date)->days;
+            $interval = 0;
+            if($diff_days > 0){
+                $interval = intdiv($diff_days, 5);
+            }
+            $index_date = $min_date;
+
+            $query = "select * from users where role != 'admin' and date(created_at) <= '".$min_date->format('Y-m-d')."'";
+            $result = DB::select($query);
+            $clients_count_list[0] = count($result);
+            if($interval > 0){
+                for($index = 1; $index < 5; $index ++){
+                    $index_date->modify('+'. $interval.' day');
+                    $query = "select * from users where role != 'admin' and date(created_at) <= '".$index_date->format('Y-m-d')."'";
+                    $result = DB::select($query);
+                    $clients_count_list[$index] = count($result);
+                }
+            }
+            $query = "select * from users where role != 'admin' and date(created_at) <= '".$max_date->format('Y-m-d')."'";
+            $result = DB::select($query);
+            if($interval > 0)
+                $clients_count_list[5] = count($result);
+            else
+                $clients_count_list[1] = count($result);
+        }
+
+    //------ get Acompte -----
+        $users= User::with('documents')
+            ->where('status','En cours')
+            ->where('status_fa',1)
+            ->get();
+
+        $total_acompte_count = count($users);
+        $total_acompte_amount = 0;
+        foreach($users as $item){
+            $documents = $item->documents;
+            $count = count($documents);
+            if($count > 0){
+                $total_acompte_amount += $item->documents[$count - 1]->pre_payment;
+            }
+        }
+
+    //------- get Solde --------
+        $users= User::with('documents')
+            ->where('status','Termine')
+            ->where('status_fa',1)
+            ->get();
+
+        $total_solde_count = count($users);
+        $total_solde_amount = 0;
+        foreach($users as $item){
+            $documents = $item->documents;
+            $count = count($documents);
+            if($count > 0){
+                $total_solde_amount += $item->documents[$count - 1]->end_payment;
+            }
+        }
+
+        return response()->json([
+            'clients_count' => $total_client_count, 'clients_count_list'=>$clients_count_list,
+            'acompte_count'=>$total_acompte_count, 'acompte_amount'=>$total_acompte_amount,
+            'solde_count'=>$total_solde_count, 'solde_amount'=>$total_solde_amount
+            ]);
+    }
+    public function getStatisticsPerMonth(Request $request){
+        $thisyear = date("y");
+
+        //------- get Acompte list --------
+        $lst_acompte_amount = array();
+        for($month = 1; $month <=12; $month ++){
+            $users= User::with('documents')
+                ->where('status','En cours')
+                ->where('status_fa',1)
+                ->whereYear('status_update_date', '=', "20".$thisyear)
+                ->whereMonth('status_update_date', '=', $month)
+                ->get();
+            $acompte_amount = 0;
+            foreach($users as $item){
+                $documents = $item->documents;
+                $count = count($documents);
+                if($count > 0){
+                    $acompte_amount += $item->documents[$count - 1]->pre_payment;
+                }
+            }
+            array_push($lst_acompte_amount, $acompte_amount);
+        }
+
+        //------- get Solde list--------
+        $lst_solde_amount = array();
+        for($month = 1; $month <=12; $month ++){
+            $users= User::with('documents')
+                ->where('status','Termine')
+                ->where('status_fa',1)
+                ->whereYear('status_update_date', '=', "20".$thisyear)
+                ->whereMonth('status_update_date', '=', $month)
+                ->get();
+            $solde_amount = 0;
+            foreach($users as $item){
+                $documents = $item->documents;
+                $count = count($documents);
+                if($count > 0){
+                    $solde_amount += $item->documents[$count - 1]->pre_payment;
+                }
+            }
+            array_push($lst_solde_amount, $solde_amount * -1);
+        }
+        return response()->json([
+            'lst_acompte_amount' => $lst_acompte_amount, 'lst_solde_amount'=>$lst_solde_amount,
+        ]);
+    }
+
+    public function getStatisticsTotalIncome(Request $request){
+        $year = isset($request->year)?$request->year:"2021";
+        $users= User::with('documents')
+            ->whereYear('status_update_date', '=', $year)
+			->Where(function($query) {
+                $query->where('status', 'En cours')
+                      ->orWhere('status', 'Termine');
+            })
+            ->where('status_fa',1)
+            ->get();
+
+        $total_amount = 0;
+        foreach($users as $item){
+            $documents = $item->documents;
+            $count = count($documents);
+            if($count > 0){
+                if($item->status == "En cours")
+                    $total_amount += $item->documents[$count - 1]->pre_payment;
+                else
+                    $total_amount += $item->documents[$count - 1]->end_payment;
+            }
+        }
+
+        return response()->json(['total_amount' => $total_amount]);
+    }
+    public function getPaymentList(Request $request)
+    {
+        $year = isset($request->year)?$request->year:"2021";
+        $payment_list= User::with('documents','parent')
+            ->whereYear('status_update_date', '=', $year)
+			->Where(function($query) {
+                $query->where('status', 'En cours')
+                      ->orWhere('status', 'Termine');
+            })
+            ->where('status_fa',1)
+            ->get();
+
+        foreach($payment_list as $item){
+            $documents = $item->documents;
+            $count = count($documents);
+            if($count > 0){
+                if($item->status == "En cours")
+                    $item->payment_amount = $item->documents[$count - 1]->pre_payment;
+                else
+                    $item->payment_amount = $item->documents[$count - 1]->end_payment;
+            }
+        }
+
+        return response()->json(['payment_list' => $payment_list]);
+    }
+}

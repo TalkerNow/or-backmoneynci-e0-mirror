@@ -9,12 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 class UsersController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function index()
+    public function index(Request $request)
     {
         try {
             $auth = auth()->userOrFail();
@@ -23,13 +18,26 @@ class UsersController extends Controller
         }
 //        if ($auth->role != "admin")
 //            return response()->json(['error' => 'Unauthorized'], 401);
-
-        if($auth->role == "admin"){
-            $users = User::all();
-            $infos = PersonalInformations::all();
-        }else{
-            $users = User::where('parent_id', $auth->id)->get();
-            $infos = PersonalInformations::where('parent_id', $auth->id)->get();
+        if($request->kind == 'client'){
+            if($auth->role == "admin"){
+                $users = User::with('parent')->where('role','Client EOR')->orWhere('role','Client MAXO')->orderby('created_at','DESC')->get();
+                $infos = PersonalInformations::all();
+            }else{
+                $users = User::with('parent')->where(function ($query) {
+                    $query->where('role','Client EOR')->orWhere('role','Client MAXO');
+                })->where('parent_id', $auth->id)->orderby('created_at','DESC')->get();
+                $infos = PersonalInformations::where('parent_id', $auth->id)->get();
+            }
+        }else if($request->kind == 'member'){
+            if($auth->role == "admin"){
+                $users = User::where('role','!=','Client EOR')->Where('role','!=','Client MAXO')->orderby('created_at','DESC')->get();
+                $infos = PersonalInformations::all();
+            }else{
+                $users = User::where(function ($query) {
+                    $query->where('role','!=','Client EOR')->Where('role','!=','Client MAXO');
+                })->where('parent_id', $auth->id)->orderby('created_at','DESC')->get();
+                $infos = PersonalInformations::where('parent_id', $auth->id)->get();
+            }
         }
 
         foreach ($users as $user) {
@@ -42,12 +50,6 @@ class UsersController extends Controller
         return $users->toJson(JSON_PRETTY_PRINT);
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function show($id)
     {
         $info = $this->get_personal_information($id);
@@ -67,13 +69,6 @@ class UsersController extends Controller
         return $user->toJson(JSON_PRETTY_PRINT);
     }
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function update(Request $request, $id)
     {
         $user = $this->get_user($id);
@@ -87,18 +82,16 @@ class UsersController extends Controller
         }
 //        if ($auth->role != "admin" && $auth->id != $user->id)
 //            return response()->json(['error' => 'Unauthorized'], 401);
+        $status = $request['status'];
+        $status_fa = $request['status_fa'];
+        if(!($user->status_fa==$status_fa && $user->status==$status)){
+            $request['status_update_date']= date("Y-m-d");
+        }
         $user->update($request->all());
         if(isset($request->p_password))
             $user->update(['password'=>Hash::make($request->p_password)]);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Exception
-     */
     public function destroy($id)
     {
         $user = $this->get_user($id);

@@ -28,14 +28,14 @@ class FilesController extends Controller
 
     public function update(Request $request, $id)
     {
-        $task = Files::find($id);
-        $task->update($request->all());
+        $file = Files::find($id);
+        $file->update($request->all());
     }
 
     public function destroy($id)
     {
-        $task = Files::find($id);
-        $task->delete();
+        $file = Files::find($id);
+        $file->delete();
     }
 
     public function uploadFiles(Request $request){
@@ -76,5 +76,11 @@ class FilesController extends Controller
             'success' => true,
             'files' => $image_urls
         ]);
+    }
+    public function downloadFile(Request $request){
+        $file_id = $request->file_id;
+        $file = Files::find($file_id);
+        $file_url = public_path('img/'.$file->filename);
+        return response()->download($file_url);
     }
 }

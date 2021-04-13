@@ -7,12 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 class RegisterController extends Controller
 {
-    /**
-     * Create an account and add it in the database, also gives you a JWT.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
+
     public function register(Request $request)
     {
 //        $rules = [

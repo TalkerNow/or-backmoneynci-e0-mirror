@@ -17,6 +17,7 @@ class MeController extends Controller
     {
         try {
             $user = auth()->userOrFail();
+
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
