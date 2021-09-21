@@ -28,6 +28,7 @@ Route::namespace('App\Http\Controllers')->group(function () {
 
     Route::apiResource('/me', 'Api\MeController');
     Route::apiResource('/users', 'Api\UsersController');
+    Route::get('/duplicated_email', 'Api\UsersController@duplicated_email')->name('duplicated_email');
     Route::post('/set_user_subscribe_services', 'Api\UsersController@set_user_subscribe_services')->name('set_user_subscribe_services');
 
     Route::get('/unread_count', 'Api\TasksController@unread_count')->name('unread_count');

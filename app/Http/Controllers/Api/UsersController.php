@@ -95,27 +95,23 @@ class UsersController extends Controller
     public function destroy($id)
     {
         $user = $this->get_user($id);
+        if ($user != null)
+            $user->delete();
+
         $personal_information = $this->get_personal_information($id);
-
-        if ($user == null)
-            return response()->json(['error' => 'User does not exist'], 500);
-        if ($personal_information == null)
-            return response()->json(['error' => 'User does not exist'], 500);
-
-        try {
-            $auth = auth()->userOrFail();
-        } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
-            return response()->json(['error' => $e->getMessage()], 401);
-        }
-//        if ($auth->role != "admin")
-//            return response()->json(['error' => 'Unauthorized'], 401);
-
-        $personal_information->delete();
-        $user->delete();
+        if ($personal_information != null)
+            $personal_information->delete();
     }
     public function set_user_subscribe_services(Request $request){
         User::where('id', $request->user_id)->limit(1)->update([
             'subscribe_services' => $request->subscribe_services]);
         return true;
+    }
+    public function duplicated_email(Request $request){
+        $user = User::where('email', $request->email)->get();
+        if(count($user) > 0)
+            return "duplicated";
+        else
+            return "not duplicated";
     }
 }
