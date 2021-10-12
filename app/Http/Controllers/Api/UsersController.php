@@ -20,21 +20,21 @@ class UsersController extends Controller
 //            return response()->json(['error' => 'Unauthorized'], 401);
         if($request->kind == 'client'){
             if($auth->role == "admin"){
-                $users = User::with('parent')->where('role','Client EOR')->orWhere('role','Client MAXO')->orderby('created_at','DESC')->get();
+                $users = User::with('parent')->where('role','Client')->orderby('created_at','DESC')->get();
                 $infos = PersonalInformations::all();
             }else{
                 $users = User::with('parent')->where(function ($query) {
-                    $query->where('role','Client EOR')->orWhere('role','Client MAXO');
+                    $query->where('role','Client');
                 })->where('parent_id', $auth->id)->orderby('created_at','DESC')->get();
                 $infos = PersonalInformations::where('parent_id', $auth->id)->get();
             }
         }else if($request->kind == 'member'){
             if($auth->role == "admin"){
-                $users = User::where('role','!=','Client EOR')->Where('role','!=','Client MAXO')->orderby('created_at','DESC')->get();
+                $users = User::where('role','!=','Client')->orderby('created_at','DESC')->get();
                 $infos = PersonalInformations::all();
             }else{
                 $users = User::where(function ($query) {
-                    $query->where('role','!=','Client EOR')->Where('role','!=','Client MAXO');
+                    $query->where('role','!=','Client');
                 })->where('parent_id', $auth->id)->orderby('created_at','DESC')->get();
                 $infos = PersonalInformations::where('parent_id', $auth->id)->get();
             }
