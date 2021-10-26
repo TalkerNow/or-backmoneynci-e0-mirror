@@ -26,14 +26,13 @@ class DocumentsController extends Controller
 //        if ($auth->role != "admin")
 //            return response()->json(['error' => 'Unauthorized'], 401);
 
-        if($auth->role == "admin") {
+        if($auth->role == "admin" || $auth->role =="Consultant") {
             $doc = Documents::with(['user'])->get();
             $services = Services::all();
             $servtab = array();
         }else{
             $doc = Documents::with(['user'])->where('parent_id', $auth->id)->get();
         }
-
         foreach ($doc as $do) {
             foreach ($services as $service) {
                 if ($do->id == $service->document_id) {

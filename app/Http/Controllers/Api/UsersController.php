@@ -84,7 +84,7 @@ class UsersController extends Controller
 //            return response()->json(['error' => 'Unauthorized'], 401);
         $status = $request['status'];
         $status_fa = $request['status_fa'];
-        if(!($user->status_fa==$status_fa && $user->status==$status)){
+        if(!($user->status_fa==$status_fa && $user->status==$status)) {
             $request['status_update_date']= date("Y-m-d");
         }
         $user->update($request->all());
