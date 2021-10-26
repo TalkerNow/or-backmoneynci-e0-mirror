@@ -51,7 +51,7 @@ class UsersController extends Controller
             }
         }
 
-        if ($request->kind == 'client' || $request->kind == 'member'){
+        if ($request->kind === 'client' || $request->kind === 'member'){
             foreach ($users as $user) {
                 foreach ($infos as $info) {
                     if ($user->id == $info->id) {
@@ -60,7 +60,7 @@ class UsersController extends Controller
                 }
             }
             return $users->toJson(JSON_PRETTY_PRINT);
-        }else if ($request->kind == 'oldclient'){
+        }else if ($request->kind === 'oldclient'){
             return $oldclient->toJson(JSON_PRETTY_PRINT);
         }
     }
