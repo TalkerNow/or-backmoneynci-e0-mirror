@@ -22,8 +22,6 @@ class UsersController extends Controller
         if ($request->kind == 'oldclient'){
             if($auth->role == "admin" || $auth->role == "Consultant"){
                 $oldclient = OldClient::all();
-                // $users = User::with('parent')->where('role','Client')->orderby('created_at','DESC')->get();
-                // $infos = PersonalInformations::all();
             }else{
                 $users = User::with('parent')->where(function ($query) {
                     $query->where('role','Client');
