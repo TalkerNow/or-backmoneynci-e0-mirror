@@ -19,15 +19,15 @@ class UsersController extends Controller
         }
 //        if ($auth->role != "admin")
 //            return response()->json(['error' => 'Unauthorized'], 401);
+        $oldclient = null;
         if ($request->kind == 'oldclient'){
             if($auth->role == "admin" || $auth->role == "Consultant"){
                 $oldclient = OldClient::all();
             }else{
-                return response()->json(['error' => 'Unauthorized'], 401);
-                // $users = User::with('parent')->where(function ($query) {
-                //     $query->where('role','Client');
-                // })->where('parent_id', $auth->id)->orderby('created_at','DESC')->get();
-                // $infos = PersonalInformations::where('parent_id', $auth->id)->get();
+                $users = User::with('parent')->where(function ($query) {
+                    $query->where('role','Client');
+                })->where('parent_id', $auth->id)->orderby('created_at','DESC')->get();
+                $infos = PersonalInformations::where('parent_id', $auth->id)->get();
             } 
         }
         else if($request->kind == 'client'){
@@ -62,9 +62,7 @@ class UsersController extends Controller
             }
             return $users->toJson(JSON_PRETTY_PRINT);
         }else if ($request->kind === 'oldclient'){
-            if ($oldclient === null)
-                return "vide";
-            return $oldclient->toJson(JSON_PRETTY_PRINT);
+             return $oldclient->toJson(JSON_PRETTY_PRINT);
         }
     }
 
