@@ -51,14 +51,14 @@ class UsersController extends Controller
             }
         }
 
-        foreach ($users as $user) {
-            foreach ($infos as $info) {
-                if ($user->id == $info->id) {
-                    $user["personal_informations"] = $info;
+        if ($request->kind == 'client' || $request->kind == 'member'){
+            foreach ($users as $user) {
+                foreach ($infos as $info) {
+                    if ($user->id == $info->id) {
+                        $user["personal_informations"] = $info;
+                    }
                 }
             }
-        }
-        if ($request->kind == 'client' || $request->kind == 'member'){
             return $users->toJson(JSON_PRETTY_PRINT);
         }else if ($request->kind == 'oldclient'){
             return $oldclient->toJson(JSON_PRETTY_PRINT);
