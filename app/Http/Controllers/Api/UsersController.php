@@ -61,7 +61,7 @@ class UsersController extends Controller
             }
         }
         if ($request->kind == 'client' || $request->kind == 'member'){
-        return $users->toJson(JSON_PRETTY_PRINT);
+            return $users->toJson(JSON_PRETTY_PRINT);
         }else if ($request->kind == 'oldclient'){
             return $oldclient->toJson(JSON_PRETTY_PRINT);
         }
