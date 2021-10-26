@@ -6,7 +6,7 @@
 -- Generation Time: Oct 26, 2021 at 09:17 AM
 -- Server version: 5.6.50-log
 -- PHP Version: 7.4.24
-
+USE 'monneynci';
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
@@ -27,7 +27,7 @@ SET time_zone = "+00:00";
 -- Table structure for table `client`
 --
 
-CREATE TABLE `client` (
+CREATE TABLE `old_client` (
   `clcleunik` int(11) NOT NULL,
   `cl_emcleunik_resp` int(11) DEFAULT NULL,
   `cl_emcleunik_cons` int(11) DEFAULT NULL,
