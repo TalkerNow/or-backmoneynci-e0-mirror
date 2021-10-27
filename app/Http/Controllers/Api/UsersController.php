@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Controller;
 use App\Models\PersonalInformations;
 use App\Models\User;
-use App\Models\OldClient;
+use App\Models\OldClients;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -22,7 +22,7 @@ class UsersController extends Controller
 //            return response()->json(['error' => 'Unauthorized'], 401);
         if ($request->kind == 'oldclient'){
             if($auth->role == "admin" || $auth->role == "Consultant"){
-                $oldclient = OldClient::all();
+                $oldclient = OldClients::all();
             }else{
                 $users = User::with('parent')->where(function ($query) {
                     $query->where('role','Client');
