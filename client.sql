@@ -26,7 +26,6 @@ SET time_zone = "+00:00";
 --
 -- Table structure for table `client`
 --
-
 CREATE TABLE `old_clients` (
   `clcleunik` int(11) NOT NULL,
   `cl_emcleunik_resp` int(11) DEFAULT NULL,
