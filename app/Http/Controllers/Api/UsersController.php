@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Controller;
 use App\Models\PersonalInformations;
 use App\Models\User;
+use App\Models\OldClients;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+
 class UsersController extends Controller
 {
     public function index(Request $request)
@@ -18,8 +20,18 @@ class UsersController extends Controller
         }
 //        if ($auth->role != "admin")
 //            return response()->json(['error' => 'Unauthorized'], 401);
-        if($request->kind == 'client'){
-            if($auth->role == "admin"){
+        if ($request->kind == 'oldclient'){
+            if($auth->role == "admin" || $auth->role == "Consultant"){
+                $oldclient = OldClients::all();
+            }else{
+                $users = User::with('parent')->where(function ($query) {
+                    $query->where('role','Client');
+                })->where('parent_id', $auth->id)->orderby('created_at','DESC')->get();
+                $infos = PersonalInformations::where('parent_id', $auth->id)->get();
+            } 
+        }
+        else if($request->kind == 'client'){
+            if($auth->role == "admin" || $auth->role == "Consultant"){
                 $users = User::with('parent')->where('role','Client')->orderby('created_at','DESC')->get();
                 $infos = PersonalInformations::all();
             }else{
@@ -29,7 +41,7 @@ class UsersController extends Controller
                 $infos = PersonalInformations::where('parent_id', $auth->id)->get();
             }
         }else if($request->kind == 'member'){
-            if($auth->role == "admin"){
+            if($auth->role == "admin" || $auth->role == "Consultant"){
                 $users = User::where('role','!=','Client')->orderby('created_at','DESC')->get();
                 $infos = PersonalInformations::all();
             }else{
@@ -39,15 +51,18 @@ class UsersController extends Controller
                 $infos = PersonalInformations::where('parent_id', $auth->id)->get();
             }
         }
-
-        foreach ($users as $user) {
-            foreach ($infos as $info) {
-                if ($user->id == $info->id) {
-                    $user["personal_informations"] = $info;
+        if ($request->kind == 'client' || $request->kind == 'member'){
+            foreach ($users as $user) {
+                foreach ($infos as $info) {
+                    if ($user->id == $info->id) {
+                        $user["personal_informations"] = $info;
+                    }
                 }
             }
+            return $users->toJson(JSON_PRETTY_PRINT);
+        }else if ($request->kind == 'oldclient'){
+            return $oldclient->toJson(JSON_PRETTY_PRINT);
         }
-        return $users->toJson(JSON_PRETTY_PRINT);
     }
 
     public function show($id)
