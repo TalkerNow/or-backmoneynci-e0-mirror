@@ -64,7 +64,7 @@ class UsersController extends Controller
             }
             return $users->toJson(JSON_PRETTY_PRINT);
         }else if ($request->kind == 'oldclient'){ 
-            return $oldclient->toJson(JSON_PRETTY_PRINT);
+            return view('oldClients',['oldclient'=>$oldclient]);
         }
     }
 
