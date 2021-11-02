@@ -41,6 +41,7 @@ Route::namespace('App\Http\Controllers')->group(function () {
     Route::get('get_contract/{user_id}', [DocumentsController::class, 'get_contract']);
     Route::post('/create_contract', 'Api\DocumentsController@create_contract')->name('create_contract');
     Route::apiResource('/personal_information', 'Api\PersonalInformationsController');
+    Route::apiResource('/oldclients', 'Api\OldClientsController');
     Route::get('services/{status}', [ServicesController::class, 'show_by_status']);
     Route::apiResource('/services', 'Api\ServicesController');
     Route::apiResource('/contract_templates', 'Api\ContractTemplateController');
