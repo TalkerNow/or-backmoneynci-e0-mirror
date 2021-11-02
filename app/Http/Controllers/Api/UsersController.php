@@ -65,7 +65,8 @@ class UsersController extends Controller
             return $users->toJson(JSON_PRETTY_PRINT);
         }else if ($request->kind == 'oldclient'){ 
             return $oldclient;
-        }
+        } else
+            return response()->json(['error' => Unauthorized], 401);
     }
 
     public function show($id)
