@@ -23,11 +23,11 @@ class StatisticsController extends Controller
 //            $document->save();
 //        }
     //----- get clients ------
-        $query = "select * from users where role != 'admin'";
+        $query = "select * from users where role= 'Client'";
         $result = DB::select($query);
         $total_client_count = count($result);
 
-        $query = "select min(created_at) as min_date, max(created_at) as max_date from users where role != 'admin'";
+        $query = "select min(created_at) as min_date, max(created_at) as max_date from users where role= 'Client'";
         $result = DB::select($query);
         $clients_count_list = [];
         if(count($result) > 0) {
@@ -40,18 +40,18 @@ class StatisticsController extends Controller
             }
             $index_date = $min_date;
 
-            $query = "select * from users where role != 'admin' and date(created_at) <= '".$min_date->format('Y-m-d')."'";
+            $query = "select * from users where role = 'Client' and date(created_at) <= '".$min_date->format('Y-m-d')."'";
             $result = DB::select($query);
             $clients_count_list[0] = count($result);
             if($interval > 0){
                 for($index = 1; $index < 5; $index ++){
                     $index_date->modify('+'. $interval.' day');
-                    $query = "select * from users where role != 'admin' and date(created_at) <= '".$index_date->format('Y-m-d')."'";
+                    $query = "select * from users where role = 'Client' and date(created_at) <= '".$index_date->format('Y-m-d')."'";
                     $result = DB::select($query);
                     $clients_count_list[$index] = count($result);
                 }
             }
-            $query = "select * from users where role != 'admin' and date(created_at) <= '".$max_date->format('Y-m-d')."'";
+            $query = "select * from users where role = 'Client' and date(created_at) <= '".$max_date->format('Y-m-d')."'";
             $result = DB::select($query);
             if($interval > 0)
                 $clients_count_list[5] = count($result);
