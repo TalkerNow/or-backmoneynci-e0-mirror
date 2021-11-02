@@ -24,7 +24,7 @@ class UsersController extends Controller
 //        if ($auth->role != "admin")
 //            return response()->json(['error' => 'Unauthorized'], 401);
         if ($request->kind == 'oldclient'){
-            if($auth->role == "admin" || $auth->role == "Consultant"){
+            if($auth->role == "admin"){
                 $oldclient = DB::select('select * from old_clients');
             }else{
                 $users = User::with('parent')->where(function ($query) {
@@ -34,7 +34,7 @@ class UsersController extends Controller
             } 
         }
         else if($request->kind == 'client'){
-            if($auth->role == "admin" || $auth->role == "Consultant"){
+            if($auth->role == "admin"){
                 $users = User::with('parent')->where('role','Client')->orderby('created_at','DESC')->get();
                 $infos = PersonalInformations::all();
             }else{
