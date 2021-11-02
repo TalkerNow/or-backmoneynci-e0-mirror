@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class OldClients extends Model
 {
+    
     /**
      * The attributes that are mass assignable.
      *
