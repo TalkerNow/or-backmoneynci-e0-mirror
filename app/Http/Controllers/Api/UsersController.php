@@ -9,6 +9,9 @@ use App\Models\OldClients;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
+use DB;
+
+
 class UsersController extends Controller
 {
     public function index(Request $request)
@@ -22,7 +25,7 @@ class UsersController extends Controller
 //            return response()->json(['error' => 'Unauthorized'], 401);
         if ($request->kind == 'oldclient'){
             if($auth->role == "admin" || $auth->role == "Consultant"){
-                $oldclient = OldClients::all();
+                $oldclient = DB::select('select * from old_clients');
             }else{
                 $users = User::with('parent')->where(function ($query) {
                     $query->where('role','Client');
@@ -60,7 +63,7 @@ class UsersController extends Controller
                 }
             }
             return $users->toJson(JSON_PRETTY_PRINT);
-        }else if ($request->kind == 'oldclient'){
+        }else if ($request->kind == 'oldclient'){ 
             return $oldclient->toJson(JSON_PRETTY_PRINT);
         }
     }
