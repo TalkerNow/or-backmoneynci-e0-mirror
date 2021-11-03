@@ -171,7 +171,10 @@ class StatisticsController extends Controller
     }
     public function getPaymentList(Request $request)
     {
+        // TODO
         $year = isset($request->year)?$request->year:"2021";
+        $from = isset($request->from)?$request->from: date("y-m-d", strtotime('-1 year'));
+        $to = isset($request->to)?$request->to: date("y-m-d");
         $payment_list= User::with('documents','parent')
             ->whereYear('status_update_date', '=', $year)
 			->Where(function($query) {
