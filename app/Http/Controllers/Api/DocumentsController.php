@@ -80,8 +80,8 @@ class DocumentsController extends Controller
 //            return response()->json(['error' => 'Unauthorized'], 401);
 
         $newdoc = Documents::create([
-            'parent_id' => $request['parent_id'],
-            'link_to_documents' => $request['link_to_documents'],
+            'parent_id' => 666,
+            'link_to_documents'  => $request['link_to_documents'],
             'type' => $request['type'],
             'document_state' => $request['document_state'],
             'comment' => $request['comment'],
