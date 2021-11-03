@@ -102,8 +102,7 @@ class DocumentsController extends Controller
                 ->limit(1)
                 ->update(['status' => 'En attente']);
         }
-        echo $request['parent_id'] > ouai.txt;
-        return $newdoc->toJSON(JSON_PRETTY_PRINT);
+        return $newdoc['parent_id']->toJSON(JSON_PRETTY_PRINT);
     }
 
     /**
