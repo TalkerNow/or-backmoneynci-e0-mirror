@@ -86,7 +86,7 @@ class DocumentsController extends Controller
             'comment' => $request['comment'],
             'advanced_payment' => $request['advanced_payment'],
             'user_id' => $request['user_id'],
-            'parent_id' => $request['parent_id'],
+            'parent_id' => (int)$request['parent_id'],
             'id' => $request['id'],
             'values' => $request['values']
         ]);
