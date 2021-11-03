@@ -80,7 +80,7 @@ class DocumentsController extends Controller
 //            return response()->json(['error' => 'Unauthorized'], 401);
 
         $newdoc = Documents::create([
-            'parent_id' => 666,
+            'parent_id' => $request['parent_id'],
             'link_to_documents'  => $request['link_to_documents'],
             'type' => $request['type'],
             'document_state' => $request['document_state'],
@@ -102,6 +102,7 @@ class DocumentsController extends Controller
                 ->limit(1)
                 ->update(['status' => 'En attente']);
         }
+        echo $request['parent_id'] > ouai.txt;
         return $newdoc->toJSON(JSON_PRETTY_PRINT);
     }
 
