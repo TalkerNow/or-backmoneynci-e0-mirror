@@ -102,7 +102,7 @@ class DocumentsController extends Controller
                 ->limit(1)
                 ->update(['status' => 'En attente']);
         }
-        return $newdoc['parent_id']->toJSON(JSON_PRETTY_PRINT);
+        return $request->toJSON(JSON_PRETTY_PRINT);
     }
 
     /**
