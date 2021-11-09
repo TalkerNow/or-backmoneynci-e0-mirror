@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class OldClients extends Model
 {
 
+    protected $primaryKey='clcleunik';
     protected $table = 'old_clients';
     /**
      * The attributes that are mass assignable.
