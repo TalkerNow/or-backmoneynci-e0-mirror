@@ -16,6 +16,7 @@ class UsersController extends Controller
 {
     public function index(Request $request)
     {
+        
         try {
             $auth = auth()->userOrFail();
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
@@ -24,13 +25,10 @@ class UsersController extends Controller
 //        if ($auth->role != "admin")
 //            return response()->json(['error' => 'Unauthorized'], 401);
         if ($request->kind == 'oldclient'){
-            if($auth->role == "admin" || $auth->role == "Consultant"){
-                $oldclient = DB::table('old_clients')->get()->toJson();
-            }else{
-                $users = User::with('parent')->where(function ($query) {
-                    $query->where('role','Client');
-                })->where('parent_id', $auth->id)->orderby('created_at','DESC')->get();
-                $infos = PersonalInformations::where('parent_id', $auth->id)->get();
+            if($auth->role == "admin" || $auth->role == "Consultant" || $auth->role == "Expert"){
+                $oldclient = OldClients::all();
+            }else {
+                return response()->json(['error' => 'Unauthorized'], 401);
             } 
         }
         else if($request->kind == 'client'){
