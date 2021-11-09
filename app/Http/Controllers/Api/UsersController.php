@@ -72,6 +72,12 @@ class UsersController extends Controller
 
     public function show($id)
     {
+        try {
+            $auth = auth()->userOrFail();
+        } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
+            return response()->json(['error' => $e->getMessage()], 401);
+        }
+
         $info = $this->get_personal_information($id);
         $user = $this->get_user($id);
 
@@ -82,8 +88,8 @@ class UsersController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-//        if ($auth->role != "admin" && $auth->id != $user->id)
-//            return response()->json(['error' => 'Unauthorized'], 401);
+        if ($auth->role != "admin" && $auth->id != $user->id)
+            return response()->json(['error' => 'Unauthorized'], 401);
 
         $user["personal_informations"] = $info;
         return $user->toJson(JSON_PRETTY_PRINT);
@@ -91,6 +97,12 @@ class UsersController extends Controller
 
     public function update(Request $request, $id)
     {
+        try {
+            $auth = auth()->userOrFail();
+        } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
+            return response()->json(['error' => $e->getMessage()], 401);
+        }
+
         $user = $this->get_user($id);
 
         if ($user == null)
@@ -114,6 +126,12 @@ class UsersController extends Controller
 
     public function destroy($id)
     {
+        try {
+            $auth = auth()->userOrFail();
+        } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
+            return response()->json(['error' => $e->getMessage()], 401);
+        }
+
         $user = $this->get_user($id);
         if ($user != null)
             $user->delete();
