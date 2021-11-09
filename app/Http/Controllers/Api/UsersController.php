@@ -28,7 +28,7 @@ class UsersController extends Controller
             if($auth->role == "admin" || $auth->role == "Consultant" || $auth->role == "Expert"){
                 $oldclients = OldClients::all();
                 if ($oldclients->isEmpty()) {
-                    return response()->json(['error' => 'old client empty'], 500); 
+                    return response()->json(['error' => $oldclients[0]], 500); 
                 }
                 return $oldclients->toJson(JSON_PRETTY_PRINT);
             }else {
