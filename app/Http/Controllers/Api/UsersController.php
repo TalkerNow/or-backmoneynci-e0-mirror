@@ -27,7 +27,7 @@ class UsersController extends Controller
         if ($request->kind == 'oldclient'){
             if($auth->role == "admin" || $auth->role == "Consultant" || $auth->role == "Expert"){
                 $oldclients = OldClients::all();
-                return $oldclient->toJson(JSON_PRETTY_PRINT);
+                return $oldclients->toJson(JSON_PRETTY_PRINT);
             }else {
                 return response()->json(['error' => 'Unauthorized'], 401);
             } 
@@ -63,7 +63,7 @@ class UsersController extends Controller
             }
             return $users->toJson(JSON_PRETTY_PRINT);
         } else if ($request->kind == 'oldclient'){ 
-            return $oldclient->toJson(JSON_PRETTY_PRINT);
+            return $oldclients->toJson(JSON_PRETTY_PRINT);
         } else
             return response()->json(['error' => Unauthorized], 401);
     }
