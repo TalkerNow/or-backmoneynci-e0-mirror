@@ -14,8 +14,27 @@ use DB;
 
 class UsersController extends Controller
 {
+    public static function convert_from_latin1_to_utf8_recursively($dat)
+    {
+       if (is_string($dat)) {
+          return utf8_encode($dat);
+       } elseif (is_array($dat)) {
+          $ret = [];
+          foreach ($dat as $i => $d) $ret[ $i ] = self::convert_from_latin1_to_utf8_recursively($d);
+ 
+          return $ret;
+       } elseif (is_object($dat)) {
+          foreach ($dat as $i => $d) $dat->$i = self::convert_from_latin1_to_utf8_recursively($d);
+ 
+          return $dat;
+       } else {
+          return $dat;
+       }
+    }
+
     public function index(Request $request)
     {
+        
         try {
             $auth = auth()->userOrFail();
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
@@ -24,13 +43,14 @@ class UsersController extends Controller
 //        if ($auth->role != "admin")
 //            return response()->json(['error' => 'Unauthorized'], 401);
         if ($request->kind == 'oldclient'){
-            if($auth->role == "admin" || $auth->role == "Consultant"){
-                $oldclient = DB::table('old_clients')->get()->toJson();
-            }else{
-                $users = User::with('parent')->where(function ($query) {
-                    $query->where('role','Client');
-                })->where('parent_id', $auth->id)->orderby('created_at','DESC')->get();
-                $infos = PersonalInformations::where('parent_id', $auth->id)->get();
+            if($auth->role == "admin" || $auth->role == "Consultant" || $auth->role == "Expert"){
+                $oldclients = OldClients::all();
+                $oldclients = self::convert_from_latin1_to_utf8_recursively($oldclients);
+                return response()->json(['data' => $oldclients], 200); 
+                
+                return $oldclients->toJson(JSON_PRETTY_PRINT);
+            }else {
+                return response()->json(['error' => 'Unauthorized'], 401);
             } 
         }
         else if($request->kind == 'client'){
@@ -63,14 +83,20 @@ class UsersController extends Controller
                 }
             }
             return $users->toJson(JSON_PRETTY_PRINT);
-        }else if ($request->kind == 'oldclient'){ 
-            return $oldclient;
+        } else if ($request->kind == 'oldclient'){ 
+            return $oldclients->toJson(JSON_PRETTY_PRINT);
         } else
             return response()->json(['error' => Unauthorized], 401);
     }
 
     public function show($id)
     {
+        try {
+            $auth = auth()->userOrFail();
+        } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
+            return response()->json(['error' => $e->getMessage()], 401);
+        }
+
         $info = $this->get_personal_information($id);
         $user = $this->get_user($id);
 
@@ -81,8 +107,8 @@ class UsersController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-//        if ($auth->role != "admin" && $auth->id != $user->id)
-//            return response()->json(['error' => 'Unauthorized'], 401);
+        if ($auth->role != "admin" && $auth->id != $user->id && $auth->role != "Consultant")
+            return response()->json(['error' => 'Unauthorized'], 401);
 
         $user["personal_informations"] = $info;
         return $user->toJson(JSON_PRETTY_PRINT);
@@ -90,6 +116,12 @@ class UsersController extends Controller
 
     public function update(Request $request, $id)
     {
+        try {
+            $auth = auth()->userOrFail();
+        } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
+            return response()->json(['error' => $e->getMessage()], 401);
+        }
+
         $user = $this->get_user($id);
 
         if ($user == null)
@@ -113,6 +145,12 @@ class UsersController extends Controller
 
     public function destroy($id)
     {
+        try {
+            $auth = auth()->userOrFail();
+        } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
+            return response()->json(['error' => $e->getMessage()], 401);
+        }
+
         $user = $this->get_user($id);
         if ($user != null)
             $user->delete();
