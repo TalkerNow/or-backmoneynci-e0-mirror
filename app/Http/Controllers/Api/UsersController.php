@@ -46,7 +46,7 @@ class UsersController extends Controller
             if($auth->role == "admin" || $auth->role == "Consultant" || $auth->role == "Expert"){
                 $oldclients = OldClients::all();
                 $oldclients = self::convert_from_latin1_to_utf8_recursively($oldclients);
-                return response()->json(['data' => $oldclients[0]], 200); 
+                return response()->json(['data' => $oldclients[1]], 200); 
                 
                 return $oldclients->toJson(JSON_PRETTY_PRINT);
             }else {
