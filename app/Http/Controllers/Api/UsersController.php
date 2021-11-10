@@ -88,7 +88,7 @@ class UsersController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        if ($auth->role != "admin" || $auth->id != $user->id || $auth->role != "Consultant")
+        if ($auth->role != "admin" && $auth->id != $user->id && $auth->role != "admin")
             return response()->json(['error' => 'Unauthorized'], 401);
 
         $user["personal_informations"] = $info;
