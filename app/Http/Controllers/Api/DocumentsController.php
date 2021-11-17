@@ -78,11 +78,13 @@ class DocumentsController extends Controller
         }
 //        if ($auth->role != "admin")
 //            return response()->json(['error' => 'Unauthorized'], 401);
-
+        // TODO add new rockets
         $newdoc = Documents::create([
             'parent_id' => $request['parent_id'],
             'link_to_documents'  => $request['link_to_documents'],
             'type' => $request['type'],
+            'end_payment' => $request['end_payment'],
+            'pre_payment' => $request['pre_payment'],
             'document_state' => $request['document_state'],
             'comment' => $request['comment'],
             'advanced_payment' => $request['advanced_payment'],

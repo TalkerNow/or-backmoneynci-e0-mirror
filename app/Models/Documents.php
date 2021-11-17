@@ -15,7 +15,9 @@ class Documents extends Model
      * @var array
      */
     protected $fillable = [
-        'link_to_documents', 'type', 'document_state', 'date', 'parent_id', 'comment', 'advanced_payment', 'id', 'user_id','values'
+        'id', 'link_to_documents', 'type', 'document_state', 'comment',
+        'advanced_payment','pre_payment', 'end_payment', 'status_payment','subscribe_services',
+        'values',  'user_id', 'parent_id',
     ];
     public function user() {
         return $this->belongsTo('App\Models\User', 'user_id');
