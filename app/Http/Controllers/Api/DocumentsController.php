@@ -30,17 +30,17 @@ class DocumentsController extends Controller
             $doc = Documents::with(['user'])->get();
             $services = Services::all();
             $servtab = array();
-        }else{
-            $doc = Documents::with(['user'])->where('parent_id', $auth->id)->get();
-        }
-        foreach ($doc as $do) {
-            foreach ($services as $service) {
-                if ($do->id == $service->document_id) {
-                    array_push($servtab, $service);
+            foreach ($doc as $do) {
+                foreach ($services as $service) {
+                    if ($do->id == $service->document_id) {
+                        array_push($servtab, $service);
+                    }
                 }
+                $do["services"] = $servtab;
+                $servtab = array();
             }
-            $do["services"] = $servtab;
-            $servtab = array();
+        } else {
+            $doc = Documents::with(['user'])->where('parent_id', $auth->id)->get();
         }
         return $doc->toJson(JSON_PRETTY_PRINT);
     }
