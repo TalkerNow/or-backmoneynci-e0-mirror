@@ -60,35 +60,25 @@ class StatisticsController extends Controller
         }
 
     //------ get Acompte -----
-        $users= User::with('documents')
-            ->where('status','En cours')
-            ->where('status_fa',1)
-            ->get();
+    // TODO ajouter les dates
+        $query = "select * from documents where document_state='En cours', document_state='Termine', status_payments=1";
+        $acompte = DB::select($query);
 
-        $total_acompte_count = count($users);
+        $total_acompte_count = count($acompte);
         $total_acompte_amount = 0;
-        foreach($users as $item){
-            $documents = $item->documents;
-            $count = count($documents);
-            if($count > 0){
-                $total_acompte_amount += $item->documents[$count - 1]->pre_payment;
+        foreach($acompte as $item) {
+                $total_acompte_amount += $item->pre_payment;
             }
-        }
 
     //------- get Solde --------
-        $users= User::with('documents')
-            ->where('status','Termine')
-            ->where('status_fa',1)
-            ->get();
+            // TODO ajouter les dates
+    $query = "select * from documents where document_state='En cours', document_state='Termine', status_payments=2";
+    $solde = DB::select($query);
 
-        $total_solde_count = count($users);
-        $total_solde_amount = 0;
-        foreach($users as $item){
-            $documents = $item->documents;
-            $count = count($documents);
-            if($count > 0){
-                $total_solde_amount += $item->documents[$count - 1]->end_payment;
-            }
+    $total_solde_count = count($solde);
+    $total_solde_amount = 0;
+    foreach($solde as $item) {
+            $total_solde_amount += $item->end_payment;
         }
 
         return response()->json([

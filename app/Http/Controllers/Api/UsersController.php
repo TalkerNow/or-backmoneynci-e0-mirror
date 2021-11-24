@@ -49,7 +49,7 @@ class UsersController extends Controller
             if($auth->role == "admin" || $auth->role == "Consultant"){
                 $users = User::where('role','!=','Client')->orderby('created_at','DESC')->get();
                 $infos = PersonalInformations::all();
-            }else{
+            }else {
                 $users = User::where(function ($query) {
                     $query->where('role','!=','Client');
                 })->where('parent_id', $auth->id)->orderby('created_at','DESC')->get();
