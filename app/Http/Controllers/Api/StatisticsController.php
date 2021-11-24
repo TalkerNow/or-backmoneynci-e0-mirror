@@ -14,20 +14,14 @@ class StatisticsController extends Controller
 {
     public function getStatistics(Request $request)
     {
-//        $query = "select * from documents";
-//        $result = DB::select($query);
-//        foreach($result as $item){
-//            $document = Documents::find($item->id);
-//            $document->pre_payment = $document->advanced_payment * 0.75;
-//            $document->end_payment = $document->advanced_payment * 0.25;
-//            $document->save();
-//        }
+
     //----- get clients ------
-        $query = "select * from users where role= 'Client'";
-        $result = DB::select($query);
+        $query = "SELECT * FROM users WHERE role='Client' ";
+        $result = DB::select($query)->whereYear('status_update_date', '=', $year)
+                                    ->whereMonth('updated_at', '=', $month);
         $total_client_count = count($result);
 
-        $query = "select min(created_at) as min_date, max(created_at) as max_date from users where role= 'Client'";
+        $query = "SELECT MIN(created_at) AS min_date, MAX(created_at) AS max_date FROM users WHERE role='Client'";
         $result = DB::select($query);
         $clients_count_list = [];
         if(count($result) > 0) {
@@ -40,7 +34,7 @@ class StatisticsController extends Controller
             }
             $index_date = $min_date;
 
-            $query = "select * from users where role = 'Client' and date(created_at) <= '".$min_date->format('Y-m-d')."'";
+            $query = "SELECT * FROM users WHERE role ='Client' AND DATE(created_at) <= '".$min_date->format('Y-m-d')."'";
             $result = DB::select($query);
             $clients_count_list[0] = count($result);
             if($interval > 0){
@@ -51,7 +45,7 @@ class StatisticsController extends Controller
                     $clients_count_list[$index] = count($result);
                 }
             }
-            $query = "select * from users where role = 'Client' and date(created_at) <= '".$max_date->format('Y-m-d')."'";
+            $query = "SELECT * FROM users WHERE role='Client' AND DATE(created_at) <= '".$max_date->format('Y-m-d')."'";
             $result = DB::select($query);
             if($interval > 0)
                 $clients_count_list[5] = count($result);
@@ -162,7 +156,9 @@ class StatisticsController extends Controller
     public function getPaymentList(Request $request)
     {
         // TODO
-        $year = isset($request->year)?$request->year:"2021";
+        $year = isset($request->year)?$request->year:date('Y');
+        $month = isset($request->month)?$request->month:date('M');
+        $year = isset($request->year)?$request->year:date('Y');
         $from = isset($request->from)?$request->from: date("y-m-d", strtotime('-1 year'));
         $to = isset($request->to)?$request->to: date("y-m-d");
         $payment_list= User::with('documents','parent')
