@@ -17,8 +17,7 @@ class StatisticsController extends Controller
 
     //----- get clients ------
         $query = "SELECT * FROM users WHERE role='Client' ";
-        $result = DB::select($query)->whereYear('status_update_date', '=', $year)
-                                    ->whereMonth('updated_at', '=', $month);
+        $result = DB::select($query);
         $total_client_count = count($result);
 
         $query = "SELECT MIN(created_at) AS min_date, MAX(created_at) AS max_date FROM users WHERE role='Client'";
@@ -157,29 +156,17 @@ class StatisticsController extends Controller
     {
         // TODO
         $year = isset($request->year)?$request->year:date('Y');
-        $month = isset($request->month)?$request->month:date('M');
-        $year = isset($request->year)?$request->year:date('Y');
         $from = isset($request->from)?$request->from: date("y-m-d", strtotime('-1 year'));
         $to = isset($request->to)?$request->to: date("y-m-d");
-        $payment_list= User::with('documents','parent')
-            ->whereYear('status_update_date', '=', $year)
+        $payment_list=DB::table('documents')
+            ->whereYear('updated_at', '=', $year)
 			->Where(function($query) {
-                $query->where('status', 'En cours')
-                      ->orWhere('status', 'Termine');
+                $query->where('document_state', 'En cours')
+                      ->orWhere('document_state', 'Termine');
             })
-            ->where('status_fa',1)
+            ->where('status_payment',1)
+            ->orWhere('status_payment',2)
             ->get();
-
-        foreach($payment_list as $item){
-            $documents = $item->documents;
-            $count = count($documents);
-            if($count > 0){
-                if($item->status == "En cours")
-                    $item->payment_amount = $item->documents[$count - 1]->pre_payment;
-                else
-                    $item->payment_amount = $item->documents[$count - 1]->end_payment;
-            }
-        }
 
         return response()->json(['payment_list' => $payment_list]);
     }
