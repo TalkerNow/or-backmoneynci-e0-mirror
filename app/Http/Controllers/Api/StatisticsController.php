@@ -51,10 +51,9 @@ class StatisticsController extends Controller
             else
                 $clients_count_list[1] = count($result);
         }
-
     //------ get Acompte -----
     // TODO ajouter les dates
-        $query = "SELECT * FROM documents WHERE (document_state='En cours' OR document_state='Termine') AND status_payment>=1";
+        $query = "SELECT * FROM documents WHERE (document_state='En cours' OR document_state='Termine') AND status_payment=1";
         $acompte = DB::select($query);
 
         $total_acompte_count = count($acompte);
