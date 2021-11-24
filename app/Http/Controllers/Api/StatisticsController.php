@@ -61,7 +61,7 @@ class StatisticsController extends Controller
 
     //------ get Acompte -----
     // TODO ajouter les dates
-        $query = "SELECT * FROM documents WHERE document_state='En cours'AND document_state='Termine' AND status_payment=1";
+        $query = "SELECT * FROM documents WHERE (document_state='En cours' OR document_state='Termine') AND status_payment=1";
         $acompte = DB::select($query);
 
         $total_acompte_count = count($acompte);
@@ -72,7 +72,7 @@ class StatisticsController extends Controller
 
     //------- get Solde --------
             // TODO ajouter les dates
-    $query = "SELECT * FROM documents WHERE document_state='En cours' AND document_state='Termine' AND status_payment=2";
+    $query = "SELECT * FROM documents WHERE (document_state='En cours' OR document_state='Termine') AND status_payment=2";
     $solde = DB::select($query);
 
     $total_solde_count = count($solde);
