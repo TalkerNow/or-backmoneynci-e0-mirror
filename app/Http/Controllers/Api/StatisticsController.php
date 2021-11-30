@@ -16,7 +16,7 @@ class StatisticsController extends Controller
     public function getStatistics(Request $request)
     {
 
-        //----- get clients ------
+        // ? ----- get clients count------
         $query = "SELECT * FROM users WHERE role='Client' ";
         $result = DB::select($query);
         $total_client_count = count($result);
@@ -52,30 +52,59 @@ class StatisticsController extends Controller
             else
                 $clients_count_list[1] = count($result);
         }
-        //------ get Acompte -----
-        // TODO ajouter les dates
-        $query = "SELECT * FROM documents WHERE (document_state='En cours' OR document_state='Termine') AND status_payment=1";
-        $acompte = DB::select($query);
-        $total_acompte_count = count($acompte);
-        $total_acompte_amount = 0;
-        foreach ($acompte as $item) {
-            $total_acompte_amount += $item->pre_payment;
-        }
-
-        //------- get Solde --------
-        // TODO ajouter les dates
-        $query = "SELECT * FROM documents WHERE (document_state='En cours' OR document_state='Termine') AND status_payment=2";
-        $solde = DB::select($query);
-
-        $total_solde_count = count($solde);
-        $total_solde_amount = 0;
-        foreach ($solde as $item) {
-            $total_solde_amount += $item->end_payment;
-        }
+        $year = isset($request->year) ? $request->year : "tous";
+        $month = isset($request->month) ? $request->month : "tous";
+            // ?  acompte em cours
+            // ! add date
+            $acompte = DB::table('documents')
+                ->where('document_state', 'En cours')
+                ->get();
+            $total_current_acompte_count = count($acompte);
+            $total_current_acompte_amount = 0;
+            foreach ($acompte as $item) {
+                $total_current_acompte_amount += $item->pre_payment;
+            }
+            // ?  sold en cours
+            // ! add date
+            $solde = DB::table('documents')
+                ->where('document_state', 'En cours')
+                ->get();
+            $total_current_solde_count = count($solde);
+            $total_current_solde_amount = 0;
+            foreach ($solde as $item) {
+                $total_current_solde_amount += $item->end_payment;
+            }
+            // ? terminer
+            // ! add date 
+            $ended = DB::table('documents')
+                ->where('document_state', 'Termine')
+                ->get();
+            $total_ended_count = count($ended);
+            $total_ended_amount = 0;
+            foreach ($ended as $item) {
+                $total_ended_amount += $item->advanced_payment;
+            }
+            // ? total opportunite
+            // ! add date
+            $opportunite = DB::table('documents')
+                ->where('document_state', 'En attente')
+                ->get();
+            $opportunite_count = count($opportunite);
+            $opportunite_amount = 0;
+            foreach ($opportunite as $item) {
+                $opportunite_amount += $item->advanced_payment;
+            }
+            // ? total paid amount for no month selected
+            $total_current_amount = $total_current_acompte_amount + $total_current_solde_amount;
+            $total_current_count = $total_current_solde_count + $total_current_acompte_count;
+       
         return response()->json([
             'clients_count' => $total_client_count, 'clients_count_list' => $clients_count_list,
-            'acompte_count' => $total_acompte_count, 'acompte_amount' => $total_acompte_amount,
-            'solde_count' => $total_solde_count, 'solde_amount' => $total_solde_amount
+            'current_total_count' => $total_current_count, 'current_total_amount' => $total_current_amount,
+            'total_ended_count' => $total_ended_count, 'total_ended_amount' => $total_ended_amount,
+            'current_acompte_count' => $total_current_acompte_count, 'current_acompte_amount' => $total_current_acompte_amount,
+            'current_solde_count' => $total_current_solde_count, 'current_solde_amount' => $total_current_solde_amount,
+            'opportunite_count' => $opportunite_count,'opportunite_amount' => $opportunite_amount,
         ]);
     }
     public function getStatisticsPerMonth(Request $request)
