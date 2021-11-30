@@ -179,7 +179,7 @@ class StatisticsController extends Controller
                 'total_ended_count' => $total_ended_count, 'total_ended_amount' => $total_ended_amount,
                 'current_acompte_count' => $total_current_acompte_count, 'current_acompte_amount' => $total_current_acompte_amount,
                 'current_solde_count' => $total_current_solde_count, 'current_solde_amount' => $total_current_solde_amount,
-                'opportunite_count' => $opportunite_count,'opportunite_amount' => $total_potentiel_amount,
+                'opportunite_count' => $opportunite_count,'opportunite_amount' => $opportunite_amount,
             ]);
     }
     public function getPaymentList(Request $request)
