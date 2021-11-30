@@ -28,6 +28,7 @@ class UsersController extends Controller
         if ($request->kind == 'oldclient'){
             if($auth->role == "admin" || $auth->role == "Consultant" || $auth->role == "Expert"){
                 $oldclients = OldClients::all();
+                $infos = PersonalInformations::all();
                 return response()->json(['data' => $oldclients], 200); 
                 
                 return $oldclients->toJson(JSON_PRETTY_PRINT);
