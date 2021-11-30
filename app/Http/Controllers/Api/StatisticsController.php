@@ -163,12 +163,12 @@ class StatisticsController extends Controller
             }
             // ? total opportunite
             // ! add date
-            $oportunite = DB::table('documents')
+            $opportunite = DB::table('documents')
                 ->where('document_state', 'En attente')
                 ->get();
-            $opportunite_count = count($oportunite);
+            $opportunite_count = count($opportunite);
             $opportunite_amount = 0;
-            foreach ($oportunite as $item) {
+            foreach ($opportunite as $item) {
                 $opportunite_amount += $item->advanced_payment;
             }
             // ? total paid amount for no month selected
@@ -179,7 +179,7 @@ class StatisticsController extends Controller
                 'total_ended_count' => $total_ended_count, 'total_ended_amount' => $total_ended_amount,
                 'current_acompte_count' => $total_current_acompte_count, 'current_acompte_amount' => $total_current_acompte_amount,
                 'current_solde_count' => $total_current_solde_count, 'current_solde_amount' => $total_current_solde_amount,
-                'opportunite_count' => $oportunite_count,'opportunite_amount' => $total_potentiel_amount,
+                'opportunite_count' => $opportunite_count,'opportunite_amount' => $total_potentiel_amount,
             ]);
     }
     public function getPaymentList(Request $request)
