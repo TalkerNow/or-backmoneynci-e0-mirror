@@ -134,7 +134,7 @@ class StatisticsController extends Controller
             // ?  acompte em cours
             // ! add date
             $acompte = DB::table('documents')
-                ->where('documents_state', 'En cours')
+                ->where('document_state', 'En cours')
                 ->get();
             $total_current_acompte_count = count($acompte);
             $total_current_acompte_amount = 0;
@@ -144,7 +144,7 @@ class StatisticsController extends Controller
             // ?  sold en cours
             // ! add date
             $solde = DB::table('documents')
-                ->where('documents_state', 'En cours')
+                ->where('document_state', 'En cours')
                 ->get();
             $total_current_solde_count = count($solde);
             $total_current_solde_amount = 0;
@@ -154,7 +154,7 @@ class StatisticsController extends Controller
             // ? terminer
             // ! add date 
             $ended = DB::table('documents')
-                ->where('documents_state', 'Termine')
+                ->where('document_state', 'Termine')
                 ->get();
             $total_ended_count = count($ended);
             $total_ended_amount = 0;
@@ -164,7 +164,7 @@ class StatisticsController extends Controller
             // ? total opportunite
             // ! add date
             $oportunite = DB::table('documents')
-                ->where('documents_state', 'En attente')
+                ->where('document_state', 'En attente')
                 ->get();
             $opportunite_count = count($oportunite);
             $opportunite_amount = 0;
