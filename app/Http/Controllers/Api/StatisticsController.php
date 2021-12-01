@@ -52,8 +52,8 @@ class StatisticsController extends Controller
             else
                 $clients_count_list[1] = count($result);
         }
-        $year = isset($request->year) ? $request->year : "tous";
-        $month = isset($request->month) ? $request->month : "tous";
+        $year = date('Y');
+        $month = date('m');
             // ?  acompte em cours
             // ! add date
             $acompte = DB::table('documents')
