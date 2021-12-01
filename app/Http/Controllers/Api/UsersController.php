@@ -28,6 +28,7 @@ class UsersController extends Controller
         if ($request->kind == 'oldclient'){
             if($auth->role == "admin" || $auth->role == "Consultant" || $auth->role == "Expert"){
                 $oldclients = OldClients::all();
+                //$infos = PersonalInformations::all();
                 return response()->json(['data' => $oldclients], 200); 
                 
                 return $oldclients->toJson(JSON_PRETTY_PRINT);
@@ -49,7 +50,7 @@ class UsersController extends Controller
             if($auth->role == "admin" || $auth->role == "Consultant"){
                 $users = User::where('role','!=','Client')->orderby('created_at','DESC')->get();
                 $infos = PersonalInformations::all();
-            }else{
+            }else {
                 $users = User::where(function ($query) {
                     $query->where('role','!=','Client');
                 })->where('parent_id', $auth->id)->orderby('created_at','DESC')->get();
