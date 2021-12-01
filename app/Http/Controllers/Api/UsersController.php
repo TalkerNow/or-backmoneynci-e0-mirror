@@ -57,7 +57,7 @@ class UsersController extends Controller
                 $infos = PersonalInformations::where('parent_id', $auth->id)->get();
             }
         }
-        if ($request->kind == 'client' || $request->kind == 'member'){
+        if ($request->kind == 'client' || $request->kind == 'member') {
             foreach ($users as $user) {
                 foreach ($infos as $info) {
                     if ($user->id == $info->id) {
@@ -90,7 +90,7 @@ class UsersController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        if ($auth->role != "admin" && $auth->id != $user->id && $auth->role != "Consultant")
+        if ($auth->role != "admin" && $auth->id != $user->id && $auth->role != "Consultant" && $user->parent_id != $auth->id)
             return response()->json(['error' => 'Unauthorized'], 401);
 
         $user["personal_informations"] = $info;
