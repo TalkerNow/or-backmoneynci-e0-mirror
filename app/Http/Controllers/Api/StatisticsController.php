@@ -59,7 +59,6 @@ class StatisticsController extends Controller
             $acompte = DB::table('documents')
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 1)
-                ->orWhere('status_payment', 2)
                 ->get();
             $total_current_acompte_count = count($acompte);
             $total_current_acompte_amount = 0;
@@ -99,7 +98,7 @@ class StatisticsController extends Controller
                 $opportunite_amount += $item->advanced_payment;
             }
             // ? total paid amount for no month selected
-            $total_current_amount = $total_current_solde_amount;
+            $total_current_amount = $total_current_acompte_amount + $total_current_solde_amount;
             $total_current_count = $total_current_solde_count + $total_current_acompte_count;
        
         return response()->json([
@@ -169,7 +168,6 @@ class StatisticsController extends Controller
             $acompte = DB::table('documents')
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 1)
-                ->orWhere('status_payment', 2)
                 ->get();
             $total_current_acompte_count = count($acompte);
             $total_current_acompte_amount = 0;
