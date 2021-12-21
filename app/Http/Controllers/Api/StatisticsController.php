@@ -169,7 +169,7 @@ class StatisticsController extends Controller
         );
         $monthArray = array(12);
         for($x = 0; $x < 12; $x++) {
-            $monthArray[x] = $monthData;
+            $monthArray[$x] = $monthData;
           }
         return json_encode($monthArray);
             // ?  acompte em cours
