@@ -160,12 +160,13 @@ class StatisticsController extends Controller
 
     public function getStatisticsTotalIncome(Request $request)
     {
-        $year = isset($request->year) ? $request->year : "tous";
-        $month = isset($request->month) ? $request->month : "tous";
+        $year = isset($request->year) ? $request->year : date("y");
+        
         
             // ?  acompte em cours
             // ! add date
             $acompte = DB::table('documents')
+                ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 1)
                 ->get();
@@ -177,6 +178,7 @@ class StatisticsController extends Controller
             // ?  sold en cours
             // ! add date
             $solde = DB::table('documents')
+                ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 2)
                 ->get();
@@ -199,6 +201,7 @@ class StatisticsController extends Controller
             // ? total opportunite
             // ! add date
             $opportunite = DB::table('documents')
+                ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'En attente')
                 ->get();
             $opportunite_count = count($opportunite);
