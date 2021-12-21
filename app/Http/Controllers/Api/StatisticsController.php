@@ -171,7 +171,6 @@ class StatisticsController extends Controller
         for($x = 0; $x < 12; $x++) {
             $monthArray[$x] = $monthData;
           }
-        return json_encode($monthArray);
             // ?  acompte em cours
             // ! add date
             $acompte = DB::table('documents')
@@ -195,6 +194,7 @@ class StatisticsController extends Controller
             $total_current_solde_amount = 0;
             foreach ($solde as $item) {
                 $total_current_solde_amount += $item->end_payment;
+                $monthArray[date('n', $item->updated_at)]['total_current_solde_amount'] += $item->end_payment;
             }
             // ? terminer
             // ! add date 
@@ -222,6 +222,8 @@ class StatisticsController extends Controller
             // ? total paid amount for no month selected
             $total_current_amount = $total_current_acompte_amount + $total_current_solde_amount;
             $total_current_count = $total_current_solde_count + $total_current_acompte_count;
+
+            return json_encode($monthArray);
             return response()->json([
                 'current_total_count' => $total_current_count, 'current_total_amount' => $total_current_amount,
                 'total_ended_count' => $total_ended_count, 'total_ended_amount' => $total_ended_amount,
