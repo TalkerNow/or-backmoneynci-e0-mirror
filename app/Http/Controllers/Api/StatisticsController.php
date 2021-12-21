@@ -167,8 +167,8 @@ class StatisticsController extends Controller
             'current_solde_count' => 0, 'current_solde_amount' => 0,
             'opportunite_count' => 0,'opportunite_amount' => 0,
         );
-        $monthArray = array(12);
-        for($x = 0; $x < 12; $x++) {
+        $monthArray = array(13);
+        for($x = 0; $x < 13; $x++) {
             $monthArray[$x] = $monthData;
           }
             // ?  acompte em cours
