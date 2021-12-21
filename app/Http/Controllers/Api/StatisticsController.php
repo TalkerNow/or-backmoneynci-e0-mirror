@@ -15,7 +15,6 @@ class StatisticsController extends Controller
 {
     public function getStatistics(Request $request)
     {
-
         // ? ----- get clients count------
         $query = "SELECT * FROM users WHERE role='Client' ";
         $result = DB::select($query);
@@ -113,7 +112,6 @@ class StatisticsController extends Controller
     public function getStatisticsPerMonth(Request $request)
     {
         $thisyear = date("y");
-
         //------- get Acompte list --------
         $lst_acompte_amount = array();
         for ($month = 1; $month <= 12; $month++) {
@@ -161,8 +159,19 @@ class StatisticsController extends Controller
     public function getStatisticsTotalIncome(Request $request)
     {
         $year = isset($request->year) ? $request->year : date("y");
-        
-        
+        $monthData = array(
+            'clients_count' => 0, 'clients_count_list' =>0,
+            'current_total_count' => 0, 'current_total_amount' => 0,
+            'total_ended_count' => 0, 'total_ended_amount' => 0,
+            'current_acompte_count' => 0, 'current_acompte_amount' => 0,
+            'current_solde_count' => 0, 'current_solde_amount' => 0,
+            'opportunite_count' => 0,'opportunite_amount' => 0,
+        );
+        $monthArray[12];
+        for($x = 0; $x < 12; $x++) {
+            $monthArray[x] = $monthData;
+          }
+        return json_encode($monthArray);
             // ?  acompte em cours
             // ! add date
             $acompte = DB::table('documents')
@@ -190,6 +199,7 @@ class StatisticsController extends Controller
             // ? terminer
             // ! add date 
             $ended = DB::table('documents')
+                ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'Termine')
                 ->where('status_payment', 2)
                 ->get();
