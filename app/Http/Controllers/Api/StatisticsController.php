@@ -206,9 +206,9 @@ class StatisticsController extends Controller
             //$total_ended_count = count($ended);
            // $total_ended_amount = 0;
             foreach ($ended as $item) {
-                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_ended_count'] += 1;
+                $monthArray[(int)date('n',strtotime($item->updated_at))]['total_ended_count'] += 1;
                 //$total_ended_amount += $item->advanced_payment;
-                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_ended_amount'] += $item->advanced_payment;
+                $monthArray[(int)date('n',strtotime($item->updated_at))]['total_ended_amount'] += $item->advanced_payment;
             }
             // ? total opportunite
             $opportunite = DB::table('documents')
