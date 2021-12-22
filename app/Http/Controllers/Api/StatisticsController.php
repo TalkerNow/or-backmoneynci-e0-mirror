@@ -259,20 +259,24 @@ class StatisticsController extends Controller
                 ->where('document_state', 'En attente')
                 ->get();
             foreach ($waiting as $item) {
-                switch ($item->subscribe_services) {
-                    case stristr($item->subscribe_services, 'CH'):
+                    if (stristr($item->subscribe_services, 'CH')) {
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
-                    case stristr($item->subscribe_services, 'SIMU'):
+                    }
+                    if (stristr($item->subscribe_services, 'SIMU')) {
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
-                    case stristr($item->subscribe_services, 'AR'):
+                    }
+                    if (stristr($item->subscribe_services, 'AR')) {
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['AR'] += 1;
-                    case stristr($item->subscribe_services, 'TFD'):
+                    }
+                    if (stristr($item->subscribe_services, 'TFD')) {
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['TFD'] += 1;
-                    case stristr($item->subscribe_services, 'ACTU'):
+                    }
+                    if (stristr($item->subscribe_services, 'ACTU')) {
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
-                    case stristr($item->subscribe_services, 'RAC'):
+                    }
+                    if (stristr($item->subscribe_services, 'RAC')) {
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
-                }
+                    }   
             }
           $running = DB::table('documents')
           ->whereYear('updated_at', '=', $year)
