@@ -254,7 +254,7 @@ class StatisticsController extends Controller
                 ->where('document_state', 'En attente')
                 ->get();
             foreach ($waiting as $item) {
-                switch ($item) {
+                switch ($item->subscribe_services) {
                     case str_contains($item->subscribe_services, 'CH'): 
                         $monthWaitingArray[(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
                     case str_contains($item->subscribe_services, 'SIMU'):
@@ -274,7 +274,7 @@ class StatisticsController extends Controller
           ->where('document_state', 'En cours')
           ->get();
           foreach ($running as $item) {
-            switch ($item) {
+            switch ($item->subscribe_services) {
                 case str_contains($item->subscribe_services, 'CH'): 
                     $monthRunningArray[(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
                 case str_contains($item->subscribe_services, 'SIMU'):
@@ -294,7 +294,7 @@ class StatisticsController extends Controller
           ->where('document_state', 'Termine')
           ->get();
           foreach ($ended as $item) {
-            switch ($item) {
+            switch ($item->subscribe_services) {
                 case str_contains($item->subscribe_services, 'CH'): 
                     $monthEndedArray[(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
                 case str_contains($item->subscribe_services, 'SIMU'):
