@@ -259,22 +259,22 @@ class StatisticsController extends Controller
                 ->where('document_state', 'En attente')
                 ->get();
             foreach ($waiting as $item) {
-                if (strpos($item->subscribe_services, 'CH') == false) {
+                if (strpos($item->subscribe_services, 'CH') !== false) {
                     $monthArray[0][(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
                 }
-                if (strpos($item->subscribe_services, ' SIMU') == false) {
+                if (strpos($item->subscribe_services, ' SIMU') !== false) {
                     $monthArray[0][(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
                 }
-                if (strpos($item->subscribe_services, 'AR') == false) {
+                if (strpos($item->subscribe_services, 'AR') !== false) {
                     $monthArray[0][(int)date('n',strtotime($item->updated_at))]['AR'] += 1;
                 }
-                if (strpos($item->subscribe_services, 'TFD') == false) {
+                if (strpos($item->subscribe_services, 'TFD') !== false) {
                     $monthArray[0][(int)date('n',strtotime($item->updated_at))]['TFD'] += 1;
                 }
-                if (strpos($item->subscribe_services, 'ACTU') == false) {
+                if (strpos($item->subscribe_services, 'ACTU') !== false) {
                     $monthArray[0][(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
                 }
-                if (strpos($item->subscribe_services, 'RAC') == false) {
+                if (strpos($item->subscribe_services, 'RAC') !== false) {
                     $monthArray[0][(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
                 }
             }
@@ -283,22 +283,22 @@ class StatisticsController extends Controller
           ->where('document_state', 'En cours')
           ->get();
           foreach ($running as $item) {
-            if (strpos($item->subscribe_services, 'CH') == false) {
+            if (strpos($item->subscribe_services, 'CH') !== false) {
                 $monthArray[1][(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
             }
-            if (strpos($item->subscribe_services, ' SIMU') == false) {
+            if (strpos($item->subscribe_services, ' SIMU') !== false) {
                 $monthArray[1][(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
             }
-            if (strpos($item->subscribe_services, 'AR') == false) {
+            if (strpos($item->subscribe_services, 'AR') !== false) {
                 $monthArray[1][(int)date('n',strtotime($item->updated_at))]['AR'] += 1;
             }
-            if (strpos($item->subscribe_services, 'TFD') == false) {
+            if (strpos($item->subscribe_services, 'TFD') !== false) {
                 $monthArray[1][(int)date('n',strtotime($item->updated_at))]['TFD'] += 1;
             }
-            if (strpos($item->subscribe_services, 'ACTU') == false) {
+            if (strpos($item->subscribe_services, 'ACTU') !== false) {
                 $monthArray[1][(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
             }
-            if (strpos($item->subscribe_services, 'RAC') == false) {
+            if (strpos($item->subscribe_services, 'RAC') !== false) {
                 $monthArray[1][(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
             }
         }
@@ -307,22 +307,22 @@ class StatisticsController extends Controller
           ->where('document_state', 'Termine')
           ->get();
           foreach ($ended as $item) {
-            if (strpos($item->subscribe_services, 'CH') == false) {
+            if (strpos($item->subscribe_services, 'CH') !== false) {
                 $monthArray[2][(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
             }
-            if (strpos($item->subscribe_services, ' SIMU') == false) {
+            if (strpos($item->subscribe_services, ' SIMU') !== false) {
                 $monthArray[2][(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
             }
-            if (strpos($item->subscribe_services, 'AR') == false) {
+            if (strpos($item->subscribe_services, 'AR') !== false) {
                 $monthArray[2][(int)date('n',strtotime($item->updated_at))]['AR'] += 1;
             }
-            if (strpos($item->subscribe_services, 'TFD') == false) {
+            if (strpos($item->subscribe_services, 'TFD') !== false) {
                 $monthArray[2][(int)date('n',strtotime($item->updated_at))]['TFD'] += 1;
             }
-            if (strpos($item->subscribe_services, 'ACTU') == false) {
+            if (strpos($item->subscribe_services, 'ACTU') !== false) {
                 $monthArray[2][(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
             }
-            if (strpos($item->subscribe_services, 'RAC') == false) {
+            if (strpos($item->subscribe_services, 'RAC') !== false) {
                 $monthArray[2][(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
             }
         }
