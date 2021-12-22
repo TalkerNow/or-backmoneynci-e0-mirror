@@ -177,10 +177,10 @@ class StatisticsController extends Controller
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 1)
                 ->get();
-            $monthArray[(int)date('n',strtotime($item->updated_at))]['current_acompte_count'] += count($acompte);
             //$total_current_acompte_count = count($acompte);
            // $total_current_acompte_amount = 0;
             foreach ($acompte as $item) {
+                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_acompte_count'] += 1;
                 //$total_current_acompte_amount += $item->pre_payment;
                 $monthArray[(int)date('n',strtotime($item->updated_at))]['current_acompte_amount'] += $item->pre_payment;
             }
@@ -190,10 +190,10 @@ class StatisticsController extends Controller
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 2)
                 ->get();
-            $monthArray[(int)date('n',strtotime($item->updated_at))]['current_solde_count'] += count($solde);
             //$total_current_solde_count = count($solde);
             //$total_current_solde_amount = 0;
             foreach ($solde as $item) {
+                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_solde_count'] += 1;
                // $total_current_solde_amount += $item->end_payment;
                 $monthArray[(int)date('n',strtotime($item->updated_at))]['current_solde_amount'] += $item->end_payment;
             }
@@ -203,10 +203,10 @@ class StatisticsController extends Controller
                 ->where('document_state', 'Termine')
                 ->where('status_payment', 2)
                 ->get();
-            $monthArray[(int)date('n',strtotime($item->updated_at))]['current_solde_count'] += count($ended);
             //$total_ended_count = count($ended);
            // $total_ended_amount = 0;
             foreach ($ended as $item) {
+                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_ended_count'] += 1;
                 //$total_ended_amount += $item->advanced_payment;
                 $monthArray[(int)date('n',strtotime($item->updated_at))]['current_ended_amount'] += $item->advanced_payment;
             }
@@ -215,10 +215,10 @@ class StatisticsController extends Controller
                 ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'En attente')
                 ->get();
-            $monthArray[(int)date('n',strtotime($item->updated_at))]['current_opportunite_count'] += count($opportunite);
            // $opportunite_count = count($opportunite);
            // $opportunite_amount = 0;
             foreach ($opportunite as $item) {
+               $monthArray[(int)date('n',strtotime($item->updated_at))]['current_opportunite_count'] += 1;
                // $opportunite_amount += $item->advanced_payment;
                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_opportunite_amount'] += $item->advanced_payment;
             }
