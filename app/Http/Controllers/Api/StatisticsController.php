@@ -232,7 +232,7 @@ class StatisticsController extends Controller
     }
     public function getPrestation(Request $request) 
     {
-        $year = isset($request->year) ? $request->year : date("y");
+        $year = isset($request->year) ? $request->year : 2021;
         $monthData = array (
             'CH' => 0,
             'SIMU' => 0,
@@ -259,24 +259,20 @@ class StatisticsController extends Controller
                 ->where('document_state', 'En attente')
                 ->get();
             foreach ($waiting as $item) {
-                    if (stristr($item->subscribe_services, 'CH')) {
+                switch ($item->subscribe_services) {
+                    case stristr($item->subscribe_services, 'CH'):
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
-                    }
-                    if (stristr($item->subscribe_services, 'SIMU')) {
+                    case stristr($item->subscribe_services, 'SIMU'):
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
-                    }
-                    if (stristr($item->subscribe_services, 'AR')) {
+                    case stristr($item->subscribe_services, 'AR'):
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['AR'] += 1;
-                    }
-                    if (stristr($item->subscribe_services, 'TFD')) {
+                    case stristr($item->subscribe_services, 'TFD'):
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['TFD'] += 1;
-                    }
-                    if (stristr($item->subscribe_services, 'ACTU')) {
+                    case stristr($item->subscribe_services, 'ACTU'):
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
-                    }
-                    if (stristr($item->subscribe_services, 'RAC')) {
+                    case stristr($item->subscribe_services, 'RAC'):
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
-                    }   
+                }
             }
           $running = DB::table('documents')
           ->whereYear('updated_at', '=', $year)
