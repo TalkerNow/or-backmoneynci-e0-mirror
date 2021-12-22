@@ -218,9 +218,9 @@ class StatisticsController extends Controller
            // $opportunite_count = count($opportunite);
            // $opportunite_amount = 0;
             foreach ($opportunite as $item) {
-               $monthArray[(int)date('n',strtotime($item->updated_at))]['current_opportunite_count'] += 1;
+               $monthArray[(int)date('n',strtotime($item->updated_at))]['opportunite_count'] += 1;
                // $opportunite_amount += $item->advanced_payment;
-               $monthArray[(int)date('n',strtotime($item->updated_at))]['current_opportunite_amount'] += $item->advanced_payment;
+               $monthArray[(int)date('n',strtotime($item->updated_at))]['opportunite_amount'] += $item->advanced_payment;
             }
             // ? total paid amount for no month selected
             // TODO $total_current_amount = $total_current_acompte_amount + $total_current_solde_amount;
