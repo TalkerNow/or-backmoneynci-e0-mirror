@@ -249,6 +249,11 @@ class StatisticsController extends Controller
             $monthRunningArray[$x] = $monthData;
             $monthEndedArray[$x] = $monthData;
           }
+        $monthArray = array(3);
+        $monthArray[0] = $monthWaitingArray;
+        $monthArray[1] = $monthRunningArray;
+        $monthArray[2] = $monthEndedArray;
+
           $waiting = DB::table('documents')
                 ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'En attente')
@@ -256,18 +261,17 @@ class StatisticsController extends Controller
             foreach ($waiting as $item) {
                 switch ($item->subscribe_services) {
                     case str_contains($item->subscribe_services, 'CH'): 
-                        $monthWaitingArray[(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
+                        $monthArray[0][(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
                     case str_contains($item->subscribe_services, 'SIMU'):
-                        $monthWaitingArray[(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
+                        $monthArray[0][(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
                     case str_contains($item->subscribe_services, 'AR'):
-                        $monthWaitingArray[(int)date('n',strtotime($item->updated_at))]['AR'] += 1;
+                        $monthArray[0][(int)date('n',strtotime($item->updated_at))]['AR'] += 1;
                     case str_contains($item->subscribe_services, 'TFD'):
-                        $monthWaitingArray[(int)date('n',strtotime($item->updated_at))]['TFD'] += 1;
+                        $monthArray[0][(int)date('n',strtotime($item->updated_at))]['TFD'] += 1;
                     case str_contains($item->subscribe_services, 'ACTU'):
-                        $monthWaitingArray[(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
+                        $monthArray[0][(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
                     case str_contains($item->subscribe_services, 'RAC'):
-                        $monthWaitingArray[(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
-                    break;
+                        $monthArray[0][(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
                 }
             }
           $running = DB::table('documents')
@@ -277,18 +281,17 @@ class StatisticsController extends Controller
           foreach ($running as $item) {
             switch ($item->subscribe_services) {
                 case str_contains($item->subscribe_services, 'CH'): 
-                    $monthRunningArray[(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
+                    $monthArray[1][(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
                 case str_contains($item->subscribe_services, 'SIMU'):
-                    $monthRunningArray[(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
+                    $monthArray[1][(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
                 case str_contains($item->subscribe_services, 'AR'):
-                    $monthRunningArray[(int)date('n',strtotime($item->updated_at))]['AR'] += 1;
+                    $monthArray[1][(int)date('n',strtotime($item->updated_at))]['AR'] += 1;
                 case str_contains($item->subscribe_services, 'TFD'):
-                    $monthRunningArray[(int)date('n',strtotime($item->updated_at))]['TFD'] += 1;
+                    $monthArray[1][(int)date('n',strtotime($item->updated_at))]['TFD'] += 1;
                 case str_contains($item->subscribe_services, 'ACTU'):
-                    $monthRunningArray[(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
+                    $monthArray[1][(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
                 case str_contains($item->subscribe_services, 'RAC'):
-                    $monthRunningArray[(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
-                break;
+                    $monthArray[1][(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
             }
         }
           $ended = DB::table('documents')
@@ -298,24 +301,19 @@ class StatisticsController extends Controller
           foreach ($ended as $item) {
             switch ($item->subscribe_services) {
                 case str_contains($item->subscribe_services, 'CH'): 
-                    $monthEndedArray[(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
+                    $monthArray[2][(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
                 case str_contains($item->subscribe_services, 'SIMU'):
-                    $monthEndedArray[(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
+                    $monthArray[2][(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
                 case str_contains($item->subscribe_services, 'AR'):
-                    $monthEndedArray[(int)date('n',strtotime($item->updated_at))]['AR'] += 1;
+                    $monthArray[2][(int)date('n',strtotime($item->updated_at))]['AR'] += 1;
                 case str_contains($item->subscribe_services, 'TFD'):
-                    $monthEndedArray[(int)date('n',strtotime($item->updated_at))]['TFD'] += 1;
+                    $monthArray[2][(int)date('n',strtotime($item->updated_at))]['TFD'] += 1;
                 case str_contains($item->subscribe_services, 'ACTU'):
-                    $monthEndedArray[(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
+                    $monthArray[2][(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
                 case str_contains($item->subscribe_services, 'RAC'):
-                    $monthEndedArray[(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
-                break;
+                    $monthArray[2][(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
             }
         }
-        $monthArray = array(3);
-        $monthArray[0] = $monthWaitingArray;
-        $monthArray[1] = $monthRunningArray;
-        $monthArray[2] = $monthEndedArray;
         return json_encode($monthArray);
     }
     public function getPaymentList(Request $request)
