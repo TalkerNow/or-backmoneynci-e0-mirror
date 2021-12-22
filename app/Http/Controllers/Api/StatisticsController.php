@@ -171,7 +171,6 @@ class StatisticsController extends Controller
         for($x = 1; $x < 13; $x++) {
             $monthArray[$x] = $monthData;
           }
-          return json_encode($monthArray);
             // ?  acompte em cours
             $acompte = DB::table('documents')
                 ->whereYear('updated_at', '=', $year)
