@@ -160,7 +160,7 @@ class StatisticsController extends Controller
     {
         $year = isset($request->year) ? $request->year : date("y");
         $monthData = array(
-            'clients_count' => 0, 'clients_count_list' =>0,
+            'clients_count' => 0,
             'current_total_count' => 0, 'current_total_amount' => 0,
             'total_ended_count' => 0, 'total_ended_amount' => 0,
             'current_acompte_count' => 0, 'current_acompte_amount' => 0,
@@ -171,7 +171,16 @@ class StatisticsController extends Controller
         for($x = 1; $x < 13; $x++) {
             $monthArray[$x] = $monthData;
           }
-            // ?  acompte em cours
+        // ? client count
+          $clients = DB::table('users')
+          ->whereYear('created_at', '=', $year)
+          ->where('role', 'Client')
+          ->get();
+          foreach ($clients as $item) {
+            $monthArray[(int)date('n',strtotime($item->created_at))]['clients_count'] += 1;
+          }
+            
+        // ?  acompte em cours
             $acompte = DB::table('documents')
                 ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'En cours')
