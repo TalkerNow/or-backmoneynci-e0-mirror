@@ -172,65 +172,68 @@ class StatisticsController extends Controller
             $monthArray[$x] = $monthData;
           }
             // ?  acompte em cours
-            // ! add date
             $acompte = DB::table('documents')
                 ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 1)
                 ->get();
-            $total_current_acompte_count = count($acompte);
-            $total_current_acompte_amount = 0;
+            $monthArray[(int)date('n',strtotime($item->updated_at))]['current_acompte_count'] += count($acompte);
+            //$total_current_acompte_count = count($acompte);
+           // $total_current_acompte_amount = 0;
             foreach ($acompte as $item) {
-                $total_current_acompte_amount += $item->pre_payment;
+                //$total_current_acompte_amount += $item->pre_payment;
+                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_acompte_amount'] += $item->pre_payment;
             }
             // ?  sold en cours
-            // ! add date
             $solde = DB::table('documents')
                 ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 2)
                 ->get();
-            $total_current_solde_count = count($solde);
-            $total_current_solde_amount = 0;
+            $monthArray[(int)date('n',strtotime($item->updated_at))]['current_solde_count'] += count($solde);
+            //$total_current_solde_count = count($solde);
+            //$total_current_solde_amount = 0;
             foreach ($solde as $item) {
-                $total_current_solde_amount += $item->end_payment; // TODO total current amount doesn't exist
-                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_total_amount'] += $item->end_payment;
+               // $total_current_solde_amount += $item->end_payment;
+                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_solde_amount'] += $item->end_payment;
             }
             // ? terminer
-            // ! add date 
             $ended = DB::table('documents')
                 ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'Termine')
                 ->where('status_payment', 2)
                 ->get();
-            $total_ended_count = count($ended);
-            $total_ended_amount = 0;
+            $monthArray[(int)date('n',strtotime($item->updated_at))]['current_solde_count'] += count($ended);
+            //$total_ended_count = count($ended);
+           // $total_ended_amount = 0;
             foreach ($ended as $item) {
-                $total_ended_amount += $item->advanced_payment;
+                //$total_ended_amount += $item->advanced_payment;
+                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_ended_amount'] += $item->advanced_payment;
             }
             // ? total opportunite
-            // ! add date
             $opportunite = DB::table('documents')
                 ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'En attente')
                 ->get();
-            $opportunite_count = count($opportunite);
-            $opportunite_amount = 0;
+            $monthArray[(int)date('n',strtotime($item->updated_at))]['current_opportunite_count'] += count($opportunite);
+           // $opportunite_count = count($opportunite);
+           // $opportunite_amount = 0;
             foreach ($opportunite as $item) {
-                $opportunite_amount += $item->advanced_payment;
+               // $opportunite_amount += $item->advanced_payment;
+               $monthArray[(int)date('n',strtotime($item->updated_at))]['current_opportunite_amount'] += $item->advanced_payment;
             }
             // ? total paid amount for no month selected
             $total_current_amount = $total_current_acompte_amount + $total_current_solde_amount;
             $total_current_count = $total_current_solde_count + $total_current_acompte_count;
 
             return json_encode($monthArray);
-            return response()->json([
-                'current_total_count' => $total_current_count, 'current_total_amount' => $total_current_amount,
-                'total_ended_count' => $total_ended_count, 'total_ended_amount' => $total_ended_amount,
-                'current_acompte_count' => $total_current_acompte_count, 'current_acompte_amount' => $total_current_acompte_amount,
-                'current_solde_count' => $total_current_solde_count, 'current_solde_amount' => $total_current_solde_amount,
-                'opportunite_count' => $opportunite_count,'opportunite_amount' => $opportunite_amount,
-            ]);
+            // return response()->json([
+            //     'current_total_count' => $total_current_count, 'current_total_amount' => $total_current_amount,
+            //     'total_ended_count' => $total_ended_count, 'total_ended_amount' => $total_ended_amount,
+            //     'current_acompte_count' => $total_current_acompte_count, 'current_acompte_amount' => $total_current_acompte_amount,
+            //     'current_solde_count' => $total_current_solde_count, 'current_solde_amount' => $total_current_solde_amount,
+            //     'opportunite_count' => $opportunite_count,'opportunite_amount' => $opportunite_amount,
+            // ]);
     }
     public function getPaymentList(Request $request)
     {
