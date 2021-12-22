@@ -167,7 +167,7 @@ class StatisticsController extends Controller
             'current_solde_count' => 0, 'current_solde_amount' => 0,
             'opportunite_count' => 0,'opportunite_amount' => 0,
         );
-        $monthArray = array(1=> 13);
+        $monthArray = array(1 => 13);
         for($x = 1; $x < 13; $x++) {
             $monthArray[$x] = $monthData;
           }
@@ -190,11 +190,8 @@ class StatisticsController extends Controller
                     ->where('status_payment', 2);
                 })
                 ->get();
-            //$total_current_acompte_count = count($acompte);
-           // $total_current_acompte_amount = 0;
             foreach ($acompte as $item) {
                 $monthArray[(int)date('n',strtotime($item->updated_at))]['current_acompte_count'] += 1;
-                //$total_current_acompte_amount += $item->pre_payment;
                 $monthArray[(int)date('n',strtotime($item->updated_at))]['current_acompte_amount'] += $item->pre_payment;
             }
             // ?  sold en cours
@@ -203,11 +200,8 @@ class StatisticsController extends Controller
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 2)
                 ->get();
-            //$total_current_solde_count = count($solde);
-            //$total_current_solde_amount = 0;
             foreach ($solde as $item) {
                 $monthArray[(int)date('n',strtotime($item->updated_at))]['current_solde_count'] += 1;
-               // $total_current_solde_amount += $item->end_payment;
                 $monthArray[(int)date('n',strtotime($item->updated_at))]['current_solde_amount'] += $item->end_payment;
             }
             // ? terminer
@@ -216,11 +210,8 @@ class StatisticsController extends Controller
                 ->where('document_state', 'Termine')
                 ->where('status_payment', 2)
                 ->get();
-            //$total_ended_count = count($ended);
-           // $total_ended_amount = 0;
             foreach ($ended as $item) {
                 $monthArray[(int)date('n',strtotime($item->updated_at))]['total_ended_count'] += 1;
-                //$total_ended_amount += $item->advanced_payment;
                 $monthArray[(int)date('n',strtotime($item->updated_at))]['total_ended_amount'] += $item->advanced_payment;
             }
             // ? total opportunite
@@ -228,29 +219,114 @@ class StatisticsController extends Controller
                 ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'En attente')
                 ->get();
-           // $opportunite_count = count($opportunite);
-           // $opportunite_amount = 0;
             foreach ($opportunite as $item) {
                $monthArray[(int)date('n',strtotime($item->updated_at))]['opportunite_count'] += 1;
-               // $opportunite_amount += $item->advanced_payment;
                $monthArray[(int)date('n',strtotime($item->updated_at))]['opportunite_amount'] += $item->advanced_payment;
             }
             for($x = 1; $x < 13; $x++) {
             $monthArray[$x]['current_total_count'] = $monthArray[$x]['current_acompte_count'];
             $monthArray[$x]['current_total_amount'] = $monthArray[$x]['current_acompte_amount'] + $monthArray[$x]['current_solde_amount'];
           }
-            // ? total paid amount for no month selected
-            // TODO $total_current_amount = $total_current_acompte_amount + $total_current_solde_amount;
-            // TODO $total_current_count = $total_current_solde_count + $total_current_acompte_count;
 
             return json_encode($monthArray);
-            // return response()->json([
-            //     'current_total_count' => $total_current_count, 'current_total_amount' => $total_current_amount,
-            //     'total_ended_count' => $total_ended_count, 'total_ended_amount' => $total_ended_amount,
-            //     'current_acompte_count' => $total_current_acompte_count, 'current_acompte_amount' => $total_current_acompte_amount,
-            //     'current_solde_count' => $total_current_solde_count, 'current_solde_amount' => $total_current_solde_amount,
-            //     'opportunite_count' => $opportunite_count,'opportunite_amount' => $opportunite_amount,
-            // ]);
+    }
+    public function getPrestation(Request $request) 
+    {
+        $year = isset($request->year) ? $request->year : 2021;
+        $monthData = array (
+            'CH' => 0,
+            'SIMU' => 0,
+            'AR' => 0,
+            'TFD' => 0,
+            'ACTU' => 0,
+            'RAC' => 0
+        );
+        $monthWaitingArray = array(1 => 13);
+        $monthRunningArray = array(1 => 13);
+        $monthEndedArray = array(1 => 13);
+        for($x = 1; $x < 13; $x++) {
+            $monthWaitingArray[$x] = $monthData;
+            $monthRunningArray[$x] = $monthData;
+            $monthEndedArray[$x] = $monthData;
+          }
+        $monthArray = array(3);
+        $monthArray[0] = $monthWaitingArray;
+        $monthArray[1] = $monthRunningArray;
+        $monthArray[2] = $monthEndedArray;
+
+          $waiting = DB::table('documents')
+                ->whereYear('updated_at', '=', $year)
+                ->where('document_state', 'En attente')
+                ->get();
+            foreach ($waiting as $item) {
+                if (strpos($item->subscribe_services, 'CH') !== false) {
+                    $monthArray[0][(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
+                }
+                if (strpos($item->subscribe_services, ' SIMU') !== false) {
+                    $monthArray[0][(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
+                }
+                if (strpos($item->subscribe_services, 'AR') !== false) {
+                    $monthArray[0][(int)date('n',strtotime($item->updated_at))]['AR'] += 1;
+                }
+                if (strpos($item->subscribe_services, 'TFD') !== false) {
+                    $monthArray[0][(int)date('n',strtotime($item->updated_at))]['TFD'] += 1;
+                }
+                if (strpos($item->subscribe_services, 'ACTU') !== false) {
+                    $monthArray[0][(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
+                }
+                if (strpos($item->subscribe_services, 'RAC') !== false) {
+                    $monthArray[0][(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
+                }
+            }
+          $running = DB::table('documents')
+          ->whereYear('updated_at', '=', $year)
+          ->where('document_state', 'En cours')
+          ->get();
+          foreach ($running as $item) {
+            if (strpos($item->subscribe_services, 'CH') !== false) {
+                $monthArray[1][(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
+            }
+            if (strpos($item->subscribe_services, ' SIMU') !== false) {
+                $monthArray[1][(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
+            }
+            if (strpos($item->subscribe_services, 'AR') !== false) {
+                $monthArray[1][(int)date('n',strtotime($item->updated_at))]['AR'] += 1;
+            }
+            if (strpos($item->subscribe_services, 'TFD') !== false) {
+                $monthArray[1][(int)date('n',strtotime($item->updated_at))]['TFD'] += 1;
+            }
+            if (strpos($item->subscribe_services, 'ACTU') !== false) {
+                $monthArray[1][(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
+            }
+            if (strpos($item->subscribe_services, 'RAC') !== false) {
+                $monthArray[1][(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
+            }
+        }
+          $ended = DB::table('documents')
+          ->whereYear('updated_at', '=', $year)
+          ->where('document_state', 'Termine')
+          ->get();
+          foreach ($ended as $item) {
+            if (strpos($item->subscribe_services, 'CH') !== false) {
+                $monthArray[2][(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
+            }
+            if (strpos($item->subscribe_services, ' SIMU') !== false) {
+                $monthArray[2][(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
+            }
+            if (strpos($item->subscribe_services, 'AR') !== false) {
+                $monthArray[2][(int)date('n',strtotime($item->updated_at))]['AR'] += 1;
+            }
+            if (strpos($item->subscribe_services, 'TFD') !== false) {
+                $monthArray[2][(int)date('n',strtotime($item->updated_at))]['TFD'] += 1;
+            }
+            if (strpos($item->subscribe_services, 'ACTU') !== false) {
+                $monthArray[2][(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
+            }
+            if (strpos($item->subscribe_services, 'RAC') !== false) {
+                $monthArray[2][(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
+            }
+        }
+        return json_encode($monthArray);
     }
     public function getPaymentList(Request $request)
     {
