@@ -260,7 +260,7 @@ class StatisticsController extends Controller
                 ->get();
             foreach ($waiting as $item) {
                 switch ($item->subscribe_services) {
-                    case str_contain($item->subscribe_services, 'CH') !== FALSE:
+                    case stristr($item->subscribe_services, 'CH') !== FALSE:
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
                     case stristr($item->subscribe_services, 'SIMU') !== FALSE:
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
