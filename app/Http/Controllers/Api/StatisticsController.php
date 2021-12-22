@@ -312,7 +312,7 @@ class StatisticsController extends Controller
         $monthArray = array(3);
         $monthArray[0] = $monthWaitingArray;
         $monthArray[1] = $monthRunningArray;
-        $monthArray[2] = $monthEndedgArray;
+        $monthArray[2] = $monthEndedArray;
         return json_encode($monthArray);
     }
     public function getPaymentList(Request $request)
