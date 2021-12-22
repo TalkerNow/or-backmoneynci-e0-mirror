@@ -193,8 +193,8 @@ class StatisticsController extends Controller
             $total_current_solde_count = count($solde);
             $total_current_solde_amount = 0;
             foreach ($solde as $item) {
-                $total_current_solde_amount += $item->end_payment;
-                $monthArray[(int)date('n',strtotime($item->updated_at))]['total_current_amount'] += $item->end_payment;
+                $total_current_solde_amount += $item->end_payment; // TODO total current amount doesn't exist
+                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_total_amount'] += $item->end_payment;
             }
             // ? terminer
             // ! add date 
