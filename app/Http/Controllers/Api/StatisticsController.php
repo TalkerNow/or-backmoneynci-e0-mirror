@@ -253,7 +253,7 @@ class StatisticsController extends Controller
                 ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'En attente')
                 ->get();
-            foreach ($monthWaitingArray as $item) {
+            foreach ($waiting as $item) {
                 switch ($item) {
                     case str_contains($item->subscribe_services, 'CH'): 
                         $monthWaitingArray[(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
@@ -273,7 +273,7 @@ class StatisticsController extends Controller
           ->whereYear('updated_at', '=', $year)
           ->where('document_state', 'En cours')
           ->get();
-          foreach ($monthRunningArray as $item) {
+          foreach ($running as $item) {
             switch ($item) {
                 case str_contains($item->subscribe_services, 'CH'): 
                     $monthRunningArray[(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
@@ -293,7 +293,7 @@ class StatisticsController extends Controller
           ->whereYear('updated_at', '=', $year)
           ->where('document_state', 'Termine')
           ->get();
-          foreach ($monthEndedArray as $item) {
+          foreach ($ended as $item) {
             switch ($item) {
                 case str_contains($item->subscribe_services, 'CH'): 
                     $monthEndedArray[(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
