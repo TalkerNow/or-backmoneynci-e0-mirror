@@ -260,17 +260,17 @@ class StatisticsController extends Controller
                 ->get();
             foreach ($waiting as $item) {
                 switch ($item->subscribe_services) {
-                    case str_contains($item->subscribe_services, 'CH'): 
+                    case stristr($item->subscribe_services, 'CH'):
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
-                    case str_contains($item->subscribe_services, 'SIMU'):
+                    case stristr($item->subscribe_services, 'SIMU'):
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
-                    case str_contains($item->subscribe_services, 'AR'):
+                    case stristr($item->subscribe_services, 'AR'):
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['AR'] += 1;
-                    case str_contains($item->subscribe_services, 'TFD'):
+                    case stristr($item->subscribe_services, 'TFD'):
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['TFD'] += 1;
-                    case str_contains($item->subscribe_services, 'ACTU'):
+                    case stristr($item->subscribe_services, 'ACTU'):
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
-                    case str_contains($item->subscribe_services, 'RAC'):
+                    case stristr($item->subscribe_services, 'RAC'):
                         $monthArray[0][(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
                 }
             }
@@ -280,17 +280,17 @@ class StatisticsController extends Controller
           ->get();
           foreach ($running as $item) {
             switch ($item->subscribe_services) {
-                case str_contains($item->subscribe_services, 'CH'): 
+                case stristr($item->subscribe_services, 'CH'):
                     $monthArray[1][(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
-                case str_contains($item->subscribe_services, 'SIMU'):
+                case stristr($item->subscribe_services, 'SIMU'):
                     $monthArray[1][(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
-                case str_contains($item->subscribe_services, 'AR'):
+                case stristr($item->subscribe_services, 'AR'):
                     $monthArray[1][(int)date('n',strtotime($item->updated_at))]['AR'] += 1;
-                case str_contains($item->subscribe_services, 'TFD'):
+                case stristr($item->subscribe_services, 'TFD'):
                     $monthArray[1][(int)date('n',strtotime($item->updated_at))]['TFD'] += 1;
-                case str_contains($item->subscribe_services, 'ACTU'):
+                case stristr($item->subscribe_services, 'ACTU'):
                     $monthArray[1][(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
-                case str_contains($item->subscribe_services, 'RAC'):
+                case stristr($item->subscribe_services, 'RAC'):
                     $monthArray[1][(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
             }
         }
@@ -300,17 +300,17 @@ class StatisticsController extends Controller
           ->get();
           foreach ($ended as $item) {
             switch ($item->subscribe_services) {
-                case str_contains($item->subscribe_services, 'CH'): 
+                case stristr($item->subscribe_services, 'CH'): 
                     $monthArray[2][(int)date('n',strtotime($item->updated_at))]['CH'] += 1;
-                case str_contains($item->subscribe_services, 'SIMU'):
+                case stristr($item->subscribe_services, 'SIMU'):
                     $monthArray[2][(int)date('n',strtotime($item->updated_at))]['SIMU'] += 1;
-                case str_contains($item->subscribe_services, 'AR'):
+                case stristr($item->subscribe_services, 'AR'):
                     $monthArray[2][(int)date('n',strtotime($item->updated_at))]['AR'] += 1;
-                case str_contains($item->subscribe_services, 'TFD'):
+                case stristr($item->subscribe_services, 'TFD'):
                     $monthArray[2][(int)date('n',strtotime($item->updated_at))]['TFD'] += 1;
-                case str_contains($item->subscribe_services, 'ACTU'):
+                case stristr($item->subscribe_services, 'ACTU'):
                     $monthArray[2][(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
-                case str_contains($item->subscribe_services, 'RAC'):
+                case stristr($item->subscribe_services, 'RAC'):
                     $monthArray[2][(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
             }
         }
