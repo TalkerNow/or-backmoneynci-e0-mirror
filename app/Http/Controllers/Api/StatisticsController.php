@@ -15,7 +15,6 @@ class StatisticsController extends Controller
 {
     public function getStatistics(Request $request)
     {
-
         // ? ----- get clients count------
         $query = "SELECT * FROM users WHERE role='Client' ";
         $result = DB::select($query);
@@ -113,7 +112,6 @@ class StatisticsController extends Controller
     public function getStatisticsPerMonth(Request $request)
     {
         $thisyear = date("y");
-
         //------- get Acompte list --------
         $lst_acompte_amount = array();
         for ($month = 1; $month <= 12; $month++) {
@@ -160,62 +158,99 @@ class StatisticsController extends Controller
 
     public function getStatisticsTotalIncome(Request $request)
     {
-        $year = isset($request->year) ? $request->year : "tous";
-        $month = isset($request->month) ? $request->month : "tous";
-        
-            // ?  acompte em cours
-            // ! add date
+        $year = isset($request->year) ? $request->year : date("y");
+        $monthData = array(
+            'clients_count' => 0,
+            'current_total_count' => 0, 'current_total_amount' => 0,
+            'total_ended_count' => 0, 'total_ended_amount' => 0,
+            'current_acompte_count' => 0, 'current_acompte_amount' => 0,
+            'current_solde_count' => 0, 'current_solde_amount' => 0,
+            'opportunite_count' => 0,'opportunite_amount' => 0,
+        );
+        $monthArray = array(1=> 13);
+        for($x = 1; $x < 13; $x++) {
+            $monthArray[$x] = $monthData;
+          }
+        // ? client count
+          $clients = DB::table('users')
+          ->whereYear('created_at', '=', $year)
+          ->where('role', 'Client')
+          ->get();
+          foreach ($clients as $item) {
+            $monthArray[(int)date('n',strtotime($item->created_at))]['clients_count'] += 1;
+          }
+            
+        // ?  acompte em cours
             $acompte = DB::table('documents')
+                ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 1)
+                ->orWhere(function($query) {
+                    $query->where('document_state', 'En cours')
+                    ->where('status_payment', 2);
+                })
                 ->get();
-            $total_current_acompte_count = count($acompte);
-            $total_current_acompte_amount = 0;
+            //$total_current_acompte_count = count($acompte);
+           // $total_current_acompte_amount = 0;
             foreach ($acompte as $item) {
-                $total_current_acompte_amount += $item->pre_payment;
+                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_acompte_count'] += 1;
+                //$total_current_acompte_amount += $item->pre_payment;
+                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_acompte_amount'] += $item->pre_payment;
             }
             // ?  sold en cours
-            // ! add date
             $solde = DB::table('documents')
+                ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 2)
                 ->get();
-            $total_current_solde_count = count($solde);
-            $total_current_solde_amount = 0;
+            //$total_current_solde_count = count($solde);
+            //$total_current_solde_amount = 0;
             foreach ($solde as $item) {
-                $total_current_solde_amount += $item->end_payment;
+                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_solde_count'] += 1;
+               // $total_current_solde_amount += $item->end_payment;
+                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_solde_amount'] += $item->end_payment;
             }
             // ? terminer
-            // ! add date 
             $ended = DB::table('documents')
+                ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'Termine')
                 ->where('status_payment', 2)
                 ->get();
-            $total_ended_count = count($ended);
-            $total_ended_amount = 0;
+            //$total_ended_count = count($ended);
+           // $total_ended_amount = 0;
             foreach ($ended as $item) {
-                $total_ended_amount += $item->advanced_payment;
+                $monthArray[(int)date('n',strtotime($item->updated_at))]['total_ended_count'] += 1;
+                //$total_ended_amount += $item->advanced_payment;
+                $monthArray[(int)date('n',strtotime($item->updated_at))]['total_ended_amount'] += $item->advanced_payment;
             }
             // ? total opportunite
-            // ! add date
             $opportunite = DB::table('documents')
+                ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'En attente')
                 ->get();
-            $opportunite_count = count($opportunite);
-            $opportunite_amount = 0;
+           // $opportunite_count = count($opportunite);
+           // $opportunite_amount = 0;
             foreach ($opportunite as $item) {
-                $opportunite_amount += $item->advanced_payment;
+               $monthArray[(int)date('n',strtotime($item->updated_at))]['opportunite_count'] += 1;
+               // $opportunite_amount += $item->advanced_payment;
+               $monthArray[(int)date('n',strtotime($item->updated_at))]['opportunite_amount'] += $item->advanced_payment;
             }
+            for($x = 1; $x < 13; $x++) {
+            $monthArray[$x]['current_total_count'] = $monthArray[$x]['current_acompte_count'];
+            $monthArray[$x]['current_total_amount'] = $monthArray[$x]['current_acompte_amount'] + $monthArray[$x]['current_solde_amount'];
+          }
             // ? total paid amount for no month selected
-            $total_current_amount = $total_current_acompte_amount + $total_current_solde_amount;
-            $total_current_count = $total_current_solde_count + $total_current_acompte_count;
-            return response()->json([
-                'current_total_count' => $total_current_count, 'current_total_amount' => $total_current_amount,
-                'total_ended_count' => $total_ended_count, 'total_ended_amount' => $total_ended_amount,
-                'current_acompte_count' => $total_current_acompte_count, 'current_acompte_amount' => $total_current_acompte_amount,
-                'current_solde_count' => $total_current_solde_count, 'current_solde_amount' => $total_current_solde_amount,
-                'opportunite_count' => $opportunite_count,'opportunite_amount' => $opportunite_amount,
-            ]);
+            // TODO $total_current_amount = $total_current_acompte_amount + $total_current_solde_amount;
+            // TODO $total_current_count = $total_current_solde_count + $total_current_acompte_count;
+
+            return json_encode($monthArray);
+            // return response()->json([
+            //     'current_total_count' => $total_current_count, 'current_total_amount' => $total_current_amount,
+            //     'total_ended_count' => $total_ended_count, 'total_ended_amount' => $total_ended_amount,
+            //     'current_acompte_count' => $total_current_acompte_count, 'current_acompte_amount' => $total_current_acompte_amount,
+            //     'current_solde_count' => $total_current_solde_count, 'current_solde_amount' => $total_current_solde_amount,
+            //     'opportunite_count' => $opportunite_count,'opportunite_amount' => $opportunite_amount,
+            // ]);
     }
     public function getPaymentList(Request $request)
     {
