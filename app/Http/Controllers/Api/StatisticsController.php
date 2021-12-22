@@ -176,6 +176,7 @@ class StatisticsController extends Controller
                 ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 1)
+                ->where('status_payment', 2)
                 ->get();
             //$total_current_acompte_count = count($acompte);
            // $total_current_acompte_amount = 0;
