@@ -228,7 +228,7 @@ class StatisticsController extends Controller
             }
             for($x = 0; $x < 13; $x++) {
                 for($x = 0; $x < 13; $x++) {
-            $monthArray[$x]['current_total_count'] = $monthArray[$x]['current_acompte_count'] + $monthArray[$x]['current_solde_count'];
+            $monthArray[$x]['current_total_count'] = $monthArray[$x]['current_acompte_count'];
             $monthArray[$x]['current_total_amount'] = $monthArray[$x]['current_acompte_amount'] + $monthArray[$x]['current_solde_amount'];
           }
               }
