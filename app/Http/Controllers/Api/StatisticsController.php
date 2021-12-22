@@ -167,8 +167,8 @@ class StatisticsController extends Controller
             'current_solde_count' => 0, 'current_solde_amount' => 0,
             'opportunite_count' => 0,'opportunite_amount' => 0,
         );
-        $monthArray = array(1=> 13);
-        for($x = 0; $x < 13; $x++) {
+        $monthArray = array(1=> 12);
+        for($x = 1; $x < 12; $x++) {
             $monthArray[$x] = $monthData;
           }
             // ?  acompte em cours
@@ -226,12 +226,10 @@ class StatisticsController extends Controller
                // $opportunite_amount += $item->advanced_payment;
                $monthArray[(int)date('n',strtotime($item->updated_at))]['opportunite_amount'] += $item->advanced_payment;
             }
-            for($x = 0; $x < 13; $x++) {
-                for($x = 0; $x < 13; $x++) {
+            for($x = 1; $x < 12; $x++) {
             $monthArray[$x]['current_total_count'] = $monthArray[$x]['current_acompte_count'];
             $monthArray[$x]['current_total_amount'] = $monthArray[$x]['current_acompte_amount'] + $monthArray[$x]['current_solde_amount'];
           }
-              }
             // ? total paid amount for no month selected
             // TODO $total_current_amount = $total_current_acompte_amount + $total_current_solde_amount;
             // TODO $total_current_count = $total_current_solde_count + $total_current_acompte_count;
