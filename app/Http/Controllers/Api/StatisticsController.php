@@ -178,7 +178,7 @@ class StatisticsController extends Controller
                 ->where('status_payment', 1)
                 ->orWhere(function($query) {
                     $query->where('document_state', 'En cours')
-                    ->where('status_payment', 1);
+                    ->where('status_payment', 2);
                 })
                 ->get();
             //$total_current_acompte_count = count($acompte);
