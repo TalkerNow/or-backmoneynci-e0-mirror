@@ -223,8 +223,8 @@ class StatisticsController extends Controller
                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_opportunite_amount'] += $item->advanced_payment;
             }
             // ? total paid amount for no month selected
-            $total_current_amount = $total_current_acompte_amount + $total_current_solde_amount;
-            $total_current_count = $total_current_solde_count + $total_current_acompte_count;
+            // TODO $total_current_amount = $total_current_acompte_amount + $total_current_solde_amount;
+            // TODO $total_current_count = $total_current_solde_count + $total_current_acompte_count;
 
             return json_encode($monthArray);
             // return response()->json([
