@@ -267,6 +267,7 @@ class StatisticsController extends Controller
                         $monthWaitingArray[(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
                     case str_contains($item->subscribe_services, 'RAC'):
                         $monthWaitingArray[(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
+                    break;
                 }
             }
           $running = DB::table('documents')
@@ -287,6 +288,7 @@ class StatisticsController extends Controller
                     $monthRunningArray[(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
                 case str_contains($item->subscribe_services, 'RAC'):
                     $monthRunningArray[(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
+                break;
             }
         }
           $ended = DB::table('documents')
@@ -307,6 +309,7 @@ class StatisticsController extends Controller
                     $monthEndedArray[(int)date('n',strtotime($item->updated_at))]['ACTU'] += 1;
                 case str_contains($item->subscribe_services, 'RAC'):
                     $monthEndedArray[(int)date('n',strtotime($item->updated_at))]['RAC'] += 1;
+                break;
             }
         }
         $monthArray = array(3);
