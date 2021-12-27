@@ -344,6 +344,8 @@ class StatisticsController extends Controller
         $memberList = array(count($result));
         for($x = 0; $x < count($result); $x++) {
             $memberList[$x] = $memberData;
+            $memberList[$x]['id'] = $result[$x]['id'];
+            $memberList[$x]['name'] = $result[$x]['name'];
           }
           return json_encode($memberList);
     }
