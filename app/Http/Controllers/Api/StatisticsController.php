@@ -232,7 +232,7 @@ class StatisticsController extends Controller
     }
     public function getPrestation(Request $request) 
     {
-        $year = isset($request->year) ? $request->year : 2021;
+        $year = isset($request->year) ? $request->year : 2021; // TODO remplacer valeur en dure
         $monthData = array (
             'CH' => 0,
             'SIMU' => 0,
@@ -253,7 +253,7 @@ class StatisticsController extends Controller
         $monthArray[0] = $monthWaitingArray;
         $monthArray[1] = $monthRunningArray;
         $monthArray[2] = $monthEndedArray;
-
+// TODO optimiser 1 query au lieu de 3, utiliser des for et tableau au lieux de if
           $waiting = DB::table('documents')
                 ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'En attente')
@@ -328,6 +328,28 @@ class StatisticsController extends Controller
         }
         return json_encode($monthArray);
     }
+
+    public function getMembersPrestation(Request $request) {
+        $year = isset($request->year) ? $request->year : 2021;
+        $memberData = array (
+            'id' => 0,
+            'name' => 'name',
+            'Total' => 0,
+            'Termine' => 0,
+            'En cours' => 0,
+            'En attente' => 0,
+        );
+        $query = "SELECT * FROM users WHERE role='Expert' ";
+        $result = DB::select($query);
+        $memberList = array(count($result));
+        for($x = 0; $x < count($result); $x++) {
+            $memberList[$x] = $memberData;
+            $memberList[$x]['id'] = $result[$x]['id'];
+            $memberList[$x]['name'] = $result[$x]['name'];
+          }
+          return json_encode($memberList);
+    }
+    
     public function getPaymentList(Request $request)
     {
         // TODO
