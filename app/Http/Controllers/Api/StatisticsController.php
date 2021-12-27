@@ -339,14 +339,19 @@ class StatisticsController extends Controller
             'En cours' => 0,
             'En attente' => 0,
         );
-        $query = "SELECT * FROM users WHERE role='Expert' ";
+        $query = "SELECT * FROM users WHERE role='Expert'";
         $result = DB::select($query);
         $memberList = array(count($result));
         for($x = 0; $x < count($result); $x++) {
             $memberList[$x] = $memberData;
-            //$memberList[$x]['id'] = $result[$x]['id'];
-            $memberList[$x]['name'] = 'test';
           }
+        $i = 0;
+        foreach ($result as $item) {
+            $memberList[$i]['id'] = $item['id'];
+            $memberList[$i]['name'] = $item['name'];
+            $i++;
+        }
+       
           return json_encode($memberList);
     }
     
