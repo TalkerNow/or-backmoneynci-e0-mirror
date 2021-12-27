@@ -347,8 +347,8 @@ class StatisticsController extends Controller
           }
         $i = 0;
         foreach ($result as $item) {
-            $memberList[$i]['id'] = $item['id'];
-            $memberList[$i]['name'] = $item['name'];
+            $memberList[$i]['id'] = $item->id;
+            $memberList[$i]['name'] = $item->name;
             $i++;
         }
        
