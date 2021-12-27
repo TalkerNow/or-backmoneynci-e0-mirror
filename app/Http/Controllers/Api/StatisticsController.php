@@ -333,7 +333,7 @@ class StatisticsController extends Controller
         $year = isset($request->year) ? $request->year : 2021;
         $memberData = array (
             'id' => 0,
-            'name' => 'name',
+            'name' => '',
             'Total' => 0,
             'Termine' => 0,
             'En cours' => 0,
@@ -344,8 +344,6 @@ class StatisticsController extends Controller
         $memberList = array(count($result));
         for($x = 0; $x < count($result); $x++) {
             $memberList[$x] = $memberData;
-            $memberList[$x]['id'] = $result[$x]['id'];
-            $memberList[$x]['name'] = $result[$x]['name'];
           }
           return json_encode($memberList);
     }
