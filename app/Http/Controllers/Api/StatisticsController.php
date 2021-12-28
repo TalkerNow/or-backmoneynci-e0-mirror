@@ -344,6 +344,7 @@ class StatisticsController extends Controller
         $memberData = array (
             'id' => 0,
             'name' => '',
+            'total' => 0,
             'monthArray' => $monthArray,
         );
         $query = "SELECT * FROM users WHERE role='Expert'";
