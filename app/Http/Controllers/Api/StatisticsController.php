@@ -376,16 +376,16 @@ class StatisticsController extends Controller
                 ->get();
             foreach ($waiting as $item) {
                 if ($item->document_state === 'En attente') {
-                    $memberList[getKeyByID($memberList, $item->parent_id)]['monthArray'][(int)date('n',strtotime($item->updated_at))]['En attente'] += 1;
-                    $memberList[getKeyByID($memberList, $item->parent_id)]['total En attente'] += 1;
+                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['monthArray'][(int)date('n',strtotime($item->updated_at))]['En attente'] += 1;
+                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['total En attente'] += 1;
                 }
                 if ($item->document_state === 'En cours') {
-                    $memberList[getKeyByID($memberList, $item->parent_id)]['monthArray'][(int)date('n',strtotime($item->updated_at))]['En cours'] += 1;
-                    $memberList[getKeyByID($memberList, $item->parent_id)]['total En cours'] += 1;
+                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['monthArray'][(int)date('n',strtotime($item->updated_at))]['En cours'] += 1;
+                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['total En cours'] += 1;
                 }
                 if ($item->document_state === 'Termine') {
-                    $memberList[getKeyByID($memberList, $item->parent_id)]['monthArray'][(int)date('n',strtotime($item->updated_at))]['Termine'] += 1;
-                    $memberList[getKeyByID($memberList, $item->parent_id)]['total Termine'] += 1;
+                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['monthArray'][(int)date('n',strtotime($item->updated_at))]['Termine'] += 1;
+                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['total Termine'] += 1;
                 }
             }
           
