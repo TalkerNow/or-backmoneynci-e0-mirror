@@ -331,13 +331,20 @@ class StatisticsController extends Controller
 
     public function getMembersPrestation(Request $request) {
         $year = isset($request->year) ? $request->year : 2021;
-        $memberData = array (
-            'id' => 0,
-            'name' => '',
+        $monthData = array (
             'Total' => 0,
             'Termine' => 0,
             'En cours' => 0,
             'En attente' => 0,
+        );
+        $monthArray = array(1 => 13);
+        for($x = 1; $x < 13; $x++) {
+            $monthArray[$x] = $monthData;
+          }
+        $memberData = array (
+            'id' => 0,
+            'name' => '',
+            'monthArray' => $monthData,
         );
         $query = "SELECT * FROM users WHERE role='Expert'";
         $result = DB::select($query);
