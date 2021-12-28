@@ -232,7 +232,8 @@ class StatisticsController extends Controller
     }
     public function getPrestation(Request $request) 
     {
-        $year = isset($request->year) ? $request->year : (int) date('Y'); // TODO remplacer valeur en dure
+        $year = isset($request->year) ? $request->year : (int) date('Y');
+        return json_encode($year);
         $monthData = array (
             'CH' => 0,
             'SIMU' => 0,
