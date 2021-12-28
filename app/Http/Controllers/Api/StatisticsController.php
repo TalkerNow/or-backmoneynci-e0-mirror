@@ -329,10 +329,19 @@ class StatisticsController extends Controller
         return json_encode($monthArray);
     }
 
+    private function getKeyByID($array, $id) {
+        $num = 0;
+        for ($num; $num < $count($array); $num += 1) {
+            if ($array[$num]['id'] == $id) {
+                return $num;
+            }
+        }
+        return -1;
+    }
+
     public function getMembersPrestation(Request $request) {
         $year = isset($request->year) ? $request->year : (int) date('Y');
         $monthData = array (
-            'Total' => 0,
             'Termine' => 0,
             'En cours' => 0,
             'En attente' => 0,
@@ -344,7 +353,9 @@ class StatisticsController extends Controller
         $memberData = array (
             'id' => 0,
             'name' => '',
-            'total' => 0,
+            'total En cours' => 0,
+            'total En attente' => 0,
+            'total Termine' => 0,
             'monthArray' => $monthArray,
         );
         $query = "SELECT * FROM users WHERE role='Expert'";
@@ -360,6 +371,24 @@ class StatisticsController extends Controller
             $i++;
         }
         // TODO 
+        $waiting = DB::table('documents')
+                ->whereYear('updated_at', '=', $year)
+                ->get();
+            foreach ($waiting as $item) {
+                if ($item->document_state === 'En attente') {
+                    $memberList[getKeyByID($memberList, $item->parent_id)]['monthArray'][(int)date('n',strtotime($item->updated_at))]['En attente'] += 1;
+                    $memberList[getKeyByID($memberList, $item->parent_id)]['total En attente'] += 1;
+                }
+                if ($item->document_state === 'En cours') {
+                    $memberList[getKeyByID($memberList, $item->parent_id)]['monthArray'][(int)date('n',strtotime($item->updated_at))]['En cours'] += 1;
+                    $memberList[getKeyByID($memberList, $item->parent_id)]['total En cours'] += 1;
+                }
+                if ($item->document_state === 'Termine') {
+                    $memberList[getKeyByID($memberList, $item->parent_id)]['monthArray'][(int)date('n',strtotime($item->updated_at))]['Termine'] += 1;
+                    $memberList[getKeyByID($memberList, $item->parent_id)]['total Termine'] += 1;
+                }
+            }
+          
           return json_encode($memberList);
     }
     
