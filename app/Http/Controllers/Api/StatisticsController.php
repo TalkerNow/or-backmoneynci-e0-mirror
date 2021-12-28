@@ -232,7 +232,7 @@ class StatisticsController extends Controller
     }
     public function getPrestation(Request $request) 
     {
-        $year = isset($request->year) ? $request->year : 2021; // TODO remplacer valeur en dure
+        $year = isset($request->year) ? $request->year : (int) date('Y'); // TODO remplacer valeur en dure
         $monthData = array (
             'CH' => 0,
             'SIMU' => 0,
@@ -359,7 +359,7 @@ class StatisticsController extends Controller
             $memberList[$i]['name'] = $item->name;
             $i++;
         }
-       
+        // TODO 
           return json_encode($memberList);
     }
     
