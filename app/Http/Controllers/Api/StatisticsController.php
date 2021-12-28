@@ -233,7 +233,6 @@ class StatisticsController extends Controller
     public function getPrestation(Request $request) 
     {
         $year = isset($request->year) ? $request->year : (int) date('Y');
-        return json_encode($year);
         $monthData = array (
             'CH' => 0,
             'SIMU' => 0,
@@ -331,7 +330,7 @@ class StatisticsController extends Controller
     }
 
     public function getMembersPrestation(Request $request) {
-        $year = isset($request->year) ? $request->year : 2021;
+        $year = isset($request->year) ? $request->year : (int) date('Y');
         $monthData = array (
             'Total' => 0,
             'Termine' => 0,
@@ -366,7 +365,6 @@ class StatisticsController extends Controller
     
     public function getPaymentList(Request $request)
     {
-        // TODO
         $year = isset($request->year) ? $request->year : date('Y');
         $from = isset($request->from) ? $request->from : date("y-m-d", strtotime('-1 year'));
         $to = isset($request->to) ? $request->to : date("y-m-d");
