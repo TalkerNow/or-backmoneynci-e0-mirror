@@ -359,7 +359,7 @@ class StatisticsController extends Controller
             'total Termine' => 0,
             'monthArray' => $monthArray,
         );
-        $query = "SELECT * FROM users WHERE role='Expert' OR WHERE role='admin' OR WHERE role='Consultant'";
+        $query = "SELECT * FROM users WHERE role='Expert' OR role='admin' OR role='Consultant'";
         $result = DB::select($query);
         $memberList = array(count($result));
         for($x = 0; $x < count($result); $x++) {
