@@ -56,4 +56,6 @@ Route::namespace('App\Http\Controllers')->group(function () {
     Route::get('/get_statistics_total_income', 'Api\StatisticsController@getStatisticsTotalIncome')->name('get_statistics_total_income');
     Route::get('/get_payment_list', 'Api\StatisticsController@getPaymentList')->name('get_payment_list');
     Route::get('/getPrestation', 'Api\StatisticsController@getPrestation')->name('getPrestation');
+    Route::get('/getMembersPrestation', 'Api\StatisticsController@getMembersPrestation')->name('getMembersPrestation');
+
 });

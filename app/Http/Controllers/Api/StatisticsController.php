@@ -232,7 +232,7 @@ class StatisticsController extends Controller
     }
     public function getPrestation(Request $request) 
     {
-        $year = isset($request->year) ? $request->year : 2021;
+        $year = isset($request->year) ? $request->year : (int) date('Y');
         $monthData = array (
             'CH' => 0,
             'SIMU' => 0,
@@ -253,7 +253,7 @@ class StatisticsController extends Controller
         $monthArray[0] = $monthWaitingArray;
         $monthArray[1] = $monthRunningArray;
         $monthArray[2] = $monthEndedArray;
-
+// TODO optimiser 1 query au lieu de 3, utiliser des for et tableau au lieux de if
           $waiting = DB::table('documents')
                 ->whereYear('updated_at', '=', $year)
                 ->where('document_state', 'En attente')
@@ -328,9 +328,71 @@ class StatisticsController extends Controller
         }
         return json_encode($monthArray);
     }
+
+    private function getKeyByID($array, $id) {
+        $num = 0;
+        for ($num; $num < count($array); $num += 1) {
+            if ($array[$num]['id'] == $id) {
+                return $num;
+            }
+        }
+        return -1;
+    }
+
+    public function getMembersPrestation(Request $request) {
+        $year = isset($request->year) ? $request->year : (int) date('Y');
+        $monthData = array (
+            'Termine' => 0,
+            'En cours' => 0,
+            'En attente' => 0,
+        );
+        $monthArray = array(1 => 13);
+        for($x = 1; $x < 13; $x++) {
+            $monthArray[$x] = $monthData;
+          }
+        $memberData = array (
+            'id' => 0,
+            'name' => '',
+            'total En cours' => 0,
+            'total En attente' => 0,
+            'total Termine' => 0,
+            'monthArray' => $monthArray,
+        );
+        $query = "SELECT * FROM users WHERE role='Expert'";
+        $result = DB::select($query);
+        $memberList = array(count($result));
+        for($x = 0; $x < count($result); $x++) {
+            $memberList[$x] = $memberData;
+          }
+        $i = 0;
+        foreach ($result as $item) {
+            $memberList[$i]['id'] = $item->id;
+            $memberList[$i]['name'] = $item->name;
+            $i++;
+        }
+        $waiting = DB::table('documents')
+                ->whereYear('updated_at', '=', $year)
+                ->get();
+            foreach ($waiting as $item) {
+                if ($item->document_state === 'En attente') {
+                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['monthArray'][(int)date('n',strtotime($item->updated_at))]['En attente'] += 1;
+                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['total En attente'] += 1;
+                }
+                if ($item->document_state === 'En cours') {
+                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['monthArray'][(int)date('n',strtotime($item->updated_at))]['En cours'] += 1;
+                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['total En cours'] += 1;
+                }
+                if ($item->document_state === 'Termine') {
+                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['monthArray'][(int)date('n',strtotime($item->updated_at))]['Termine'] += 1;
+                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['total Termine'] += 1;
+                }
+            }
+          
+          return json_encode($memberList);
+    }
+    
     public function getPaymentList(Request $request)
     {
-        // TODO
         $year = isset($request->year) ? $request->year : date('Y');
         $from = isset($request->from) ? $request->from : date("y-m-d", strtotime('-1 year'));
         $to = isset($request->to) ? $request->to : date("y-m-d");
