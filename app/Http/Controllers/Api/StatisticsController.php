@@ -370,7 +370,6 @@ class StatisticsController extends Controller
             $memberList[$i]['name'] = $item->name;
             $i++;
         }
-        // TODO 
         $waiting = DB::table('documents')
                 ->whereYear('updated_at', '=', $year)
                 ->get();
