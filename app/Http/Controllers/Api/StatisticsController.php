@@ -353,12 +353,13 @@ class StatisticsController extends Controller
         $memberData = array (
             'id' => 0,
             'name' => '',
+            'role' => '',
             'total En cours' => 0,
             'total En attente' => 0,
             'total Termine' => 0,
             'monthArray' => $monthArray,
         );
-        $query = "SELECT * FROM users WHERE role='Expert'";
+        $query = "SELECT * FROM users WHERE role='Expert' OR role='admin' OR role='Consultant'";
         $result = DB::select($query);
         $memberList = array(count($result));
         for($x = 0; $x < count($result); $x++) {
@@ -368,6 +369,7 @@ class StatisticsController extends Controller
         foreach ($result as $item) {
             $memberList[$i]['id'] = $item->id;
             $memberList[$i]['name'] = $item->name;
+            $memberList[$i]['role'] = $item->role;
             $i++;
         }
         $waiting = DB::table('documents')
