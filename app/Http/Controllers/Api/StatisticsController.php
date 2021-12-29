@@ -336,7 +336,7 @@ class StatisticsController extends Controller
                 return $num;
             }
         }
-        return -1;
+        return null;
     }
 
     public function getMembersPrestation(Request $request) {
@@ -373,22 +373,22 @@ class StatisticsController extends Controller
         $waiting = DB::table('documents')
                 ->whereYear('updated_at', '=', $year)
                 ->get();
-            foreach ($waiting as $item) {
-                if ($item->document_state === 'En attente') {
-                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['monthArray'][(int)date('n',strtotime($item->updated_at))]['En attente'] += 1;
-                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['total En attente'] += 1;
-                }
-                if ($item->document_state === 'En cours') {
-                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['monthArray'][(int)date('n',strtotime($item->updated_at))]['En cours'] += 1;
-                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['total En cours'] += 1;
-                }
-                if ($item->document_state === 'Termine') {
-                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['monthArray'][(int)date('n',strtotime($item->updated_at))]['Termine'] += 1;
-                    $memberList[$this->getKeyByID($memberList, $item->parent_id)]['total Termine'] += 1;
-                }
+        foreach ($waiting as $item) {
+            $key = $this->getKeyByID($memberList, $item->parent_id);
+            if ($item->document_state === 'En attente' && $key != null) {
+                $memberList[$key]['monthArray'][(int)date('n',strtotime($item->updated_at))]['En attente'] += 1;
+                $memberList[$key]['total En attente'] += 1;
             }
-          
-          return json_encode($memberList);
+            if ($item->document_state === 'En cours' && $key != null) {
+                $memberList[$key]['monthArray'][(int)date('n',strtotime($item->updated_at))]['En cours'] += 1;
+                $memberList[$key]['total En cours'] += 1;
+            }
+            if ($item->document_state === 'Termine' && $key != null) {
+                $memberList[$key]['monthArray'][(int)date('n',strtotime($item->updated_at))]['Termine'] += 1;
+                $memberList[$key]['total Termine'] += 1;
+            }
+        }
+        return json_encode($memberList);
     }
     
     public function getPaymentList(Request $request)
