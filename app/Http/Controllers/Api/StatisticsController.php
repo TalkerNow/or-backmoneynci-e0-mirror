@@ -373,7 +373,7 @@ class StatisticsController extends Controller
             $i++;
         }
         $waiting = DB::table('documents')
-                ->whereYear('updated_at', '=', $year)
+                ->whereYear('created_at', '=', $year)
                 ->get();
         foreach ($waiting as $item) {
             $key = $this->getKeyByID($memberList, $item->parent_id);
