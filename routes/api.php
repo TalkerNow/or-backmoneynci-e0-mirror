@@ -51,11 +51,7 @@ Route::namespace('App\Http\Controllers')->group(function () {
     Route::get('/downloadFile', 'Api\FilesController@downloadFile')->name('downloadFile');
 
     //-------- statistics ---------
-    Route::get('/get_statistics', 'Api\StatisticsController@getStatistics')->name('get_statistics');
-    Route::get('/get_statistics_per_month', 'Api\StatisticsController@getStatisticsPerMonth')->name('get_statistics_per_month');
     Route::get('/get_statistics_total_income', 'Api\StatisticsController@getStatisticsTotalIncome')->name('get_statistics_total_income');
-    Route::get('/get_payment_list', 'Api\StatisticsController@getPaymentList')->name('get_payment_list');
     Route::get('/getPrestation', 'Api\StatisticsController@getPrestation')->name('getPrestation');
     Route::get('/getMembersPrestation', 'Api\StatisticsController@getMembersPrestation')->name('getMembersPrestation');
-
 });
