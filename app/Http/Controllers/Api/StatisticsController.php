@@ -182,7 +182,7 @@ class StatisticsController extends Controller
           }
         // ?  acompte em cours
             $acompte = DB::table('documents')
-                ->whereYear('created_at', '=', $year)
+                ->whereYear('created_at', date('Y'))
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 1)
                 ->orWhere(function($query) {
