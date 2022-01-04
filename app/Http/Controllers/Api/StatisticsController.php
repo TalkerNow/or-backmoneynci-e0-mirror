@@ -182,7 +182,7 @@ class StatisticsController extends Controller
           }
         // ?  acompte em cours
             $acompte = DB::table('documents')
-                ->whereYear('updated_at', '=', $year)
+                ->whereYear('created_at', '=', $year)
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 1)
                 ->orWhere(function($query) {
@@ -196,7 +196,7 @@ class StatisticsController extends Controller
             }
             // ?  sold en cours
             $solde = DB::table('documents')
-                ->whereYear('updated_at', '=', $year)
+                ->whereYear('created_at', '=', $year)
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 2)
                 ->get();
@@ -206,7 +206,7 @@ class StatisticsController extends Controller
             }
             // ? terminer
             $ended = DB::table('documents')
-                ->whereYear('updated_at', '=', $year)
+                ->whereYear('created_at', '=', $year)
                 ->where('document_state', 'Termine')
                 ->where('status_payment', 2)
                 ->get();
@@ -216,7 +216,7 @@ class StatisticsController extends Controller
             }
             // ? total opportunite
             $opportunite = DB::table('documents')
-                ->whereYear('updated_at', '=', $year)
+                ->whereYear('created_at', '=', $year)
                 ->where('document_state', 'En attente')
                 ->get();
             foreach ($opportunite as $item) {
@@ -255,7 +255,7 @@ class StatisticsController extends Controller
         $monthArray[2] = $monthEndedArray;
 // TODO optimiser 1 query au lieu de 3, utiliser des for et tableau au lieux de if
           $waiting = DB::table('documents')
-                ->whereYear('updated_at', '=', $year)
+                ->whereYear('created_at', '=', $year)
                 ->where('document_state', 'En attente')
                 ->get();
             foreach ($waiting as $item) {
@@ -279,7 +279,7 @@ class StatisticsController extends Controller
                 }
             }
           $running = DB::table('documents')
-          ->whereYear('updated_at', '=', $year)
+          ->whereYear('created_at', '=', $year)
           ->where('document_state', 'En cours')
           ->get();
           foreach ($running as $item) {
@@ -303,7 +303,7 @@ class StatisticsController extends Controller
             }
         }
           $ended = DB::table('documents')
-          ->whereYear('updated_at', '=', $year)
+          ->whereYear('created_at', '=', $year)
           ->where('document_state', 'Termine')
           ->get();
           foreach ($ended as $item) {
