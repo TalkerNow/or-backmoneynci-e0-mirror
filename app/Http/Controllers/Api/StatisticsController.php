@@ -191,8 +191,8 @@ class StatisticsController extends Controller
                 })
                 ->get();
             foreach ($acompte as $item) {
-                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_acompte_count'] += 1;
-                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_acompte_amount'] += $item->pre_payment;
+                $monthArray[(int)date('n',strtotime($item->created_at))]['current_acompte_count'] += 1;
+                $monthArray[(int)date('n',strtotime($item->created_at))]['current_acompte_amount'] += $item->pre_payment;
             }
             // ?  sold en cours
             $solde = DB::table('documents')
@@ -201,8 +201,8 @@ class StatisticsController extends Controller
                 ->where('status_payment', 2)
                 ->get();
             foreach ($solde as $item) {
-                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_solde_count'] += 1;
-                $monthArray[(int)date('n',strtotime($item->updated_at))]['current_solde_amount'] += $item->end_payment;
+                $monthArray[(int)date('n',strtotime($item->created_at))]['current_solde_count'] += 1;
+                $monthArray[(int)date('n',strtotime($item->created_at))]['current_solde_amount'] += $item->end_payment;
             }
             // ? terminer
             $ended = DB::table('documents')
@@ -211,8 +211,8 @@ class StatisticsController extends Controller
                 ->where('status_payment', 2)
                 ->get();
             foreach ($ended as $item) {
-                $monthArray[(int)date('n',strtotime($item->updated_at))]['total_ended_count'] += 1;
-                $monthArray[(int)date('n',strtotime($item->updated_at))]['total_ended_amount'] += $item->advanced_payment;
+                $monthArray[(int)date('n',strtotime($item->created_at))]['total_ended_count'] += 1;
+                $monthArray[(int)date('n',strtotime($item->created_at))]['total_ended_amount'] += $item->advanced_payment;
             }
             // ? total opportunite
             $opportunite = DB::table('documents')
@@ -220,8 +220,8 @@ class StatisticsController extends Controller
                 ->where('document_state', 'En attente')
                 ->get();
             foreach ($opportunite as $item) {
-               $monthArray[(int)date('n',strtotime($item->updated_at))]['opportunite_count'] += 1;
-               $monthArray[(int)date('n',strtotime($item->updated_at))]['opportunite_amount'] += $item->advanced_payment;
+               $monthArray[(int)date('n',strtotime($item->created_at))]['opportunite_count'] += 1;
+               $monthArray[(int)date('n',strtotime($item->created_at))]['opportunite_amount'] += $item->advanced_payment;
             }
             for($x = 1; $x < 13; $x++) {
             $monthArray[$x]['current_total_count'] = $monthArray[$x]['current_acompte_count'];
