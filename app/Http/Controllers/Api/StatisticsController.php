@@ -13,6 +13,7 @@ use DateTime;
 
 class StatisticsController extends Controller
 {
+    // TODO outdated
     public function getStatistics(Request $request)
     {
         // ? ----- get clients count------
@@ -179,11 +180,10 @@ class StatisticsController extends Controller
           foreach ($clients as $item) {
             $monthArray[(int)date('n',strtotime($item->created_at))]['clients_count'] += 1;
           }
-            
         // ?  acompte em cours
             $acompte = DB::table('documents')
                 ->whereYear('updated_at', '=', $year)
-                ->where('document_state', 'En cours')
+                ->where('-', 'En cours')
                 ->where('status_payment', 1)
                 ->orWhere(function($query) {
                     $query->where('document_state', 'En cours')
@@ -392,7 +392,7 @@ class StatisticsController extends Controller
         }
         return json_encode($memberList);
     }
-    
+    // TODO outdated
     public function getPaymentList(Request $request)
     {
         $year = isset($request->year) ? $request->year : date('Y');
