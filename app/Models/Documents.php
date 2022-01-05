@@ -17,7 +17,7 @@ class Documents extends Model
     protected $fillable = [
         'id', 'link_to_documents', 'type', 'document_state', 'comment',
         'advanced_payment','pre_payment', 'end_payment', 'status_payment','subscribe_services',
-        'values',  'user_id', 'parent_id',
+        'values',  'user_id', 'parent_id','deposite_date', 'sold_date'
     ];
     public function user() {
         return $this->belongsTo('App\Models\User', 'user_id');
