@@ -159,7 +159,7 @@ class StatisticsController extends Controller
 
     public function getStatisticsTotalIncome(Request $request)
     {
-        $year = isset($request->year) ? $request->year : date("y");
+        $year = isset($request->year) ? $request->year : (int) date("y");
         $monthData = array(
             'clients_count' => 0,
             'current_total_count' => 0, 'current_total_amount' => 0,
