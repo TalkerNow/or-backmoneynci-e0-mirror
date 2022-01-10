@@ -174,7 +174,7 @@ class StatisticsController extends Controller
           }
         // ? client count
           $clients = DB::table('users')
-          ->whereYear('created_at', '=', $year)
+          ->whereYear('created_at', $year)
           ->where('role', 'Client')
           ->get();
           foreach ($clients as $item) {
@@ -182,11 +182,11 @@ class StatisticsController extends Controller
           }
         // ?  acompte em cours
             $acompte = DB::table('documents')
-                ->whereYear('deposit_date', '=', $year)
+                ->whereYear('deposit_date', $year)
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 1)
                 ->orWhere(function($query) use($year){
-                    $query->whereYear('deposit_date', '=', $year)
+                    $query->whereYear('deposit_date', $year)
                     ->where('document_state', 'En cours')
                     ->where('status_payment', 2);
                 })
@@ -199,7 +199,7 @@ class StatisticsController extends Controller
             }
             // ?  sold en cours
             $solde = DB::table('documents')
-                ->whereYear('sold_date', '=', $year)
+                ->whereYear('sold_date', $year)
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 2)
                 ->get();
@@ -211,7 +211,7 @@ class StatisticsController extends Controller
             }
             // ? terminer
             $ended = DB::table('documents')
-                ->whereYear('sold_date', '=', $year)
+                ->whereYear('sold_date', $year)
                 ->where('document_state', 'Termine')
                 ->where('status_payment', 2)
                 ->get();
@@ -223,7 +223,7 @@ class StatisticsController extends Controller
             }
             // ? total opportunite
             $opportunite = DB::table('documents')
-                ->whereYear('created_at', '=', $year)
+                ->whereYear('created_at', $year)
                 ->where('document_state', 'En attente')
                 ->get();
             foreach ($opportunite as $item) {
@@ -380,7 +380,7 @@ class StatisticsController extends Controller
             $i++;
         }
         $waiting = DB::table('documents')
-                ->whereYear('updated_at', '=', $year)
+                ->whereYear('updated_at', $year)
                 ->get();
         foreach ($waiting as $item) {
             $key = $this->getKeyByID($memberList, $item->parent_id);
