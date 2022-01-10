@@ -159,7 +159,7 @@ class StatisticsController extends Controller
 
     public function getStatisticsTotalIncome(Request $request)
     {
-        $year = isset($request->year) ? $request->year : (int) date("y");
+        $year = isset($request->year) ? $request->year : now()->year ;
         $monthData = array(
             'clients_count' => 0,
             'current_total_count' => 0, 'current_total_amount' => 0,
@@ -239,7 +239,7 @@ class StatisticsController extends Controller
     }
     public function getPrestation(Request $request) 
     {
-        $year = isset($request->year) ? $request->year : (int) date('Y');
+        $year = isset($request->year) ? $request->year : now()->year;
         $monthData = array (
             'CH' => 0,
             'SIMU' => 0,
@@ -347,7 +347,7 @@ class StatisticsController extends Controller
     }
 
     public function getMembersPrestation(Request $request) {
-        $year = isset($request->year) ? $request->year : (int) date('Y');
+        $year = isset($request->year) ? $request->year : now()->year;
         $monthData = array (
             'Termine' => 0,
             'En cours' => 0,
