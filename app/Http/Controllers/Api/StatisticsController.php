@@ -185,7 +185,7 @@ class StatisticsController extends Controller
                 ->whereYear('created_at', '=', $year)
                 ->where('document_state', 'En cours')
                 ->where('status_payment', 1)
-                ->orWhere(function($query) {
+                ->orWhere(function($query) use($year){
                     $query->whereYear('created_at', '=', $year)
                     ->where('document_state', 'En cours')
                     ->where('status_payment', 2);
