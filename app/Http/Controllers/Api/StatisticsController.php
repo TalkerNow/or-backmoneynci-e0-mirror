@@ -40,8 +40,8 @@ class StatisticsController extends Controller
         // ?  acompte em cours
         $acompte = DB::table('documents')
             ->whereYear('deposit_date', $year)
-             ->where('document_state', '!=', 'En attente')
-            // ->where('status_payment', 1)
+            ->where('document_state', '!=', 'En attente')
+            ->where('status_payment', '!=', 0)
             // ->orWhere(function ($query) use ($year) {
             //     $query->whereYear('deposit_date', $year)
             //         ->where('document_state', 'En cours')
@@ -57,8 +57,8 @@ class StatisticsController extends Controller
         // ?  sold en cours
         $solde = DB::table('documents')
             ->whereYear('sold_date', $year)
-             ->where('document_state', '!=', 'En attente')
-            // ->where('status_payment', 2)
+            ->where('document_state', '!=', 'En attente')
+             ->where('status_payment', '>=', 2)
             ->get();
         foreach ($solde as $item) {
             if ($item->sold_date === null)
