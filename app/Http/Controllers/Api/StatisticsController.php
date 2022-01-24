@@ -18,7 +18,7 @@ class StatisticsController extends Controller
     {
         $year = isset($request->year) ? $request->year : now()->year;
         $monthData = array(
-            'clients_count' => 0,
+            'signed_count' => 0,
             'current_total_count' => 0, 'current_total_amount' => 0,
             'total_ended_count' => 0, 'total_ended_amount' => 0,
             'current_acompte_count' => 0, 'current_acompte_amount' => 0,
@@ -29,24 +29,21 @@ class StatisticsController extends Controller
         for ($x = 1; $x < 13; $x++) {
             $monthArray[$x] = $monthData;
         }
-        // ? client count
-        $clients = DB::table('users')
-            ->whereYear('created_at', $year)
-            ->where('role', 'Client')
-            ->get();
+        // ? signed client count
+        $clients = DB::table('documents')
+        ->whereYear('created_at', $year)
+        ->where('document_state', '!=', 'En attente')
+        ->get();
         foreach ($clients as $item) {
-            $monthArray[(int)date('n', strtotime($item->created_at))]['clients_count'] += 1;
+            if ($item->deposit_date === null)
+                continue;
+            $monthArray[(int)date('n', strtotime($item->created_at))]['signed_count'] += 1;
         }
         // ?  acompte em cours
         $acompte = DB::table('documents')
             ->whereYear('deposit_date', $year)
             ->where('document_state', '!=', 'En attente')
             ->where('status_payment', '!=', 0)
-            // ->orWhere(function ($query) use ($year) {
-            //     $query->whereYear('deposit_date', $year)
-            //         ->where('document_state', 'En cours')
-            //         ->where('status_payment', 2);
-            // })
             ->get();
         foreach ($acompte as $item) {
             if ($item->deposit_date === null)
