@@ -196,8 +196,7 @@ class StatisticsController extends Controller
 
     private function getKeyByID($array, $id)
     {
-        $num = 0;
-        for ($num; $num < count($array); $num += 1) {
+        for ($num = 0; $num < count($array); $num += 1) {
             if ($array[$num]['id'] == $id) {
                 return $num;
             }
@@ -241,6 +240,7 @@ class StatisticsController extends Controller
             $memberList[$i]['role'] = $item->role;
             $i++;
         }
+        // ? member info for waiting contracts
         $waiting = DB::table('documents')
             ->whereYear('created_at', $year)
             ->get();
@@ -252,9 +252,10 @@ class StatisticsController extends Controller
             }
             $creator = $this->getKeyByID($memberList, $item->creator_id);
             if ($creator =! null && $item->document_state === 'En attente') {
-                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
+                $memberList[0]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
             }
         }
+        // ? member info for running contracts
         $running = DB::table('documents')
             ->whereYear('deposit_date', $year)
             ->get();
@@ -269,6 +270,7 @@ class StatisticsController extends Controller
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
             }
         }
+        // ? member info for ended contracts
         $ended = DB::table('documents')
             ->whereYear('sold_date', $year)
             ->get();
