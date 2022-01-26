@@ -275,6 +275,8 @@ class StatisticsController extends Controller
             if ($item->creator_id === null)
                 continue;
             $creator = $this->getKeyByID($memberList,  $item->creator_id);
+            if ($creator === 4)
+                return $creator;
             if ($creator ==! null && $item->document_state === 'En cours') {
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer En cours'] += 1;
             }
