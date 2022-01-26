@@ -196,8 +196,11 @@ class StatisticsController extends Controller
 
     private function getKeyByID($array, $id)
     {
+        if ($id === null) {
+            return null;
+        }
         for ($num = 0; $num < count($array); $num += 1) {
-            if ($array[$num]['id'] === $id) {
+            if ($array[$num]['id'] == $id) {
                 return $num;
             }
         }
@@ -251,7 +254,7 @@ class StatisticsController extends Controller
                 // TODO AJOUTER CA EN ATTENTE
             }
             $creator = $this->getKeyByID($memberList, $item->creator_id);
-            if ($creator =! null) {
+            if ($creator =! null && $item->document_state === 'En attente') {
                 $memberList[(int)$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
             }
         }
@@ -265,10 +268,10 @@ class StatisticsController extends Controller
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->deposit_date))]['En cours'] += 1;
                 // TODO AJOUTER CA EN COURS
             }
-            // $creator = $this->getKeyByID($memberList, $item->creator_id);
-            // if ($creator =! null && $item->document_state === 'En cours') {
-            //     $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
-            // }
+            $creator = $this->getKeyByID($memberList, $item->creator_id);
+            if ($creator =! null && $item->document_state === 'En cours') {
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
+            }
         }
         // ? member info for ended contracts
         $ended = DB::table('documents')
@@ -280,10 +283,10 @@ class StatisticsController extends Controller
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->updated_at))]['Termine'] += 1;
                 // TODO AJOUTER CA TERMINER
             }
-            // $creator = $this->getKeyByID($memberList, $item->creator_id);
-            // if ($creator =! null && $item->document_state === 'Termine') {
-            //     $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
-            // }
+            $creator = $this->getKeyByID($memberList, $item->creator_id);
+            if ($creator =! null && $item->document_state === 'Termine') {
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
+            }
         }
         return json_encode($memberList);
     }
