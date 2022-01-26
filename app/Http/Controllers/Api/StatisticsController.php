@@ -197,7 +197,7 @@ class StatisticsController extends Controller
     private function getKeyByID($array, $id)
     {
         for ($num = 0; $num < count($array); $num += 1) {
-            if ($array[$num]['id'] == $id) {
+            if ($array[$num]['id'] === $id) {
                 return $num;
             }
         }
