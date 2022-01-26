@@ -255,9 +255,10 @@ class StatisticsController extends Controller
             }
             if ($item->creator_id === null)
                 continue;
+                json_encode($item->cretor_id);
             $creator = $this->getKeyByID($memberList,  $item->creator_id);
             if ($creator =! null && $item->document_state === 'En attente') {
-                $memberList[17]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
             }
         }
         // ? member info for running contracts
@@ -274,7 +275,7 @@ class StatisticsController extends Controller
                 continue;
             $creator = $this->getKeyByID($memberList,  $item->creator_id);
             if ($creator =! null && $item->document_state === 'En cours') {
-                $memberList[17]['monthArray'][(int)date('n', strtotime($item->deposit_date))]['creer'] += 1;
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->deposit_date))]['creer'] += 1;
             }
         }
         // ? member info for ended contracts
@@ -291,7 +292,7 @@ class StatisticsController extends Controller
                 continue;
             $creator = $this->getKeyByID($memberList, $item->creator_id);
             if ($creator =! null && $item->document_state === 'Termine') {
-                $memberList[17]['monthArray'][(int)date('n', strtotime($item->sold_date))]['creer'] += 1;
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->sold_date))]['creer'] += 1;
             }
         }
         return json_encode($memberList);
