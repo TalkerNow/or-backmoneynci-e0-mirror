@@ -242,24 +242,45 @@ class StatisticsController extends Controller
             $i++;
         }
         $waiting = DB::table('documents')
-            ->whereYear('updated_at', $year)
+            ->whereYear('created_at', $year)
             ->get();
         foreach ($waiting as $item) {
             $key = $this->getKeyByID($memberList, $item->parent_id);
             if ($item->document_state === 'En attente' && $key != null) {
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->created_at))]['En attente'] += 1;
+                // TODO AJOUTER CA EN ATTENTE
             }
+            $creator = $this->getKeyByID($memberList, $item->creator_id);
+            if ($creator =! null && $item->document_state === 'En attente') {
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
+            }
+        }
+        $running = DB::table('documents')
+            ->whereYear('deposit_date', $year)
+            ->get();
+        foreach ($running as $item) {
+            $key = $this->getKeyByID($memberList, $item->parent_id);
             if ($item->document_state === 'En cours' && $key != null) {
-                $memberList[$key]['monthArray'][(int)date('n', strtotime($item->updated_at))]['En cours'] += 1;
-                // $memberList[$key]['total En cours'] += 1;
+                $memberList[$key]['monthArray'][(int)date('n', strtotime($item->deposit_date))]['En cours'] += 1;
+                // TODO AJOUTER CA EN COURS
             }
+            $creator = $this->getKeyByID($memberList, $item->creator_id);
+            if ($creator =! null && $item->document_state === 'En cours') {
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
+            }
+        }
+        $ended = DB::table('documents')
+            ->whereYear('sold_date', $year)
+            ->get();
+        foreach ($ended as $item) {
+            $key = $this->getKeyByID($memberList, $item->parent_id);
             if ($item->document_state === 'Termine' && $key != null) {
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->updated_at))]['Termine'] += 1;
-                // $memberList[$key]['total Termine'] += 1;
+                // TODO AJOUTER CA TERMINER
             }
-            if ($key != null && $item->creator_id == $key) {
-                $memberList[$key]['monthArray'][(int)date('n', strtotime($item->updated_at))]['creer'] += 1;
-                // $memberList[$key]['total Termine'] += 1;
+            $creator = $this->getKeyByID($memberList, $item->creator_id);
+            if ($creator =! null && $item->document_state === 'Termine') {
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
             }
         }
         return json_encode($memberList);
