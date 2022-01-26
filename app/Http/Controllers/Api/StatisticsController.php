@@ -282,14 +282,14 @@ class StatisticsController extends Controller
             ->whereYear('sold_date', $year)
             ->get();
         foreach ($ended as $item) {
-            $key = $this->getKeyByID($memberList, 410);
+            $key = $this->getKeyByID($memberList, $item->parent_id);
             if ($item->document_state === 'Termine' && $key != null) {
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->sold_date))]['Termine'] += 1;
                 // TODO AJOUTER CA TERMINER
             }
             if ($item->creator_id === null)
                 continue;
-            $creator = $this->getKeyByID($memberList, $item->creator_id);
+            $creator = $this->getKeyByID($memberList, 410);
             if ($creator =! null && $item->document_state === 'Termine') {
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->sold_date))]['creer'] += 1;
             }
