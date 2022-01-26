@@ -255,7 +255,7 @@ class StatisticsController extends Controller
             }
             if ($item->creator_id === null)
                 continue;
-                json_encode($item->cretor_id);
+                return json_encode($item->cretor_id);
             $creator = $this->getKeyByID($memberList,  $item->creator_id);
             if ($creator =! null && $item->document_state === 'En attente') {
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
