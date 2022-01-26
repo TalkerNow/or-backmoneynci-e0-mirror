@@ -255,7 +255,7 @@ class StatisticsController extends Controller
             }
             if ($item->creator_id === null)
                 continue;
-            $creator = $this->getKeyByID($memberList, 4);
+            $creator = $this->getKeyByID($memberList, 410);
             if ($creator =! null && $item->document_state === 'En attente') {
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
             }
@@ -272,7 +272,7 @@ class StatisticsController extends Controller
             }
             if ($item->creator_id === null)
                 continue;
-            $creator = $this->getKeyByID($memberList, 4);
+            $creator = $this->getKeyByID($memberList, 410);
             if ($creator =! null && $item->document_state === 'En cours') {
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->deposit_date))]['creer'] += 1;
             }
@@ -282,7 +282,7 @@ class StatisticsController extends Controller
             ->whereYear('sold_date', $year)
             ->get();
         foreach ($ended as $item) {
-            $key = $this->getKeyByID($memberList, 4);
+            $key = $this->getKeyByID($memberList, 410);
             if ($item->document_state === 'Termine' && $key != null) {
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->sold_date))]['Termine'] += 1;
                 // TODO AJOUTER CA TERMINER
