@@ -270,6 +270,12 @@ class StatisticsController extends Controller
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->deposit_date))]['En cours'] += 1;
                 // TODO AJOUTER CA EN COURS
             }
+            if ($item->creator_id === null)
+                continue;
+            $creator = $this->getKeyByID($memberList,  $item->creator_id);
+            if ($creator ==! null && $item->document_state === 'En cours') {
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
+            }
         }
         // ? member info for ended contracts
         $ended = DB::table('documents')
