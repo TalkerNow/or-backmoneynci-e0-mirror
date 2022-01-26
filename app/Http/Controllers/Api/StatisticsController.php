@@ -255,7 +255,7 @@ class StatisticsController extends Controller
             }
             if ($item->creator_id === null)
                 continue;
-            $creator = $this->getKeyByID($memberList, 410);
+            $creator = $this->getKeyByID($memberList,  $item->creator_id);
             if ($creator =! null && $item->document_state === 'En attente') {
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
             }
@@ -272,7 +272,7 @@ class StatisticsController extends Controller
             }
             if ($item->creator_id === null)
                 continue;
-            $creator = $this->getKeyByID($memberList, 410);
+            $creator = $this->getKeyByID($memberList,  $item->creator_id);
             if ($creator =! null && $item->document_state === 'En cours') {
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->deposit_date))]['creer'] += 1;
             }
@@ -289,7 +289,7 @@ class StatisticsController extends Controller
             }
             if ($item->creator_id === null)
                 continue;
-            $creator = $this->getKeyByID($memberList, 410);
+            $creator = $this->getKeyByID($memberList, $item->creator_id);
             if ($creator =! null && $item->document_state === 'Termine') {
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->sold_date))]['creer'] += 1;
             }
