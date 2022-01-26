@@ -200,7 +200,7 @@ class StatisticsController extends Controller
             return null;
         }                                 
         for ($num = 0; $num < count($array); $num += 1) {
-            if ($array[$num]['id'] == $id) {
+            if ($array[$num]['id'] === $id) {
                 return $num;
             }
         }
