@@ -258,7 +258,7 @@ class StatisticsController extends Controller
             if ($item->creator_id === null)
                 continue;
             $creator = $this->getKeyByID($memberList,  $item->creator_id);
-            if ($creator =! null && $item->document_state === 'En attente') {
+            if ($creator !== null && $item->document_state === 'En attente') {
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer En attente'] += 1;
             }
         }
@@ -275,7 +275,7 @@ class StatisticsController extends Controller
             if ($item->creator_id === null)
                 continue;
             $creator = $this->getKeyByID($memberList,  $item->creator_id);
-            if ($creator =! null && $item->document_state === 'En cours') {
+            if ($creator !== null && $item->document_state === 'En cours') {
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer En cours'] += 1;
             }
         }
@@ -292,7 +292,7 @@ class StatisticsController extends Controller
             if ($item->creator_id === null)
                 continue;
             $creator = $this->getKeyByID($memberList,  $item->creator_id);
-            if ($creator =! null && $item->document_state === 'Termine') {
+            if ($creator !== null && $item->document_state === 'Termine') {
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->updated_at))]['creer Termine'] += 1;
             }
         }
