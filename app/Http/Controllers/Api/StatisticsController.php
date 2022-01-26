@@ -212,6 +212,7 @@ class StatisticsController extends Controller
             'Termine' => 0,
             'En cours' => 0,
             'En attente' => 0,
+            'creer' => 0,
         );
         $monthArray = array(1 => 13);
         for ($x = 1; $x < 13; $x++) {
@@ -224,6 +225,7 @@ class StatisticsController extends Controller
             'total En cours' => 0,
             'total En attente' => 0,
             'total Termine' => 0,
+            'total creer' => 0,
             'monthArray' => $monthArray,
         );
         $query = "SELECT * FROM users WHERE role='Expert' OR role='admin' OR role='Consultant'";
@@ -246,15 +248,18 @@ class StatisticsController extends Controller
             $key = $this->getKeyByID($memberList, $item->parent_id);
             if ($item->document_state === 'En attente' && $key != null) {
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->created_at))]['En attente'] += 1;
-                $memberList[$key]['total En attente'] += 1;
             }
             if ($item->document_state === 'En cours' && $key != null) {
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->updated_at))]['En cours'] += 1;
-                $memberList[$key]['total En cours'] += 1;
+                // $memberList[$key]['total En cours'] += 1;
             }
             if ($item->document_state === 'Termine' && $key != null) {
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->updated_at))]['Termine'] += 1;
-                $memberList[$key]['total Termine'] += 1;
+                // $memberList[$key]['total Termine'] += 1;
+            }
+            if ($key != null && $item->creator_id == $key) {
+                $memberList[$key]['monthArray'][(int)date('n', strtotime($item->updated_at))]['creer'] += 1;
+                // $memberList[$key]['total Termine'] += 1;
             }
         }
         return json_encode($memberList);
