@@ -214,7 +214,9 @@ class StatisticsController extends Controller
             'Termine' => 0,
             'En cours' => 0,
             'En attente' => 0,
-            'creer' => 0,
+            'creer En attente' => 0,
+            'creer En cours' => 0,
+            'creer Termine' => 0,
         );
         $monthArray = array(1 => 13);
         for ($x = 1; $x < 13; $x++) {
@@ -257,7 +259,7 @@ class StatisticsController extends Controller
                 continue;
             $creator = $this->getKeyByID($memberList,  $item->creator_id);
             if ($creator ==! null && $item->document_state === 'En attente') {
-                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer En attente'] += 1;
             }
         }
         // ? member info for running contracts
@@ -274,7 +276,7 @@ class StatisticsController extends Controller
                 continue;
             $creator = $this->getKeyByID($memberList,  $item->creator_id);
             if ($creator ==! null && $item->document_state === 'En cours') {
-                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer En cours'] += 1;
             }
         }
         // ? member info for ended contracts
@@ -291,7 +293,7 @@ class StatisticsController extends Controller
                 continue;
             $creator = $this->getKeyByID($memberList,  $item->creator_id);
             if ($creator ==! null && $item->document_state === 'Termine') {
-                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer Termine'] += 1;
             }
         }
         return json_encode($memberList);
