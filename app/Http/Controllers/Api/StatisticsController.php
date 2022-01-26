@@ -252,7 +252,7 @@ class StatisticsController extends Controller
             }
             $creator = $this->getKeyByID($memberList, $item->creator_id);
             if ($creator =! null && $item->document_state === 'En attente') {
-                $memberList[0]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
+                $memberList[(int)$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
             }
         }
         // ? member info for running contracts
