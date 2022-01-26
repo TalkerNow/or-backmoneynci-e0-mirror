@@ -255,7 +255,7 @@ class StatisticsController extends Controller
             }
             $creator = $this->getKeyByID($memberList, $item->creator_id);
             if ($creator =! null && $item->document_state === 'En attente') {
-                $memberList[(int)$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
             }
         }
         // ? member info for running contracts
@@ -270,7 +270,7 @@ class StatisticsController extends Controller
             }
             $creator = $this->getKeyByID($memberList, $item->creator_id);
             if ($creator =! null && $item->document_state === 'En cours') {
-                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->deposit_date))]['creer'] += 1;
             }
         }
         // ? member info for ended contracts
@@ -280,12 +280,12 @@ class StatisticsController extends Controller
         foreach ($ended as $item) {
             $key = $this->getKeyByID($memberList, $item->parent_id);
             if ($item->document_state === 'Termine' && $key != null) {
-                $memberList[$key]['monthArray'][(int)date('n', strtotime($item->updated_at))]['Termine'] += 1;
+                $memberList[$key]['monthArray'][(int)date('n', strtotime($item->sold_date))]['Termine'] += 1;
                 // TODO AJOUTER CA TERMINER
             }
             $creator = $this->getKeyByID($memberList, $item->creator_id);
             if ($creator =! null && $item->document_state === 'Termine') {
-                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer'] += 1;
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->sold_date))]['creer'] += 1;
             }
         }
         return json_encode($memberList);
