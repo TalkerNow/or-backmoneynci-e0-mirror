@@ -235,7 +235,7 @@ class StatisticsController extends Controller
             'total creer Termine' => 0,
             'total CA En cours' => 0,
             'total CA En attente' => 0,
-            'total CA Terminer' => 0,
+            'total CA Termine' => 0,
             'total CA creer En cours' => 0,
             'total CA creer En attente' => 0,
             'total CA creer Termine' => 0,
@@ -310,7 +310,6 @@ class StatisticsController extends Controller
             if ($creator !== null && $item->document_state === 'Termine') {
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->updated_at))]['creer Termine'] += 1;
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['CA creer Termine'] += $item->advanced_payment;
-
             }
         }
         return json_encode($memberList);
