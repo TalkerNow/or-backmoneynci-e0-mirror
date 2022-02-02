@@ -42,11 +42,6 @@ class StatisticsController extends Controller
             ->whereYear('deposit_date', $year)
             ->where('document_state', '!=', 'En attente')
             ->where('status_payment', '!=', 0)
-            // ->orWhere(function ($query) use ($year) {
-            //     $query->whereYear('deposit_date', $year)
-            //         ->where('document_state', 'En cours')
-            //         ->where('status_payment', 2);
-            // })
             ->get();
         foreach ($acompte as $item) {
             if ($item->deposit_date === null)
@@ -235,7 +230,15 @@ class StatisticsController extends Controller
             'total En cours' => 0,
             'total En attente' => 0,
             'total Termine' => 0,
-            'total creer' => 0,
+            'total creer En cours' => 0,
+            'total creer En attente' => 0,
+            'total creer Termine' => 0,
+            'total CA En cours' => 0,
+            'total CA En attente' => 0,
+            'total CA Terminer' => 0,
+            'total CA creer En cours' => 0,
+            'total CA creer En attente' => 0,
+            'total CA creer Termine' => 0,
             'monthArray' => $monthArray,
         );
         $query = "SELECT * FROM users WHERE role='Expert' OR role='admin' OR role='Consultant'";
