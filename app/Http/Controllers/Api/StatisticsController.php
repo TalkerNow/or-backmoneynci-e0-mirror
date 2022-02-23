@@ -20,7 +20,7 @@ class StatisticsController extends Controller
         $monthData = array(
             'clients_count' => 0,
             'current_total_count' => 0, 'current_total_amount' => 0,
-            'total_ended_count' => 0, 'total_ended_amount' => 0,
+            'total_ended_count' => 0,
             'current_acompte_count' => 0, 'current_acompte_amount' => 0,
             'current_solde_count' => 0, 'current_solde_amount' => 0,
             'opportunite_count' => 0, 'opportunite_amount' => 0,
@@ -42,11 +42,6 @@ class StatisticsController extends Controller
             ->whereYear('deposit_date', $year)
             ->where('document_state', '!=', 'En attente')
             ->where('status_payment', '!=', 0)
-            // ->orWhere(function ($query) use ($year) {
-            //     $query->whereYear('deposit_date', $year)
-            //         ->where('document_state', 'En cours')
-            //         ->where('status_payment', 2);
-            // })
             ->get();
         foreach ($acompte as $item) {
             if ($item->deposit_date === null)
@@ -68,15 +63,12 @@ class StatisticsController extends Controller
         }
         // ? terminer
         $ended = DB::table('documents')
-            ->whereYear('sold_date', $year)
+            ->whereYear('updated_at', $year)
             ->where('document_state', 'Termine')
             ->where('status_payment', 2)
             ->get();
         foreach ($ended as $item) {
-            if ($item->sold_date === null)
-                continue;
-            $monthArray[(int)date('n', strtotime($item->sold_date))]['total_ended_count'] += 1;
-            $monthArray[(int)date('n', strtotime($item->sold_date))]['total_ended_amount'] += $item->advanced_payment;
+            $monthArray[(int)date('n', strtotime($item->updated_at))]['total_ended_count'] += 1;
         }
         // ? total opportunite
         $opportunite = DB::table('documents')
@@ -91,7 +83,6 @@ class StatisticsController extends Controller
             $monthArray[$x]['current_total_count'] = $monthArray[$x]['current_acompte_count'];
             $monthArray[$x]['current_total_amount'] = $monthArray[$x]['current_acompte_amount'] + $monthArray[$x]['current_solde_amount'];
         }
-
         return json_encode($monthArray);
     }
 
@@ -144,31 +135,31 @@ class StatisticsController extends Controller
             }
         }
         $running = DB::table('documents')
-            ->whereYear('created_at', '=', $year)
+            ->whereYear('deposit_date', '=', $year)
             ->where('document_state', 'En cours')
             ->get();
         foreach ($running as $item) {
             if (strpos($item->subscribe_services, 'CH') !== false) {
-                $monthArray[1][(int)date('n', strtotime($item->updated_at))]['CH'] += 1;
+                $monthArray[1][(int)date('n', strtotime($item->deposit_date))]['CH'] += 1;
             }
             if (strpos($item->subscribe_services, ' SIMU') !== false) {
-                $monthArray[1][(int)date('n', strtotime($item->updated_at))]['SIMU'] += 1;
+                $monthArray[1][(int)date('n', strtotime($item->deposit_date))]['SIMU'] += 1;
             }
             if (strpos($item->subscribe_services, 'AR') !== false) {
-                $monthArray[1][(int)date('n', strtotime($item->updated_at))]['AR'] += 1;
+                $monthArray[1][(int)date('n', strtotime($item->deposit_date))]['AR'] += 1;
             }
             if (strpos($item->subscribe_services, 'TFD') !== false) {
-                $monthArray[1][(int)date('n', strtotime($item->updated_at))]['TFD'] += 1;
+                $monthArray[1][(int)date('n', strtotime($item->deposit_date))]['TFD'] += 1;
             }
             if (strpos($item->subscribe_services, 'ACTU') !== false) {
-                $monthArray[1][(int)date('n', strtotime($item->updated_at))]['ACTU'] += 1;
+                $monthArray[1][(int)date('n', strtotime($item->deposit_date))]['ACTU'] += 1;
             }
             if (strpos($item->subscribe_services, 'RAC') !== false) {
-                $monthArray[1][(int)date('n', strtotime($item->updated_at))]['RAC'] += 1;
+                $monthArray[1][(int)date('n', strtotime($item->deposit_date))]['RAC'] += 1;
             }
         }
         $ended = DB::table('documents')
-            ->whereYear('created_at', '=', $year)
+            ->whereYear('updated_at', '=', $year)
             ->where('document_state', 'Termine')
             ->get();
         foreach ($ended as $item) {
@@ -211,12 +202,18 @@ class StatisticsController extends Controller
     {
         $year = isset($request->year) ? $request->year : now()->year;
         $monthData = array(
-            'Termine' => 0,
-            'En cours' => 0,
             'En attente' => 0,
+            'En cours' => 0,
+            'Termine' => 0,           
+            'CA En attente' => 0,
+            'CA En cours' => 0,
+            'CA Termine' => 0,
             'creer En attente' => 0,
             'creer En cours' => 0,
             'creer Termine' => 0,
+            'CA creer En attente' => 0,
+            'CA creer En cours' => 0,
+            'CA creer Termine' => 0,
         );
         $monthArray = array(1 => 13);
         for ($x = 1; $x < 13; $x++) {
@@ -229,7 +226,15 @@ class StatisticsController extends Controller
             'total En cours' => 0,
             'total En attente' => 0,
             'total Termine' => 0,
-            'total creer' => 0,
+            'total creer En cours' => 0,
+            'total creer En attente' => 0,
+            'total creer Termine' => 0,
+            'total CA En cours' => 0,
+            'total CA En attente' => 0,
+            'total CA Termine' => 0,
+            'total CA creer En cours' => 0,
+            'total CA creer En attente' => 0,
+            'total CA creer Termine' => 0,
             'monthArray' => $monthArray,
         );
         $query = "SELECT * FROM users WHERE role='Expert' OR role='admin' OR role='Consultant'";
@@ -253,13 +258,15 @@ class StatisticsController extends Controller
             $key = $this->getKeyByID($memberList, $item->parent_id);
             if ($item->document_state === 'En attente' && $key != null) {
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->created_at))]['En attente'] += 1;
-                // TODO AJOUTER CA EN ATTENTE
+                $memberList[$key]['monthArray'][(int)date('n', strtotime($item->created_at))]['CA En attente'] += $item->advanced_payment;
             }
             if ($item->creator_id === null)
                 continue;
             $creator = $this->getKeyByID($memberList,  $item->creator_id);
             if ($creator !== null && $item->document_state === 'En attente') {
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer En attente'] += 1;
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['CA creer En attente'] += $item->advanced_payment;
+
             }
         }
         // ? member info for running contracts
@@ -270,13 +277,14 @@ class StatisticsController extends Controller
             $key = $this->getKeyByID($memberList, $item->parent_id);
             if ($item->document_state === 'En cours' && $key != null) {
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->deposit_date))]['En cours'] += 1;
-                // TODO AJOUTER CA EN COURS
+                $memberList[$key]['monthArray'][(int)date('n', strtotime($item->created_at))]['CA En cours'] += $item->advanced_payment;
             }
             if ($item->creator_id === null)
                 continue;
             $creator = $this->getKeyByID($memberList,  $item->creator_id);
             if ($creator !== null && $item->document_state === 'En cours') {
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer En cours'] += 1;
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['CA creer En cours'] += $item->advanced_payment;
             }
         }
         // ? member info for ended contracts
@@ -287,13 +295,14 @@ class StatisticsController extends Controller
             $key = $this->getKeyByID($memberList, $item->parent_id);
             if ($item->document_state === 'Termine' && $key != null) {
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->updated_at))]['Termine'] += 1;
-                // TODO AJOUTER CA TERMINER
+                $memberList[$key]['monthArray'][(int)date('n', strtotime($item->created_at))]['CA Termine'] += $item->advanced_payment;
             }
             if ($item->creator_id === null)
                 continue;
             $creator = $this->getKeyByID($memberList,  $item->creator_id);
             if ($creator !== null && $item->document_state === 'Termine') {
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->updated_at))]['creer Termine'] += 1;
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['CA creer Termine'] += $item->advanced_payment;
             }
         }
         return json_encode($memberList);
