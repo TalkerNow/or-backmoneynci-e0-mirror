@@ -256,7 +256,7 @@ class StatisticsController extends Controller
             ->get();
         foreach ($waiting as $item) {
             $key = $this->getKeyByID($memberList, $item->parent_id);
-            if ($item->document_state === 'En attente' && $key != null) {
+            if ($item->document_state === 'En attente' && $key !== null) {
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->created_at))]['En attente'] += 1;
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->created_at))]['CA En attente'] += $item->advanced_payment;
             }
@@ -275,7 +275,7 @@ class StatisticsController extends Controller
             ->get();
         foreach ($running as $item) {
             $key = $this->getKeyByID($memberList, $item->parent_id);
-            if ($item->document_state === 'En cours' && $key != null) {
+            if ($item->document_state === 'En cours' && $key !== null) {
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->deposit_date))]['En cours'] += 1;
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->deposit_date))]['CA En cours'] += $item->advanced_payment;
             }
@@ -293,7 +293,7 @@ class StatisticsController extends Controller
             ->get();
         foreach ($ended as $item) {
             $key = $this->getKeyByID($memberList, $item->parent_id);
-            if ($item->document_state === 'Termine' && $key != null) {
+            if ($item->document_state === 'Termine' && $key !== null) {
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->updated_at))]['Termine'] += 1;
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->updated_at))]['CA Termine'] += $item->advanced_payment;
             }
