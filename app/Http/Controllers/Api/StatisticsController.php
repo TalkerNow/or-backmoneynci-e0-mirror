@@ -277,14 +277,14 @@ class StatisticsController extends Controller
             $key = $this->getKeyByID($memberList, $item->parent_id);
             if ($item->document_state === 'En cours' && $key != null) {
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->deposit_date))]['En cours'] += 1;
-                $memberList[$key]['monthArray'][(int)date('n', strtotime($item->created_at))]['CA En cours'] += $item->advanced_payment;
+                $memberList[$key]['monthArray'][(int)date('n', strtotime($item->deposit_date))]['CA En cours'] += $item->advanced_payment;
             }
             if ($item->creator_id === null)
                 continue;
             $creator = $this->getKeyByID($memberList,  $item->creator_id);
             if ($creator !== null && $item->document_state === 'En cours') {
-                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer En cours'] += 1;
-                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['CA creer En cours'] += $item->advanced_payment;
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->deposit_date))]['creer En cours'] += 1;
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->deposit_date))]['CA creer En cours'] += $item->advanced_payment;
             }
         }
         // ? member info for ended contracts
@@ -295,14 +295,14 @@ class StatisticsController extends Controller
             $key = $this->getKeyByID($memberList, $item->parent_id);
             if ($item->document_state === 'Termine' && $key != null) {
                 $memberList[$key]['monthArray'][(int)date('n', strtotime($item->updated_at))]['Termine'] += 1;
-                $memberList[$key]['monthArray'][(int)date('n', strtotime($item->created_at))]['CA Termine'] += $item->advanced_payment;
+                $memberList[$key]['monthArray'][(int)date('n', strtotime($item->updated_at))]['CA Termine'] += $item->advanced_payment;
             }
             if ($item->creator_id === null)
                 continue;
             $creator = $this->getKeyByID($memberList,  $item->creator_id);
             if ($creator !== null && $item->document_state === 'Termine') {
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->updated_at))]['creer Termine'] += 1;
-                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['CA creer Termine'] += $item->advanced_payment;
+                $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->updated_at))]['CA creer Termine'] += $item->advanced_payment;
             }
         }
         return json_encode($memberList);
