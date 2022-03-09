@@ -117,6 +117,7 @@ class UsersController extends Controller
         if ($request['parent_id'] !== $user['parent_id']) {
             // TODO pour tous les contrats en attent ou en cours, si le parent_id change, il faut changer le parent id dans les contrat
             $documents = DB::table('documents')
+            ->where('user_id', $user->id)
             ->where('parent_id', $user->parent_id)
             ->where('document_state', '!=', 'Termine')
             ->get();
