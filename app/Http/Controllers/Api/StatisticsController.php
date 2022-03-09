@@ -273,31 +273,31 @@ class StatisticsController extends Controller
         foreach ($Total as $item) {
             $key = $this->getKeyByID($memberList, $item->parent_id);
             if ($item->document_state === 'En attente' && $key !== null) {
-                $memberList[$key]['totalData'][(int)date('n', strtotime($item->created_at))]['En attente'] += 1;
-                $memberList[$key]['totalData'][(int)date('n', strtotime($item->created_at))]['CA En attente'] += $item->advanced_payment;
+                $memberList[$key]['totalData']['En attente'] += 1;
+                $memberList[$key]['totalData']['CA En attente'] += $item->advanced_payment;
             }
             if ($item->document_state === 'En cours' && $key !== null) {
-                $memberList[$key]['totalData'][(int)date('n', strtotime($item->deposit_date))]['En cours'] += 1;
-                $memberList[$key]['totalData'][(int)date('n', strtotime($item->deposit_date))]['CA En cours'] += $item->advanced_payment;
+                $memberList[$key]['totalData']['En cours'] += 1;
+                $memberList[$key]['totalData']['CA En cours'] += $item->advanced_payment;
             }
             if ($item->document_state === 'Termine' && $key !== null) {
-                $memberList[$key]['totalData'][(int)date('n', strtotime($item->updated_at))]['Termine'] += 1;
-                $memberList[$key]['totalData'][(int)date('n', strtotime($item->updated_at))]['CA Termine'] += $item->advanced_payment;
+                $memberList[$key]['totalData']['Termine'] += 1;
+                $memberList[$key]['totalData']['CA Termine'] += $item->advanced_payment;
             }
             if ($item->creator_id === null)
                 continue;
             $creator = $this->getKeyByID($memberList,  $item->creator_id);
             if ($creator !== null && $item->document_state === 'En attente') {
-                $memberList[$creator]['totalData'][(int)date('n', strtotime($item->created_at))]['creer En attente'] += 1;
-                $memberList[$creator]['totalData'][(int)date('n', strtotime($item->created_at))]['CA creer En attente'] += $item->advanced_payment;
+                $memberList[$creator]['totalData']['creer En attente'] += 1;
+                $memberList[$creator]['totalData']['CA creer En attente'] += $item->advanced_payment;
             }
             if ($creator !== null && $item->document_state === 'En cours') {
-                $memberList[$creator]['totalData'][(int)date('n', strtotime($item->deposit_date))]['creer En cours'] += 1;
-                $memberList[$creator]['totalData'][(int)date('n', strtotime($item->deposit_date))]['CA creer En cours'] += $item->advanced_payment;
+                $memberList[$creator]['totalData']['creer En cours'] += 1;
+                $memberList[$creator]['totalData']['CA creer En cours'] += $item->advanced_payment;
             }
             if ($creator !== null && $item->document_state === 'Termine') {
-                $memberList[$creator]['totalData'][(int)date('n', strtotime($item->updated_at))]['creer Termine'] += 1;
-                $memberList[$creator]['totalData'][(int)date('n', strtotime($item->updated_at))]['CA creer Termine'] += $item->advanced_payment;
+                $memberList[$creator]['totalData']['creer Termine'] += 1;
+                $memberList[$creator]['totalData']['CA creer Termine'] += $item->advanced_payment;
             }
         }
         // ? member info for waiting contracts
