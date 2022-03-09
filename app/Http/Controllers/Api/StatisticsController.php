@@ -214,11 +214,27 @@ class StatisticsController extends Controller
             'CA creer En attente' => 0,
             'CA creer En cours' => 0,
             'CA creer Termine' => 0,
+            'Balance Client' => 0,
         );
         $monthArray = array(1 => 13);
         for ($x = 1; $x < 13; $x++) {
             $monthArray[$x] = $monthData;
         }
+        $totalData = array(
+            'En attente' => 0,
+            'En cours' => 0,
+            'Termine' => 0,           
+            'CA En attente' => 0,
+            'CA En cours' => 0,
+            'CA Termine' => 0,
+            'creer En attente' => 0,
+            'creer En cours' => 0,
+            'creer Termine' => 0,
+            'CA creer En attente' => 0,
+            'CA creer En cours' => 0,
+            'CA creer Termine' => 0,
+            'Balance Client' => 0,
+        );
         $memberData = array(
             'id' => 0,
             'name' => '',
@@ -236,6 +252,7 @@ class StatisticsController extends Controller
             'total CA creer En attente' => 0,
             'total CA creer Termine' => 0,
             'monthArray' => $monthArray,
+            'totalData' => $totalData,
         );
         $query = "SELECT * FROM users WHERE role='Expert' OR role='admin' OR role='Consultant'";
         $result = DB::select($query);
@@ -249,6 +266,39 @@ class StatisticsController extends Controller
             $memberList[$i]['name'] = $item->name;
             $memberList[$i]['role'] = $item->role;
             $i++;
+        }
+        // ? member info for all time contract
+        $Total = DB::table('documents')
+            ->get();
+        foreach ($Total as $item) {
+            $key = $this->getKeyByID($memberList, $item->parent_id);
+            if ($item->document_state === 'En attente' && $key !== null) {
+                $memberList[$key]['totalData'][(int)date('n', strtotime($item->created_at))]['En attente'] += 1;
+                $memberList[$key]['totalData'][(int)date('n', strtotime($item->created_at))]['CA En attente'] += $item->advanced_payment;
+            }
+            if ($item->document_state === 'En cours' && $key !== null) {
+                $memberList[$key]['totalData'][(int)date('n', strtotime($item->deposit_date))]['En cours'] += 1;
+                $memberList[$key]['totalData'][(int)date('n', strtotime($item->deposit_date))]['CA En cours'] += $item->advanced_payment;
+            }
+            if ($item->document_state === 'Termine' && $key !== null) {
+                $memberList[$key]['totalData'][(int)date('n', strtotime($item->updated_at))]['Termine'] += 1;
+                $memberList[$key]['totalData'][(int)date('n', strtotime($item->updated_at))]['CA Termine'] += $item->advanced_payment;
+            }
+            if ($item->creator_id === null)
+                continue;
+            $creator = $this->getKeyByID($memberList,  $item->creator_id);
+            if ($creator !== null && $item->document_state === 'En attente') {
+                $memberList[$creator]['totalData'][(int)date('n', strtotime($item->created_at))]['creer En attente'] += 1;
+                $memberList[$creator]['totalData'][(int)date('n', strtotime($item->created_at))]['CA creer En attente'] += $item->advanced_payment;
+            }
+            if ($creator !== null && $item->document_state === 'En cours') {
+                $memberList[$creator]['totalData'][(int)date('n', strtotime($item->deposit_date))]['creer En cours'] += 1;
+                $memberList[$creator]['totalData'][(int)date('n', strtotime($item->deposit_date))]['CA creer En cours'] += $item->advanced_payment;
+            }
+            if ($creator !== null && $item->document_state === 'Termine') {
+                $memberList[$creator]['totalData'][(int)date('n', strtotime($item->updated_at))]['creer Termine'] += 1;
+                $memberList[$creator]['totalData'][(int)date('n', strtotime($item->updated_at))]['CA creer Termine'] += $item->advanced_payment;
+            }
         }
         // ? member info for waiting contracts
         $waiting = DB::table('documents')
@@ -266,7 +316,6 @@ class StatisticsController extends Controller
             if ($creator !== null && $item->document_state === 'En attente') {
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['creer En attente'] += 1;
                 $memberList[$creator]['monthArray'][(int)date('n', strtotime($item->created_at))]['CA creer En attente'] += $item->advanced_payment;
-
             }
         }
         // ? member info for running contracts
