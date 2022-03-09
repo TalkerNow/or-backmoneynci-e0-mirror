@@ -8,7 +8,7 @@ use App\Models\User;
 use App\Models\OldClients;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-
+use App\Models\Documents;
 use DB;
 
 
@@ -23,12 +23,9 @@ class UsersController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-//        if ($auth->role != "admin")
-//            return response()->json(['error' => 'Unauthorized'], 401);
         if ($request->kind == 'oldclient'){
             if($auth->role == "admin" || $auth->role == "Consultant" || $auth->role == "Expert"){
                 $oldclients = OldClients::all();
-                //$infos = PersonalInformations::all();
                 return response()->json(['data' => $oldclients], 200); 
                 
                 return $oldclients->toJson(JSON_PRETTY_PRINT);
@@ -96,7 +93,7 @@ class UsersController extends Controller
         $user["personal_informations"] = $info;
         return $user->toJson(JSON_PRETTY_PRINT);
     }
-
+   // ? update information for an user, call by /api/users/id with PUT
     public function update(Request $request, $id)
     {
         try {
@@ -104,9 +101,7 @@ class UsersController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-
         $user = $this->get_user($id);
-
         if ($user == null)
             return response()->json(['error' => 'User does not exist'], 500);
         try {
@@ -114,18 +109,26 @@ class UsersController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-//        if ($auth->role != "admin" && $auth->id != $user->id)
-//            return response()->json(['error' => 'Unauthorized'], 401);
         $status = $request['status'];
         $status_fa = $request['status_fa'];
-        if(!($user->status_fa==$status_fa && $user->status==$status)) {
-            $request['status_update_date']= date("Y-m-d");
+        if(!($user->status_fa === $status_fa && $user->status === $status)) {
+            $request['status_update_date'] = date("Y-m-d");
         }
+        if ($request['parent_id'] !== $user['parent_id']) {
+            // TODO pour tous les contrats en attent ou en cours, si le parent_id change, il faut changer le parent id dans les contrat
+            $documents = DB::table('documents')
+            ->where('parent_id', $user->parent_id)
+            ->where('document_state', '!=', 'Termine')
+            ->get();
+            // $documents->parent_id=$request['parent_id'];
+            // $documents->save(); 
+            return json_encode($documents);
+        }
+        
         $user->update($request->all());
         if(isset($request->p_password))
             $user->update(['password'=>Hash::make($request->p_password)]);
     }
-
     public function destroy($id)
     {
         try {
