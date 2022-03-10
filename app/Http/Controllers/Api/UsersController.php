@@ -121,8 +121,8 @@ class UsersController extends Controller
             ->where('parent_id', $user->parent_id)
             ->where('document_state', '!=', 'Termine')
             ->get();
-            // $documents->parent_id=$request['parent_id'];
-            // $documents->save(); 
+            $documents->parent_id = $request['parent_id'];
+            $documents->save(); 
             return json_encode($documents);
         }
         
