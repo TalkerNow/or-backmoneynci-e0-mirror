@@ -115,7 +115,7 @@ class UsersController extends Controller
             $request['status_update_date'] = date("Y-m-d");
         }
         if ($request['parent_id'] !== $user['parent_id']) {
-            $documents = DB::table('documents')
+            DB::table('documents')
             ->where('user_id', $user->id)
             ->where('document_state', '!=', 'Termine')
             ->update(['parent_id' => $request['parent_id']]);
