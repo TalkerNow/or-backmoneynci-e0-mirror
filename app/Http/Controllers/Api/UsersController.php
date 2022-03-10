@@ -117,7 +117,6 @@ class UsersController extends Controller
         if ($request['parent_id'] !== $user['parent_id']) {
             $documents = DB::table('documents')
             ->where('user_id', $user->id)
-            ->where('parent_id', $user->parent_id)
             ->where('document_state', '!=', 'Termine')
             ->update(['parent_id' => $request['parent_id']]);
         }
