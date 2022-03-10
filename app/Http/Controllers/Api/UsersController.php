@@ -115,15 +115,11 @@ class UsersController extends Controller
             $request['status_update_date'] = date("Y-m-d");
         }
         if ($request['parent_id'] !== $user['parent_id']) {
-            // TODO pour tous les contrats en attent ou en cours, si le parent_id change, il faut changer le parent id dans les contrat
             $documents = DB::table('documents')
             ->where('user_id', $user->id)
             ->where('parent_id', $user->parent_id)
             ->where('document_state', '!=', 'Termine')
-            ->get();
-            $documents->parent_id = $request['parent_id'];
-            $documents->save(); 
-            return json_encode($documents);
+            ->update(['parent_id' => $request['parent_id']]);
         }
         
         $user->update($request->all());
