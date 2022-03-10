@@ -191,9 +191,6 @@ class DocumentsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-//        if ($auth->role != "admin")
-//            return response()->json(['error' => 'Unauthorized'], 401);
-
         $doc->update($request->all());
 //        if ($request->advanced_payment)
 //            $doc->update(['advanced_payment' => $this->get_selected_total("selected", $doc->id)]);
@@ -217,13 +214,11 @@ class DocumentsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-//        if ($auth->role != "admin")
-//            return response()->json(['error' => 'Unauthorized'], 401);
         $this->delete_services($id);
         $doc->delete();
         return "Document Deleted !";
     }
-    public function get_contract($id){
+    public function get_contract($id) {
         $result = Documents::find($id);
         $result1 = User::find($result->user_id);
         $result2 = PersonalInformations::find($result->user_id);
