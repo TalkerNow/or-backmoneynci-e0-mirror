@@ -18,52 +18,66 @@ class TasksController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-//        if ($auth->role != "admin")
+        //    if ($auth->role != "admin")
 //            return response()->json(['error' => 'Unauthorized'], 401);
 
         $filter = $request->filter;
         if ($auth->role == "admin") {
             if ($filter == "all") {
                 $tasks = Tasks::with(['taskCustomer'])
-                    ->orderBy('end_date', 'desc')->get();
+                    ->orderBy('end_date', 'desc')
+                    ->get();
             } else if ($filter == "completed") {
-                $tasks = Tasks::with(['taskCustomer'])->Where('isCompleted', true)
-                    ->orderBy('end_date', 'desc')->get();
+                $tasks = Tasks::with(['taskCustomer'])
+                    ->where('isCompleted', true)
+                    ->orderBy('end_date', 'desc')
+                    ->get();
             } else if ($filter == "unread") {
-                $tasks = Tasks::with(['taskCustomer'])->Where('isRead', false)
-                    ->orderBy('end_date', 'desc')->get();
+                $tasks = Tasks::with(['taskCustomer'])
+                    ->where('isRead', false)
+                    ->orderBy('end_date', 'desc')
+                    ->get();
             } else if ($filter == "important") {
-                $tasks = Tasks::with(['taskCustomer'])->Where('isImportant', true)
-                    ->orderBy('end_date', 'desc')->get();
+                $tasks = Tasks::with(['taskCustomer'])
+                    ->where('isImportant', true)
+                    ->orderBy('end_date', 'desc')
+                    ->get();
             } else {
-                $tasks = Tasks::with(['taskCustomer'])->Where('type', $filter)
-                    ->orderBy('end_date', 'desc')->get();
+                $tasks = Tasks::with(['taskCustomer'])
+                    ->where('type', $filter)
+                    ->orderBy('end_date', 'desc')
+                    ->get();
             }
-        }else{
+        } else {
             if ($filter == "all") {
                 $tasks = Tasks::with(['taskCustomer'])
-                    ->Where('creator_id', $auth->id)
-                    ->orderBy('end_date', 'desc')->get();
+                    ->where('creator_id', $auth->id)
+                    ->orderBy('end_date', 'desc')
+                    ->get();
             } else if ($filter == "completed") {
                 $tasks = Tasks::with(['taskCustomer'])
-                    ->Where('creator_id', $auth->id)
-                    ->Where('isCompleted', true)
-                    ->orderBy('end_date', 'desc')->get();
+                    ->where('creator_id', $auth->id)
+                    ->where('isCompleted', true)
+                    ->orderBy('end_date', 'desc')
+                    ->get();
             } else if ($filter == "unread") {
                 $tasks = Tasks::with(['taskCustomer'])
-                    ->Where('creator_id', $auth->id)
-                    ->Where('isRead', false)
-                    ->orderBy('end_date', 'desc')->get();
+                    ->where('creator_id', $auth->id)
+                    ->where('isRead', false)
+                    ->orderBy('end_date', 'desc')
+                    ->get();
             } else if ($filter == "important") {
                 $tasks = Tasks::with(['taskCustomer'])
-                    ->Where('creator_id', $auth->id)
-                    ->Where('isImportant', true)
-                    ->orderBy('end_date', 'desc')->get();
+                    ->where('creator_id', $auth->id)
+                    ->where('isImportant', true)
+                    ->orderBy('end_date', 'desc')
+                    ->get();
             } else {
                 $tasks = Tasks::with(['taskCustomer'])
-                    ->Where('creator_id', $auth->id)
-                    ->Where('type', $filter)
-                    ->orderBy('end_date', 'desc')->get();
+                    ->where('creator_id', $auth->id)
+                    ->where('type', $filter)
+                    ->orderBy('end_date', 'desc')
+                    ->get();
             }
         }
         return $tasks->toJson(JSON_PRETTY_PRINT);
@@ -71,34 +85,39 @@ class TasksController extends Controller
 
     public function customer_tasks(Request $request)
     {
-//        if ($auth->role != "admin")
+        //        if ($auth->role != "admin")
 //            return response()->json(['error' => 'Unauthorized'], 401);
 
         $filter = $request->filter;
         if ($filter == "all") {
             $tasks = Tasks::with(['taskCustomer'])
-                ->Where('customer_id', $request->user_id)
-                ->orderBy('end_date', 'desc')->get();
+                ->where('customer_id', $request->user_id)
+                ->orderBy('end_date', 'desc')
+                ->get();
         } else if ($filter == "completed") {
             $tasks = Tasks::with(['taskCustomer'])
-                ->Where('customer_id', $request->user_id)
-                ->Where('isCompleted', true)
-                ->orderBy('end_date', 'desc')->get();
+                ->where('customer_id', $request->user_id)
+                ->where('isCompleted', true)
+                ->orderBy('end_date', 'desc')
+                ->get();
         } else if ($filter == "unread") {
             $tasks = Tasks::with(['taskCustomer'])
-                ->Where('customer_id', $request->user_id)
-                ->Where('isRead', false)
-                ->orderBy('end_date', 'desc')->get();
+                ->where('customer_id', $request->user_id)
+                ->where('isRead', false)
+                ->orderBy('end_date', 'desc')
+                ->get();
         } else if ($filter == "important") {
             $tasks = Tasks::with(['taskCustomer'])
-                ->Where('customer_id', $request->user_id)
-                ->Where('isImportant', true)
-                ->orderBy('end_date', 'desc')->get();
+                ->where('customer_id', $request->user_id)
+                ->where('isImportant', true)
+                ->orderBy('end_date', 'desc')
+                ->get();
         } else {
             $tasks = Tasks::with(['taskCustomer'])
-                ->Where('customer_id', $request->user_id)
-                ->Where('type', $filter)
-                ->orderBy('end_date', 'desc')->get();
+                ->where('customer_id', $request->user_id)
+                ->where('type', $filter)
+                ->orderBy('end_date', 'desc')
+                ->get();
         }
         return $tasks->toJson(JSON_PRETTY_PRINT);
     }
@@ -111,8 +130,8 @@ class TasksController extends Controller
             return response()->json(['error' => $e->getMessage()], 401);
         }
 
-        $tasks = Tasks::Where('isRead', false)
-            ->Where('customer_id', $auth->id)
+        $tasks = Tasks::where('isRead', false)
+            ->where('customer_id', $auth->id)
             ->get();
 
         return response()->json([

@@ -71,8 +71,9 @@ class UsersController extends Controller
             return response()->json(['error' => $e->getMessage()], 401);
         }
 
-        $info = $this->get_personal_information($id);
-        $user = $this->get_user($id);
+        $user = User::where('users.id', $id)
+            ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
+            ->first();
 
         if ($user == null)
             return response()->json(['error' => 'User does not exist'], 500);
@@ -83,8 +84,6 @@ class UsersController extends Controller
         }
         if ($auth->role != "admin" && $auth->id != $user->id && $auth->role != "Consultant" && $user->parent_id != $auth->id)
             return response()->json(['error' => 'Unauthorized'], 401);
-
-        $user["personal_informations"] = $info;
         return $user->toJson(JSON_PRETTY_PRINT);
     }
     // ? update information for an user, call by /api/users/id with PUT
