@@ -31,3 +31,7 @@ php artisan down || true
 
 # Turn off maintenance mode
 php artisan up
+
+echo "" > storage/logs/laravel.log
+
+php artisan serve --port=8000

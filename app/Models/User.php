@@ -18,7 +18,16 @@ class User extends Authenticatable implements JWTSubject
      * @var array
      */
     protected $fillable = [
-        'name', 'email', 'password', 'role','id','p_password','parent_id', 'subscribe_services', 'status', 'status_fa','status_update_date'
+        'name',
+        'email',
+        'password',
+        'role',
+        'id',
+        'parent_id',
+        'subscribe_services',
+        'status',
+        'status_fa',
+        'status_update_date'
     ];
 
     /**
@@ -27,7 +36,8 @@ class User extends Authenticatable implements JWTSubject
      * @var array
      */
     protected $hidden = [
-        'password', 'remember_token',
+        'password',
+        'remember_token',
     ];
 
     /**
@@ -48,16 +58,20 @@ class User extends Authenticatable implements JWTSubject
     {
         return [];
     }
-    public function personalInformation() {
+    public function personalInformation()
+    {
         return $this->belongsTo('app\Models\PersonalInformations', 'id');
     }
-    public function parent() {
+    public function parent()
+    {
         return $this->belongsTo('app\Models\User', 'parent_id');
     }
-    public function documents(){
+    public function documents()
+    {
         return $this->hasMany('App\Models\Documents', 'user_id');
     }
-    public function oldClients() {
+    public function oldClients()
+    {
         return $this->belongsTo('app\Models\OldClients');
     }
 }
