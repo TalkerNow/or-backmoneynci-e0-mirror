@@ -28,13 +28,18 @@ class RegisterController extends Controller
         $email = $request->email;
         $password = $request->password;
         $user = User::create(['name' => $name, 'email' => $email, 'password' => Hash::make($password)]);
+        if ($user === null) {
+            Log::info("NON");
+            return response()->json(['success' => false, 'error' => $validator->messages()]);
+        }
+        $user = User::where('email', $email);
         if (isset($request->role)) {
-            $user = $user->update(['role' => $request->role]);
+            $user->update(['role' => $request->role]);
         }
         if (isset($request->parent_id)) {
-            $user = $user->update(['parent_id' => $request->parent_id]);
+            $user->update(['parent_id' => $request->parent_id]);
         }
-        $id = $user->id;
+        $id = $user->first()->id;
         $creds = $request->only(['email', 'password']);
         $token = auth()->attempt($creds);
         return response()->json(['accessToken' => $token, 'user' => ['email' => $email, 'id' => $id, 'name' => $name]]);
