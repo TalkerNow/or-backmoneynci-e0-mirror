@@ -8,6 +8,7 @@ use App\Models\PersonalInformations;
 use App\Models\Services;
 use Illuminate\Http\Request;
 use function MongoDB\BSON\toJSON;
+use Log;
 
 class DocumentsController extends Controller
 {
@@ -23,10 +24,7 @@ class DocumentsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-//        if ($auth->role != "admin")
-//            return response()->json(['error' => 'Unauthorized'], 401);
-
-        if($auth->role == "admin" || $auth->role =="Consultant") {
+        if ($auth->role == "admin" || $auth->role == "Consultant") {
             $doc = Documents::with(['user'])->get();
             $services = Services::all();
             $servtab = array();
@@ -57,7 +55,7 @@ class DocumentsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-//        if ($auth->role != "admin")
+        //        if ($auth->role != "admin")
 //            return response()->json(['error' => 'Unauthorized'], 401);
 
         return view('create');
@@ -76,12 +74,12 @@ class DocumentsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-//        if ($auth->role != "admin")
+        //        if ($auth->role != "admin")
 //            return response()->json(['error' => 'Unauthorized'], 401);
         $newdoc = Documents::create([
             'parent_id' => $request['parent_id'],
-            'creator_id'=> $request['creator_id'],
-            'link_to_documents'  => $request['link_to_documents'],
+            'creator_id' => $request['creator_id'],
+            'link_to_documents' => $request['link_to_documents'],
             'type' => $request['type'],
             'status_payment' => $request['status_payment'],
             'subscribe_services' => $request['subscribe_services'],
@@ -101,7 +99,7 @@ class DocumentsController extends Controller
         }
         // if user status is null, set the pending('En attente')
         $user = User::where('id', $request['user_id'])->get();
-        if(count($user) > 0 && $user[0]->status == null) {
+        if (count($user) > 0 && $user[0]->status == null) {
             User::where(['id' => $request['user_id']])
                 ->limit(1)
                 ->update(['status' => 'En attente']);
@@ -120,14 +118,15 @@ class DocumentsController extends Controller
         $doc = Documents::find($id);
         $service = $this->get_services_by_doc($id);
 
-        if ($doc == null)
+        if ($doc == null) {
             return response()->json(['error' => 'Document does not exist'], 500);
+        }
         try {
             $auth = auth()->userOrFail();
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-//        if ($auth->role != "admin" && $auth->id != $doc->user_id)
+        //        if ($auth->role != "admin" && $auth->id != $doc->user_id)
 //            return response()->json(['error' => 'Unauthorized'], 401);
 
         $doc["services"] = $service;
@@ -142,16 +141,12 @@ class DocumentsController extends Controller
      */
     public function show_by_user($user_id)
     {
-        $docs = array();
-        foreach (Documents::with(['user'])->get() as $tmp)
-            if ($tmp->user_id == $user_id) {
-                array_push($docs, $tmp);
-            }
+        $documents = Documents::with('user')->where('user_id', $user_id)->get();
 
-        if ($docs == null)
+        if ($documents === null) {
             return response()->json(['error' => 'Document does not exist'], 500);
-
-        return $docs;
+        }
+        return $documents;
     }
 
     /**
@@ -167,7 +162,7 @@ class DocumentsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-//        if ($auth->role != "admin")
+        //        if ($auth->role != "admin")
 //            return response()->json(['error' => 'Unauthorized'], 401);
         return view('edit', compact('document'));
     }
@@ -192,7 +187,7 @@ class DocumentsController extends Controller
             return response()->json(['error' => $e->getMessage()], 401);
         }
         $doc->update($request->all());
-//        if ($request->advanced_payment)
+        //        if ($request->advanced_payment)
 //            $doc->update(['advanced_payment' => $this->get_selected_total("selected", $doc->id)]);
         return "Document Updated !";
     }
@@ -218,12 +213,13 @@ class DocumentsController extends Controller
         $doc->delete();
         return "Document Deleted !";
     }
-    public function get_contract($id) {
+    public function get_contract($id)
+    {
         $result = Documents::find($id);
         $result1 = User::find($result->user_id);
         $result2 = PersonalInformations::find($result->user_id);
         $result['user'] = $result1;
         $result['personal_informations'] = $result2;
-        return response()->json(['data'=>$result]);
+        return response()->json(['data' => $result]);
     }
 }

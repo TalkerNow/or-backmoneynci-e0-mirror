@@ -40,7 +40,7 @@ class UsersController extends Controller
                     ->get();
             } else {
                 $users = User::with('parent')
-                    ->where('parent_id', $auth->id)
+                    ->where('users.parent_id', $auth->id)
                     ->where('role', 'Client')
                     ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
                     ->orderby('users.created_at', 'DESC')
@@ -54,8 +54,8 @@ class UsersController extends Controller
                     ->get();
             } else {
                 $users = User::where('role', '!=', 'Client')
+                    ->where('users.parent_id', $auth->id)
                     ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
-                    ->where('parent_id', $auth->id)
                     ->orderby('users.created_at', 'DESC')
                     ->get();
             }
