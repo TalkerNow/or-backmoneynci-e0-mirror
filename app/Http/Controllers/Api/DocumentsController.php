@@ -216,10 +216,10 @@ class DocumentsController extends Controller
     public function get_contract($id)
     {
         $result = Documents::find($id);
-        $result1 = User::find($result->user_id);
-        $result2 = PersonalInformations::find($result->user_id);
+        $result1 = User::find($result->user_id)
+            ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
+            ->first();
         $result['user'] = $result1;
-        $result['personal_informations'] = $result2;
         return response()->json(['data' => $result]);
     }
 }
