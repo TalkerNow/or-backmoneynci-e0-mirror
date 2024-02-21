@@ -31,21 +31,6 @@ class UsersController extends Controller
             } else {
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
-        } else if ($request->kind === 'client') {
-            if ($auth->role === "admin" || $auth->role === "Consultant") {
-                $users = User::with('parent')
-                    ->where('role', 'Client')
-                    ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
-                    ->orderby('users.created_at', 'DESC')
-                    ->get();
-            } else {
-                $users = User::with('parent')
-                    ->where('users.parent_id', $auth->id)
-                    ->where('role', 'Client')
-                    ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
-                    ->orderby('users.created_at', 'DESC')
-                    ->get();
-            }
         } else if ($request->kind === 'member') {
             if ($auth->role === "admin" || $auth->role === "Consultant") {
                 $users = User::where('role', '!=', 'Client')
@@ -55,6 +40,21 @@ class UsersController extends Controller
             } else {
                 $users = User::where('role', '!=', 'Client')
                     ->where('users.parent_id', $auth->id)
+                    ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
+                    ->orderby('users.created_at', 'DESC')
+                    ->get();
+            }
+        } else {
+            if ($auth->role === "admin" || $auth->role === "Consultant") {
+                $users = User::with('parent')
+                    ->where('role', 'Client')
+                    ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
+                    ->orderby('users.created_at', 'DESC')
+                    ->get();
+            } else {
+                $users = User::with('parent')
+                    ->where('users.parent_id', $auth->id)
+                    ->where('role', 'Client')
                     ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
                     ->orderby('users.created_at', 'DESC')
                     ->get();
