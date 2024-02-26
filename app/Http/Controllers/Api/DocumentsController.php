@@ -90,6 +90,7 @@ class DocumentsController extends Controller
             'advanced_payment' => $request['advanced_payment'],
             'user_id' => $request['user_id'],
             'id' => $request['id'],
+            'payment_method' => $request['payment_method'],
             'values' => $request['values']
         ]);
 
