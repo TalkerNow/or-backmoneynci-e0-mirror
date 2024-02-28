@@ -53,6 +53,7 @@ class UsersController extends Controller
                     ->get();
             } else {
                 $users = User::with('parent')
+                    ->with('business_introducer')
                     ->where('users.parent_id', $auth->id)
                     ->where('role', 'Client')
                     ->join('personal_informations', 'users.id', '=', 'personal_informations.id')

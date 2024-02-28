@@ -20,13 +20,13 @@ class PersonalInformationsController extends Controller
     {
         $result = PersonalInformations::create($request->all());
         return response()->json([
-                    'user_id' => $request->id
-                ]);
+            'user_id' => $request->id
+        ]);
     }
 
     public function show($id)
     {
-        
+
     }
 
     public function update(Request $request, $id)
@@ -41,9 +41,6 @@ class PersonalInformationsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-//        if ($auth->role != "admin" && $auth->id != $user->id)
-//            return response()->json(['error' => 'Unauthorized'], 401);
-
         $request->validate([
             'civility' => 'nullable',
             'first_name' => 'nullable',
@@ -51,6 +48,8 @@ class PersonalInformationsController extends Controller
             'maiden' => 'nullable',
             'birth_date' => 'nullable',
             'martial_status' => 'nullable',
+            'maiden_name' => 'nullable',
+            'birth_place' => 'nullable',
             'children_number' => 'nullable',
             'mobile_number' => 'nullable',
             'office_number' => 'nullable',
@@ -66,6 +65,7 @@ class PersonalInformationsController extends Controller
             'society_city' => 'nullable',
             'society_country' => 'nullable',
             'notes' => 'nullable',
+            'business_introducer_id' => 'nullable',
         ]);
         $information->update($request->all());
     }

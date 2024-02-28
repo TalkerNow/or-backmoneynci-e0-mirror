@@ -41,6 +41,7 @@ class PersonalInformations extends Model
         'user_id',
         'notes',
         'comments',
-        'parent_id'
+        'parent_id',
+        'business_introducer_id'
     ];
 }
