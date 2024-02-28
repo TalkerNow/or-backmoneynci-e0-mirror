@@ -47,6 +47,7 @@ class UsersController extends Controller
         } else {
             if ($auth->role === "admin" || $auth->role === "Consultant") {
                 $users = User::with('parent')
+                    ->with('business_introducer')
                     ->where('role', 'Client')
                     ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
                     ->orderby('users.created_at', 'DESC')

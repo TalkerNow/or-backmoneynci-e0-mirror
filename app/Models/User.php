@@ -24,10 +24,11 @@ class User extends Authenticatable implements JWTSubject
         'role',
         'id',
         'parent_id',
+        'business_introducer_id',
         'subscribe_services',
         'status',
         'status_fa',
-        'status_update_date'
+        'status_update_date',
     ];
 
     /**
@@ -71,6 +72,7 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->belongsTo('app\Models\User', 'business_introducer_id');
     }
+
     public function documents()
     {
         return $this->hasMany('App\Models\Documents', 'user_id');
