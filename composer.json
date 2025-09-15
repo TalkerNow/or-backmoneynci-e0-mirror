@@ -9,14 +9,16 @@
     "license": "MIT",
     "require": {
         "php": "^7.3||^8.1.2",
+        "ext-json": "*",
+        "docusign/esign-client": ">=6 <7",
         "fideloper/proxy": "^4.2",
+        "firebase/php-jwt": ">=6 <7",
         "fruitcake/laravel-cors": "^2.0",
         "guzzlehttp/guzzle": "^7.0.1",
         "laravel/framework": "^8.0",
         "laravel/tinker": "^2.0",
         "laravel/ui": "^3.0",
-        "tymon/jwt-auth": "^1.0",
-      "ext-json": "*"
+        "tymon/jwt-auth": "^1.0"
     },
     "require-dev": {
         "facade/ignition": "^2.3.6",
