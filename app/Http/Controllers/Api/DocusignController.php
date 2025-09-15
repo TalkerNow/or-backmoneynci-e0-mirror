@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
-use App\Models\Users;
+use App\Models\User;
 use App\Models\Documents;
 use App\Models\SignatureRequest;
 
@@ -500,7 +500,7 @@ class DocusignController extends Controller
     /* -----------------------------------------------------------
      | Email avec PDF en PJ
      * ----------------------------------------------------------*/
-    private function sendSignedDocMail(Users $user, string $relativePath, string $docType): bool
+    private function sendSignedDocMail(User $user, string $relativePath, string $docType): bool
     {
         $locale  = app()->getLocale();
         $view    = $locale === 'fr' ? 'mails.signed-doc' : 'mails.signed-doc-en';
