@@ -248,7 +248,7 @@ class DocusignController extends Controller
         }
 
         // Récupération utilisateur
-        $user = Users::find($request->user_id);
+        $user = User::find($request->user_id);
         if (!$user) {
             return response()->json(['error' => 'User not found'], 404);
         }
@@ -344,7 +344,7 @@ class DocusignController extends Controller
             'return_url'  => 'sometimes|url'
         ]);
 
-        $user = Users::find($request->user_id);
+        $user = User::find($request->user_id);
         if (!$user) return response()->json(['error' => 'User not found'], 404);
 
         try {
@@ -446,7 +446,7 @@ class DocusignController extends Controller
             return response()->json(['success' => false, 'error' => 'Missing email/pdf/docType'], 422);
         }
 
-        $user = Users::where('email', $email)->first();
+        $user = User::where('email', $email)->first();
         if (!$user) {
             return response()->json(['success' => false, 'error' => 'User not found'], 404);
         }
