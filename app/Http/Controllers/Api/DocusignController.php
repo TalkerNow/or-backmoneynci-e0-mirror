@@ -277,7 +277,7 @@ class DocusignController extends Controller
         ];
 
         $embedded   = (bool)$request->get('embedded', true);
-        $templateId = env('DOCUSIGN_PROCURATION_TEMPLATE_ID');
+        $templateId = '7658d6c0-c749-49ac-8693-f7c9815261b1';
         if (!$templateId) {
             return response()->json(['error' => 'Missing DOCUSIGN_PROCURATION_TEMPLATE_ID'], 500);
         }
