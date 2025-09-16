@@ -68,6 +68,28 @@ class DocusignController extends Controller
     /* -----------------------------------------------------------
      | Auth DocuSign (JWT)  —  utilise UNIQUEMENT config()
      * ----------------------------------------------------------*/
+
+     private function fallbackSignerName(array $user): string
+    {
+        // 1) si first_name/last_name existent
+        $full = trim(($user['first_name'] ?? '').' '.($user['last_name'] ?? ''));
+        if ($full !== '') return $full;
+
+        // 2) sinon, si "name" (ex: "Remi SALEH") existe
+        if (!empty($user['name'])) {
+            return trim((string)$user['name']);
+        }
+
+        // 3) sinon, la partie locale de l’email
+        if (!empty($user['email'])) {
+            $local = explode('@', $user['email'])[0] ?? null;
+            if ($local) return $local;
+        }
+
+        // 4) ulti-fallback
+        return 'Client OptionRetraite';
+    }
+
     public function requestJWTApplicationToken(
         string $client_id,
         string $user_id,
@@ -183,7 +205,7 @@ class DocusignController extends Controller
         $signer = new TemplateRole([
             'role_name'  => 'Client',
             'email'      => (string)$user['email'],
-            'name'       => $this->create_fullname($user['first_name'] ?? '', $user['last_name'] ?? ''),
+            'name' => $this->fallbackSignerName($user),
             'tabs'       => $tabs,
         ]);
 
@@ -272,14 +294,30 @@ class DocusignController extends Controller
         $userData = [
             'id'        => $user->id,
             'email'     => $user->email,
-            'first_name'=> $user->first_name ?? '',
-            'last_name' => $user->last_name ?? '',
+
+            // essaie d'abord first_name/last_name, sinon derive depuis "name"
+            'first_name'=> $user->first_name
+                ?? $user->firstname
+                ?? (function($n){ $p = preg_split('/\s+/', trim((string)$n)); return $p[0] ?? ''; })($user->name ?? null),
+
+            'last_name' => $user->last_name
+                ?? $user->lastname
+                ?? (function($n){ 
+                        $n = trim((string)$n); 
+                        if ($n === '') return ''; 
+                        $p = preg_split('/\s+/', $n); 
+                        array_shift($p); 
+                        return trim(implode(' ', $p)); 
+                    })($user->name ?? null),
+
+            'name'      => $user->name ?? null, // on garde “name” dispo pour le fallback
             'adr'       => $user->personal_adr ?? $user->address ?? '',
             'zip'       => $user->personal_zip ?? $user->zip ?? '',
             'city'      => $user->personal_city ?? $user->city ?? '',
             'country'   => $user->personal_country ?? $user->country ?? '',
             'phone'     => $user->phone ?? '',
         ];
+
 
         $procu = [
             'agent_full_name'        => $request->agent_full_name,
@@ -318,7 +356,7 @@ class DocusignController extends Controller
                         'authentication_method' => 'none',
                         'client_user_id'        => (string)$userData['id'],
                         'email'                 => $userData['email'],
-                        'user_name'             => $this->create_fullname($userData['first_name'], $userData['last_name']),
+                        'user_name' => $this->fallbackSignerName($userData),
                         'return_url'            => rtrim(config('app.url'), '/') . '/docusign-return?envelopeId=' . $envId,
                     ]);
                     $viewRes   = $api->createRecipientView($accountId, $envId, $viewReq);
@@ -391,7 +429,12 @@ class DocusignController extends Controller
                 'authentication_method' => 'none',
                 'client_user_id'        => $clientId,
                 'email'                 => $user->email,
-                'user_name'             => $this->create_fullname($user->first_name ?? '', $user->last_name ?? ''),
+                'user_name' => $this->fallbackSignerName([
+                    'first_name' => $user->first_name ?? $user->firstname ?? null,
+                    'last_name'  => $user->last_name  ?? $user->lastname  ?? null,
+                    'name'       => $user->name ?? null,
+                    'email'      => $user->email,
+                ]),
                 'return_url'            => $request->get('return_url', rtrim(config('app.url'), '/') . '/docusign-return?envelopeId=' . $envelopeId),
             ]);
             $viewRes = $api->createRecipientView($accountId, $envelopeId, $viewReq);
