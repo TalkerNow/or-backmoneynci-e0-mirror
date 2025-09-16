@@ -66,32 +66,45 @@ class DocusignController extends Controller
     }
 
     /* -----------------------------------------------------------
-     | Auth DocuSign (JWT)
+     | Auth DocuSign (JWT)  —  utilise UNIQUEMENT config()
      * ----------------------------------------------------------*/
-    public function requestJWTApplicationToken($client_id, $rsa_private_key, $scopes = null, $expires_in = 60)
-    {
+    public function requestJWTApplicationToken(
+        string $client_id,
+        string $user_id,
+        string $base_path,
+        string $rsa_private_key,
+        $scopes = null,
+        int $expires_in = 60
+    ) {
         if (!$client_id) {
-            throw new \InvalidArgumentException('Missing DOCUSIGN_CLIENT_ID');
+            throw new \InvalidArgumentException('Missing DOCUSIGN_CLIENT_ID (config services.docusign.client_id)');
+        }
+        if (!$user_id) {
+            throw new \InvalidArgumentException('Missing DOCUSIGN_USER_ID (config services.docusign.user_id)');
+        }
+        if (!$base_path) {
+            throw new \InvalidArgumentException('Missing DOCUSIGN_BASE_PATH (config services.docusign.base_path)');
         }
         if (!$rsa_private_key) {
-            throw new \InvalidArgumentException('Missing DOCUSIGN_KEY_PRIVATE');
+            throw new \InvalidArgumentException('Missing DOCUSIGN_KEY_PRIVATE (config services.docusign.private_key)');
         }
 
         $scopes = $scopes ?: self::$SCOPE_SIGNATURE . ' ' . self::$SCOPE_IMPERSONATION;
-        if ((int)$expires_in > 60) $expires_in = 60;
+        if ($expires_in > 60) $expires_in = 60;
 
         $now = time();
         $claim = [
             "iss"   => $client_id,
-            "sub"   => env('DOCUSIGN_USER_ID'),       // GUID de l’utilisateur API (consent donné)
-            "aud"   => env('DOCUSIGN_BASE_PATH'),     // ex: account-d.docusign.com
+            "sub"   => $user_id,
+            "aud"   => $base_path, // ex: account.docusign.com
             "iat"   => $now,
-            "exp"   => $now + (int)$expires_in * 60,
+            "exp"   => $now + ($expires_in * 60),
             "scope" => is_array($scopes) ? implode(' ', $scopes) : $scopes
         ];
 
         $jwt  = JWT::encode($claim, $rsa_private_key, 'RS256');
-        $url  = 'https://' . env('DOCUSIGN_BASE_PATH') . '/oauth/token';
+        $url  = 'https://' . $base_path . '/oauth/token';
+
         $ch   = curl_init();
         $body = http_build_query([
             'assertion'  => $jwt,
@@ -120,10 +133,18 @@ class DocusignController extends Controller
 
     private function dsClient(): EnvelopesApi
     {
+        $apiPath    = (string) config('services.docusign.api_path');
+        $clientId   = (string) config('services.docusign.client_id');
+        $userId     = (string) config('services.docusign.user_id');
+        $basePath   = (string) config('services.docusign.base_path');
+        $privateKey = (string) config('services.docusign.private_key');
+
         $config = new Configuration();
-        $config->setHost(env('DOCUSIGN_API_PATH')); // ex: https://demo.docusign.net/restapi
-        $token = $this->requestJWTApplicationToken(env('DOCUSIGN_CLIENT_ID'), env('DOCUSIGN_KEY_PRIVATE'));
+        $config->setHost($apiPath);
+
+        $token = $this->requestJWTApplicationToken($clientId, $userId, $basePath, $privateKey);
         $config->addDefaultHeader('Authorization', 'Bearer ' . $token);
+
         $apiClient = new ApiClient($config);
         return new EnvelopesApi($apiClient);
     }
@@ -132,37 +153,28 @@ class DocusignController extends Controller
      | ENVELOPE: Procuration (OptionRetraite)
      * ----------------------------------------------------------*/
     /**
-     * ATTENTION : ton template DocuSign doit avoir le rôle **Client**
-     * et les TextTabs suivants (labels exactement identiques) :
-     * - principal_full_name
-     * - principal_full_address
-     * - principal_phone
-     * - principal_email
-     * - agent_full_name
-     * - agent_full_address
-     * - agent_phone
-     * - agent_email
-     * - procuration_scope
-     * - procuration_start_date
-     * - procuration_end_date
+     * Ton template DocuSign doit avoir le rôle **Client** et ces TextTabs :
+     * principal_full_name, principal_full_address, principal_phone, principal_email,
+     * agent_full_name, agent_full_address, agent_phone, agent_email,
+     * procuration_scope, procuration_start_date, procuration_end_date
      */
     private function make_procuration_envelope(array $user, array $procu, string $template_id, bool $embedded = true): EnvelopeDefinition
     {
         $tabs = new Tabs([
             'text_tabs' => [
-                new Text(['tab_label' => 'principal_full_name',   'value' => $this->create_fullname($user['first_name'] ?? '', $user['last_name'] ?? '')]),
-                new Text(['tab_label' => 'principal_full_address','value' => $this->create_full_address($user['adr'] ?? '', $user['zip'] ?? '', $user['city'] ?? '', $user['country'] ?? '')]),
-                new Text(['tab_label' => 'principal_phone',       'value' => (string)($user['phone'] ?? '')]),
-                new Text(['tab_label' => 'principal_email',       'value' => (string)($user['email'] ?? '')]),
+                new Text(['tab_label' => 'principal_full_name',    'value' => $this->create_fullname($user['first_name'] ?? '', $user['last_name'] ?? '')]),
+                new Text(['tab_label' => 'principal_full_address', 'value' => $this->create_full_address($user['adr'] ?? '', $user['zip'] ?? '', $user['city'] ?? '', $user['country'] ?? '')]),
+                new Text(['tab_label' => 'principal_phone',        'value' => (string)($user['phone'] ?? '')]),
+                new Text(['tab_label' => 'principal_email',        'value' => (string)($user['email'] ?? '')]),
 
-                new Text(['tab_label' => 'agent_full_name',       'value' => (string)($procu['agent_full_name'] ?? '')]),
-                new Text(['tab_label' => 'agent_full_address',    'value' => (string)($procu['agent_full_address'] ?? '')]),
-                new Text(['tab_label' => 'agent_phone',           'value' => (string)($procu['agent_phone'] ?? '')]),
-                new Text(['tab_label' => 'agent_email',           'value' => (string)($procu['agent_email'] ?? '')]),
+                new Text(['tab_label' => 'agent_full_name',        'value' => (string)($procu['agent_full_name'] ?? '')]),
+                new Text(['tab_label' => 'agent_full_address',     'value' => (string)($procu['agent_full_address'] ?? '')]),
+                new Text(['tab_label' => 'agent_phone',            'value' => (string)($procu['agent_phone'] ?? '')]),
+                new Text(['tab_label' => 'agent_email',            'value' => (string)($procu['agent_email'] ?? '')]),
 
-                new Text(['tab_label' => 'procuration_scope',     'value' => (string)($procu['procuration_scope'] ?? '')]),
-                new Text(['tab_label' => 'procuration_start_date','value' => (string)($procu['procuration_start_date'] ?? '')]),
-                new Text(['tab_label' => 'procuration_end_date',  'value' => (string)($procu['procuration_end_date'] ?? '')]),
+                new Text(['tab_label' => 'procuration_scope',      'value' => (string)($procu['procuration_scope'] ?? '')]),
+                new Text(['tab_label' => 'procuration_start_date', 'value' => (string)($procu['procuration_start_date'] ?? '')]),
+                new Text(['tab_label' => 'procuration_end_date',   'value' => (string)($procu['procuration_end_date'] ?? '')]),
             ]
         ]);
 
@@ -182,8 +194,8 @@ class DocusignController extends Controller
         }
 
         $envelope = new EnvelopeDefinition([
-            'status'      => 'sent',
-            'template_id' => $template_id,
+            'status'         => 'sent',
+            'template_id'    => $template_id,
             'template_roles' => [$signer],
         ]);
 
@@ -196,17 +208,20 @@ class DocusignController extends Controller
         ]));
 
         // Webhook Connect (événements)
-        $eventNotification = new EventNotification();
-        $eventNotification->setUrl(env('DOCUSIGN_CONNECT_REDIRECT_URL'));
-        $eventNotification->setRequireAcknowledgment('true');
-        $eventNotification->setIncludeDocuments('true');
-        $eventNotification->setLoggingEnabled('true');
-        $eventNotification->setEnvelopeEvents([
-            (new EnvelopeEvent())
-                ->setEnvelopeEventStatusCode('completed')
-                ->setIncludeDocuments('true')
-        ]);
-        $envelope->setEventNotification($eventNotification);
+        $connectUrl = (string) (config('services.docusign.connect_url') ?? '');
+        if ($connectUrl) {
+            $eventNotification = new EventNotification();
+            $eventNotification->setUrl($connectUrl);
+            $eventNotification->setRequireAcknowledgment('true');
+            $eventNotification->setIncludeDocuments('true');
+            $eventNotification->setLoggingEnabled('true');
+            $eventNotification->setEnvelopeEvents([
+                (new EnvelopeEvent())
+                    ->setEnvelopeEventStatusCode('completed')
+                    ->setIncludeDocuments('true')
+            ]);
+            $envelope->setEventNotification($eventNotification);
+        }
 
         return $envelope;
     }
@@ -230,7 +245,7 @@ class DocusignController extends Controller
             'kind'  => [ 'required', Rule::in(['procuration']) ],
             'user_id' => 'required|integer',
 
-            // Champs de procuration (tous optionnels ici, DocuSign peut préremplir vide)
+            // Champs de procuration (optionnels)
             'agent_full_name'        => 'nullable|string',
             'agent_full_address'     => 'nullable|string',
             'agent_phone'            => 'nullable|string',
@@ -277,15 +292,18 @@ class DocusignController extends Controller
         ];
 
         $embedded   = (bool)$request->get('embedded', true);
-        $templateId = '7658d6c0-c749-49ac-8693-f7c9815261b1';
+        $templateId = (string) config('services.docusign.template_procuration');
+
         if (!$templateId) {
-            return response()->json(['error' => 'Missing DOCUSIGN_PROCURATION_TEMPLATE_ID'], 500);
+            return response()->json(['error' => 'Missing DOCUSIGN_PROCURATION_TEMPLATE_ID (config services.docusign.template_procuration)'], 500);
         }
 
         try {
-            $api   = $this->dsClient();
+            $api       = $this->dsClient();
+            $accountId = (string) config('services.docusign.account_id');
+
             $env   = $this->make_procuration_envelope($userData, $procu, $templateId, $embedded);
-            $res   = $api->createEnvelope(env('DOCUSIGN_ACCOUNT_ID'), $env);
+            $res   = $api->createEnvelope($accountId, $env);
             $envId = $res->getEnvelopeId();
 
             if (!$envId) {
@@ -301,9 +319,9 @@ class DocusignController extends Controller
                         'client_user_id'        => (string)$userData['id'],
                         'email'                 => $userData['email'],
                         'user_name'             => $this->create_fullname($userData['first_name'], $userData['last_name']),
-                        'return_url'            => rtrim(env('APP_URL'), '/').'/docusign-return?envelopeId='.$envId,
+                        'return_url'            => rtrim(config('app.url'), '/') . '/docusign-return?envelopeId=' . $envId,
                     ]);
-                    $viewRes   = $api->createRecipientView(env('DOCUSIGN_ACCOUNT_ID'), $envId, $viewReq);
+                    $viewRes   = $api->createRecipientView($accountId, $envId, $viewReq);
                     $signingUrl = $viewRes->getUrl();
                 } catch (DSEApiException $e) {
                     Log::warning('createRecipientView failed: '.$e->getMessage());
@@ -349,7 +367,7 @@ class DocusignController extends Controller
 
         try {
             $api       = $this->dsClient();
-            $accountId = env('DOCUSIGN_ACCOUNT_ID');
+            $accountId = (string) config('services.docusign.account_id');
             $envelopeId= $request->envelope_id;
             $clientId  = (string)$user->id;
 
@@ -374,7 +392,7 @@ class DocusignController extends Controller
                 'client_user_id'        => $clientId,
                 'email'                 => $user->email,
                 'user_name'             => $this->create_fullname($user->first_name ?? '', $user->last_name ?? ''),
-                'return_url'            => $request->get('return_url', rtrim(env('APP_URL'), '/').'/docusign-return?envelopeId='.$envelopeId),
+                'return_url'            => $request->get('return_url', rtrim(config('app.url'), '/') . '/docusign-return?envelopeId=' . $envelopeId),
             ]);
             $viewRes = $api->createRecipientView($accountId, $envelopeId, $viewReq);
 
@@ -393,7 +411,7 @@ class DocusignController extends Controller
     public function docusignConnectCallback(Request $request)
     {
         // 0) Vérif HMAC (facultative mais recommandée)
-        $connectKey = env('DOCUSIGN_CONNECT_KEY'); // "Key" configurée dans Connect
+        $connectKey = (string) (config('services.docusign.connect_key') ?? '');
         if ($connectKey) {
             $sigHeader = $request->header('X-DocuSign-Signature-1');
             $rawBody   = $request->getContent();
@@ -404,7 +422,7 @@ class DocusignController extends Controller
             }
         }
 
-        // 1) Payload (support à la fois {data:{envelopeSummary}} et {envelopeSummary})
+        // 1) Payload (support {data:{envelopeSummary}} et {envelopeSummary})
         $payload = json_decode($request->getContent(), true);
         if (!$payload) {
             return response()->json(['success' => false, 'error' => 'Invalid JSON'], 422);
@@ -428,7 +446,6 @@ class DocusignController extends Controller
         }
 
         $customFields = $summary['customFields']['textCustomFields'] ?? [];
-        // Récupère documentType de manière robuste
         $docType = null;
         foreach ($customFields as $cf) {
             if (($cf['name'] ?? '') === 'documentType') {
@@ -461,15 +478,13 @@ class DocusignController extends Controller
                 Storage::disk('users')->makeDirectory("$userId/contract/procuration");
                 $storedPath = "$userId/contract/procuration/procuration-$time.pdf";
 
-                // Idempotence : si le fichier existe, ne recrée pas
                 if (!Storage::disk('users')->exists($storedPath)) {
                     Storage::disk('users')->put($storedPath, $file);
                 }
 
-                // Évite doublons en DB
                 $exists = Documents::where([
-                    'user_id' => $userId,
-                    'type'    => 'procuration',
+                    'user_id'     => $userId,
+                    'type'        => 'procuration',
                     'link_to_doc' => $storedPath,
                 ])->exists();
 
@@ -482,9 +497,6 @@ class DocusignController extends Controller
                         'is_approuved'=> true,
                     ]);
                 }
-
-                // Envoi email (facultatif mais utile)
-                // $this->sendSignedDocMail($user, $storedPath, 'procuration');
             } else {
                 Log::info("Doc type non géré: $docType");
                 return response()->json(['success' => false, 'error' => 'Unhandled documentType'], 422);
@@ -495,38 +507,5 @@ class DocusignController extends Controller
         }
 
         return response()->json(['success' => true], 200);
-    }
-
-    /* -----------------------------------------------------------
-     | Email avec PDF en PJ
-     * ----------------------------------------------------------*/
-    private function sendSignedDocMail(User $user, string $relativePath, string $docType): bool
-    {
-        $locale  = app()->getLocale();
-        $view    = $locale === 'fr' ? 'mails.signed-doc' : 'mails.signed-doc-en';
-        $subject = $locale === 'fr' ? 'Votre document signé est prêt' : 'Your signed document is ready';
-
-        try {
-            Mail::send(
-                $view,
-                [
-                    'name'    => trim(($user->first_name ?? '').' '.($user->last_name ?? '')),
-                    'docType' => $docType,
-                ],
-                function ($message) use ($user, $subject, $relativePath) {
-                    $message->to($user->email)
-                            ->from(env('MAIL_FROM_ADDRESS'), env('APP_NAME'))
-                            ->subject($subject)
-                            ->attach(
-                                Storage::disk('users')->path($relativePath),
-                                ['as' => basename($relativePath), 'mime' => 'application/pdf']
-                            );
-                }
-            );
-            return true;
-        } catch (\Throwable $ex) {
-            Log::error('Mail sending failed: '.$ex->getMessage());
-            return false;
-        }
     }
 }
