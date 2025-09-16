@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 use App\Models\User;
 use App\Models\Documents;
@@ -29,7 +30,6 @@ use DocuSign\eSign\Model\RecipientViewRequest;
 
 use DocuSign\eSign\Client\ApiException as DSEApiException;
 use DocuSign\eSign\Client\Auth\OAuth;
-use DocuSign\eSign\ObjectSerializer;
 
 use Firebase\JWT\JWT;
 use Exception;
@@ -50,6 +50,61 @@ class DocusignController extends Controller
     /* -----------------------------------------------------------
      | Utilitaires
      * ----------------------------------------------------------*/
+
+    private function splitChars(string $s, int $n): array {
+        $chars = preg_split('//u', $s, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        while (count($chars) < $n) $chars[] = '';
+        return array_slice($chars, 0, $n);
+    }
+
+    private function onlyDigits(?string $s): string {
+        return preg_replace('/\D+/', '', (string)$s);
+    }
+
+    private function dobToJJMMYYYY(?string $birthDate): string {
+        // DB : AAAA_MM_DD (accepte aussi AAAA-MM-DD/AAAA/MM/DD)
+        $d = preg_replace('/\D+/', '', (string)$birthDate); // garde que les chiffres
+        // attend 8 chiffres : AAAAMMDD -> JJMMYYYY
+        if (strlen($d) === 8) {
+            $yyyy = substr($d, 0, 4);
+            $mm   = substr($d, 4, 2);
+            $dd   = substr($d, 6, 2);
+            return $dd.$mm.$yyyy; // JJMMYYYY
+        }
+        return '';
+    }
+
+    private function signerNameFromPI(array $pi, array $userData): string {
+        $first = trim($pi['first_name'] ?? '');
+        $usage = trim($pi['usage_last_name'] ?? '');
+        if ($first !== '' || $usage !== '') return trim($first.' '.$usage);
+
+        $first = trim($userData['first_name'] ?? '');
+        $last  = trim($userData['last_name'] ?? '');
+        if ($first !== '' || $last !== '') return trim($first.' '.$last);
+
+        if (!empty($userData['name'])) return trim($userData['name']);
+        if (!empty($userData['email'])) return explode('@', $userData['email'])[0];
+        return 'Client OptionRetraite';
+    }
+
+    private function fallbackSignerName(array $user): string
+    {
+        $full = trim(($user['first_name'] ?? '').' '.($user['last_name'] ?? ''));
+        if ($full !== '') return $full;
+
+        if (!empty($user['name'])) {
+            return trim((string)$user['name']);
+        }
+
+        if (!empty($user['email'])) {
+            $local = explode('@', $user['email'])[0] ?? null;
+            if ($local) return $local;
+        }
+
+        return 'Client OptionRetraite';
+    }
+
     private function create_fullname($first_name, $last_name)
     {
         return trim(($first_name ?? '') . ' ' . ($last_name ?? ''));
@@ -66,29 +121,8 @@ class DocusignController extends Controller
     }
 
     /* -----------------------------------------------------------
-     | Auth DocuSign (JWT)  —  utilise UNIQUEMENT config()
+     | Auth DocuSign (JWT) — via config('services.docusign.*')
      * ----------------------------------------------------------*/
-
-     private function fallbackSignerName(array $user): string
-    {
-        // 1) si first_name/last_name existent
-        $full = trim(($user['first_name'] ?? '').' '.($user['last_name'] ?? ''));
-        if ($full !== '') return $full;
-
-        // 2) sinon, si "name" (ex: "Remi SALEH") existe
-        if (!empty($user['name'])) {
-            return trim((string)$user['name']);
-        }
-
-        // 3) sinon, la partie locale de l’email
-        if (!empty($user['email'])) {
-            $local = explode('@', $user['email'])[0] ?? null;
-            if ($local) return $local;
-        }
-
-        // 4) ulti-fallback
-        return 'Client OptionRetraite';
-    }
 
     public function requestJWTApplicationToken(
         string $client_id,
@@ -98,18 +132,10 @@ class DocusignController extends Controller
         $scopes = null,
         int $expires_in = 60
     ) {
-        if (!$client_id) {
-            throw new \InvalidArgumentException('Missing DOCUSIGN_CLIENT_ID (config services.docusign.client_id)');
-        }
-        if (!$user_id) {
-            throw new \InvalidArgumentException('Missing DOCUSIGN_USER_ID (config services.docusign.user_id)');
-        }
-        if (!$base_path) {
-            throw new \InvalidArgumentException('Missing DOCUSIGN_BASE_PATH (config services.docusign.base_path)');
-        }
-        if (!$rsa_private_key) {
-            throw new \InvalidArgumentException('Missing DOCUSIGN_KEY_PRIVATE (config services.docusign.private_key)');
-        }
+        if (!$client_id)  throw new \InvalidArgumentException('Missing DOCUSIGN_CLIENT_ID (config services.docusign.client_id)');
+        if (!$user_id)    throw new \InvalidArgumentException('Missing DOCUSIGN_USER_ID (config services.docusign.user_id)');
+        if (!$base_path)  throw new \InvalidArgumentException('Missing DOCUSIGN_BASE_PATH (config services.docusign.base_path)');
+        if (!$rsa_private_key) throw new \InvalidArgumentException('Missing DOCUSIGN_KEY_PRIVATE (config services.docusign.private_key)');
 
         $scopes = $scopes ?: self::$SCOPE_SIGNATURE . ' ' . self::$SCOPE_IMPERSONATION;
         if ($expires_in > 60) $expires_in = 60;
@@ -179,38 +205,52 @@ class DocusignController extends Controller
      * principal_full_name, principal_full_address, principal_phone, principal_email,
      * agent_full_name, agent_full_address, agent_phone, agent_email,
      * procuration_scope, procuration_start_date, procuration_end_date
+     *
+     * + ceux que tu as ajoutés :
+     * birth_last_name, usage_last_name, first_name,
+     * dob_1..dob_8, nir_1..nir_15, full_address
      */
-    private function make_procuration_envelope(array $user, array $procu, string $template_id, bool $embedded = true): EnvelopeDefinition
+    private function make_procuration_envelope(
+        array $user,
+        array $procu,
+        string $template_id,
+        bool $embedded = true,
+        array $extraTextTabs = [],          // tabs PI en plus
+        ?string $forcedSignerName = null    // nom imposé
+    ): EnvelopeDefinition
     {
-        $tabs = new Tabs([
-            'text_tabs' => [
-                new Text(['tab_label' => 'principal_full_name',    'value' => $this->create_fullname($user['first_name'] ?? '', $user['last_name'] ?? '')]),
-                new Text(['tab_label' => 'principal_full_address', 'value' => $this->create_full_address($user['adr'] ?? '', $user['zip'] ?? '', $user['city'] ?? '', $user['country'] ?? '')]),
-                new Text(['tab_label' => 'principal_phone',        'value' => (string)($user['phone'] ?? '')]),
-                new Text(['tab_label' => 'principal_email',        'value' => (string)($user['email'] ?? '')]),
+        // Tabs historiques (principal_*, agent_*, etc.)
+        $baseTabs = [
+            new Text(['tab_label' => 'principal_full_name',    'value' => $this->create_fullname($user['first_name'] ?? '', $user['last_name'] ?? '')]),
+            new Text(['tab_label' => 'principal_full_address', 'value' => $this->create_full_address($user['adr'] ?? '', $user['zip'] ?? '', $user['city'] ?? '', $user['country'] ?? '')]),
+            new Text(['tab_label' => 'principal_phone',        'value' => (string)($user['phone'] ?? '')]),
+            new Text(['tab_label' => 'principal_email',        'value' => (string)($user['email'] ?? '')]),
 
-                new Text(['tab_label' => 'agent_full_name',        'value' => (string)($procu['agent_full_name'] ?? '')]),
-                new Text(['tab_label' => 'agent_full_address',     'value' => (string)($procu['agent_full_address'] ?? '')]),
-                new Text(['tab_label' => 'agent_phone',            'value' => (string)($procu['agent_phone'] ?? '')]),
-                new Text(['tab_label' => 'agent_email',            'value' => (string)($procu['agent_email'] ?? '')]),
+            new Text(['tab_label' => 'agent_full_name',        'value' => (string)($procu['agent_full_name'] ?? '')]),
+            new Text(['tab_label' => 'agent_full_address',     'value' => (string)($procu['agent_full_address'] ?? '')]),
+            new Text(['tab_label' => 'agent_phone',            'value' => (string)($procu['agent_phone'] ?? '')]),
+            new Text(['tab_label' => 'agent_email',            'value' => (string)($procu['agent_email'] ?? '')]),
 
-                new Text(['tab_label' => 'procuration_scope',      'value' => (string)($procu['procuration_scope'] ?? '')]),
-                new Text(['tab_label' => 'procuration_start_date', 'value' => (string)($procu['procuration_start_date'] ?? '')]),
-                new Text(['tab_label' => 'procuration_end_date',   'value' => (string)($procu['procuration_end_date'] ?? '')]),
-            ]
-        ]);
+            new Text(['tab_label' => 'procuration_scope',      'value' => (string)($procu['procuration_scope'] ?? '')]),
+            new Text(['tab_label' => 'procuration_start_date', 'value' => (string)($procu['procuration_start_date'] ?? '')]),
+            new Text(['tab_label' => 'procuration_end_date',   'value' => (string)($procu['procuration_end_date'] ?? '')]),
+        ];
+
+        // Merge avec les tabs PI
+        $tabs = new Tabs(['text_tabs' => array_merge($baseTabs, $extraTextTabs)]);
 
         $clientUserId = (string)($user['id']); // pour signature embarquée
+
+        $signerName = $forcedSignerName ?: $this->create_fullname($user['first_name'] ?? '', $user['last_name'] ?? '');
 
         $signer = new TemplateRole([
             'role_name'  => 'Client',
             'email'      => (string)$user['email'],
-            'name' => $this->fallbackSignerName($user),
+            'name'       => $signerName, // IMPORTANT pour éviter INVALID_USERNAME_FOR_RECIPIENT
             'tabs'       => $tabs,
         ]);
 
         if ($embedded) {
-            // Active la signature embarquée
             $signer['client_user_id']            = $clientUserId;
             $signer['embeddedRecipientStartURL'] = 'SIGN_AT_DOCUSIGN';
         }
@@ -253,7 +293,7 @@ class DocusignController extends Controller
      * ----------------------------------------------------------*/
     public function requestSignature(Request $request)
     {
-        // Auth API requise (admin/consultant par défaut)
+        // Auth API requise (admin/consultant)
         try {
             $auth = auth()->userOrFail();
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
@@ -266,8 +306,6 @@ class DocusignController extends Controller
         $rules = [
             'kind'  => [ 'required', Rule::in(['procuration']) ],
             'user_id' => 'required|integer',
-
-            // Champs de procuration (optionnels)
             'agent_full_name'        => 'nullable|string',
             'agent_full_address'     => 'nullable|string',
             'agent_phone'            => 'nullable|string',
@@ -275,8 +313,6 @@ class DocusignController extends Controller
             'procuration_scope'      => 'nullable|string',
             'procuration_start_date' => 'nullable|string',
             'procuration_end_date'   => 'nullable|string',
-
-            // Signature embarquée ?
             'embedded'               => 'sometimes|boolean',
         ];
         $validator = Validator::make($request->all(), $rules);
@@ -284,40 +320,39 @@ class DocusignController extends Controller
             return response()->json(['success' => false, 'error' => $validator->messages()], 422);
         }
 
-        // Récupération utilisateur
+        // Récup utilisateur
         $user = User::find($request->user_id);
         if (!$user) {
             return response()->json(['error' => 'User not found'], 404);
         }
 
-        // Normalise les infos nécessaires pour la tab mapping
+        // Normalise pour les anciens tabs "principal_*"
         $userData = [
             'id'        => $user->id,
             'email'     => $user->email,
 
-            // essaie d'abord first_name/last_name, sinon derive depuis "name"
+            // essaie d'abord first_name/last_name, sinon dérive depuis "name"
             'first_name'=> $user->first_name
                 ?? $user->firstname
                 ?? (function($n){ $p = preg_split('/\s+/', trim((string)$n)); return $p[0] ?? ''; })($user->name ?? null),
 
             'last_name' => $user->last_name
                 ?? $user->lastname
-                ?? (function($n){ 
-                        $n = trim((string)$n); 
-                        if ($n === '') return ''; 
-                        $p = preg_split('/\s+/', $n); 
-                        array_shift($p); 
-                        return trim(implode(' ', $p)); 
+                ?? (function($n){
+                        $n = trim((string)$n);
+                        if ($n === '') return '';
+                        $p = preg_split('/\s+/', $n);
+                        array_shift($p);
+                        return trim(implode(' ', $p));
                     })($user->name ?? null),
 
-            'name'      => $user->name ?? null, // on garde “name” dispo pour le fallback
+            'name'      => $user->name ?? null,
             'adr'       => $user->personal_adr ?? $user->address ?? '',
             'zip'       => $user->personal_zip ?? $user->zip ?? '',
             'city'      => $user->personal_city ?? $user->city ?? '',
             'country'   => $user->personal_country ?? $user->country ?? '',
             'phone'     => $user->phone ?? '',
         ];
-
 
         $procu = [
             'agent_full_name'        => $request->agent_full_name,
@@ -331,16 +366,62 @@ class DocusignController extends Controller
 
         $embedded   = (bool)$request->get('embedded', true);
         $templateId = (string) config('services.docusign.template_procuration');
-
         if (!$templateId) {
             return response()->json(['error' => 'Missing DOCUSIGN_PROCURATION_TEMPLATE_ID (config services.docusign.template_procuration)'], 500);
         }
+
+        // ----------- PRE-REMPLISSAGE depuis personal_informations -----------
+        $piRow = DB::table('personal_informations')->where('user_id', $user->id)->first();
+
+        $pi = [
+            'first_name'       => $piRow->first_name        ?? null,
+            'birth_last_name'  => $piRow->madien_name       ?? null, // nom de naissance
+            'usage_last_name'  => $piRow->last_name         ?? null, // nom d’usage
+            'birth_date'       => $piRow->birth_date        ?? null, // AAAA_MM_DD
+            'nir_body'         => $piRow->secu_social       ?? null, // 13 chiffres
+            'nir_key'          => $piRow->secu_social_key   ?? null, // 2 chiffres
+            'adr1'             => $piRow->personal_address  ?? '',
+            'adr2'             => $piRow->personal_address_2?? '',
+            'zip'              => $piRow->personal_zip_code ?? '',
+            'city'             => $piRow->personal_city     ?? '',
+            'country'          => $piRow->personal_country  ?? '',
+        ];
+
+        $firstName = (string)($pi['first_name'] ?? $userData['first_name'] ?? '');
+        $birthLN   = (string)($pi['birth_last_name'] ?? $userData['last_name'] ?? '');
+        $usageLN   = (string)($pi['usage_last_name'] ?? $birthLN);
+
+        $dobJJMMYYYY = $this->dobToJJMMYYYY($pi['birth_date'] ?? null);
+        $dobChars    = $this->splitChars($dobJJMMYYYY, 8);
+
+        $nirFull  = $this->onlyDigits(($pi['nir_body'] ?? '').($pi['nir_key'] ?? ''));
+        $nirChars = $this->splitChars($nirFull, 15);
+
+        $fullAddress = trim(
+            trim(($pi['adr1'] ?? '')."\n".($pi['adr2'] ?? '')) . "\n" .
+            trim(($pi['zip'] ?? '').' '.($pi['city'] ?? '')) . "\n" .
+            trim($pi['country'] ?? '')
+        );
+
+        $extraTextTabs = [];
+        $extraTextTabs[] = new Text(['tab_label' => 'birth_last_name', 'value' => $birthLN]);
+        $extraTextTabs[] = new Text(['tab_label' => 'usage_last_name', 'value' => $usageLN]);
+        $extraTextTabs[] = new Text(['tab_label' => 'first_name',      'value' => $firstName]);
+        for ($i=1; $i<=8;  $i++)  $extraTextTabs[] = new Text(['tab_label' => "dob_$i", 'value' => $dobChars[$i-1] ?? '']);
+        for ($i=1; $i<=15; $i++)  $extraTextTabs[] = new Text(['tab_label' => "nir_$i", 'value' => $nirChars[$i-1] ?? '']);
+        $extraTextTabs[] = new Text(['tab_label' => 'full_address',    'value' => $fullAddress]);
+
+        $forcedSignerName = $this->signerNameFromPI(
+            ['first_name'=>$firstName, 'usage_last_name'=>$usageLN],
+            $userData
+        );
+        // --------------------------------------------------------------------
 
         try {
             $api       = $this->dsClient();
             $accountId = (string) config('services.docusign.account_id');
 
-            $env   = $this->make_procuration_envelope($userData, $procu, $templateId, $embedded);
+            $env   = $this->make_procuration_envelope($userData, $procu, $templateId, $embedded, $extraTextTabs, $forcedSignerName);
             $res   = $api->createEnvelope($accountId, $env);
             $envId = $res->getEnvelopeId();
 
@@ -348,7 +429,7 @@ class DocusignController extends Controller
                 return response()->json(['error' => 'Unable to create envelope'], 400);
             }
 
-            // Optionnel : lien de signature embarquée
+            // Lien de signature embarquée (si demandé)
             $signingUrl = null;
             if ($embedded) {
                 try {
@@ -356,7 +437,7 @@ class DocusignController extends Controller
                         'authentication_method' => 'none',
                         'client_user_id'        => (string)$userData['id'],
                         'email'                 => $userData['email'],
-                        'user_name' => $this->fallbackSignerName($userData),
+                        'user_name'             => $forcedSignerName,
                         'return_url'            => rtrim(config('app.url'), '/') . '/docusign-return?envelopeId=' . $envId,
                     ]);
                     $viewRes   = $api->createRecipientView($accountId, $envId, $viewReq);
@@ -366,7 +447,7 @@ class DocusignController extends Controller
                 }
             }
 
-            // (optionnel) stocker une SignatureRequest si tu en utilises
+            // (optionnel) stocker une SignatureRequest
             try {
                 SignatureRequest::create([
                     'user_id'     => $user->id,
@@ -429,7 +510,7 @@ class DocusignController extends Controller
                 'authentication_method' => 'none',
                 'client_user_id'        => $clientId,
                 'email'                 => $user->email,
-                'user_name' => $this->fallbackSignerName([
+                'user_name'             => $this->fallbackSignerName([
                     'first_name' => $user->first_name ?? $user->firstname ?? null,
                     'last_name'  => $user->last_name  ?? $user->lastname  ?? null,
                     'name'       => $user->name ?? null,
@@ -465,7 +546,7 @@ class DocusignController extends Controller
             }
         }
 
-        // 1) Payload (support {data:{envelopeSummary}} et {envelopeSummary})
+        // 1) Payload
         $payload = json_decode($request->getContent(), true);
         if (!$payload) {
             return response()->json(['success' => false, 'error' => 'Invalid JSON'], 422);
