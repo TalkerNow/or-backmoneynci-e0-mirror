@@ -103,7 +103,7 @@ class DocusignController extends Controller
         }
 
         if (!empty($user['email'])) {
-            $local = explode('@', $user['email'])[0] ?? null;
+            $local = explode('@', $user->email)[0] ?? null;
             if ($local) return $local;
         }
 
@@ -126,13 +126,24 @@ class DocusignController extends Controller
     }
 
     /**
-     * Pick la première colonne non vide parmi une liste d'alias
+     * Pick la première propriété non vide parmi une liste d'alias sur un objet (row Eloquent/StdClass).
      */
     private function pick($row, array $candidates, $default = null) {
         foreach ($candidates as $c) {
             if ($row && isset($row->$c) && $row->$c !== '' && $row->$c !== null) {
                 return $row->$c;
             }
+        }
+        return $default;
+    }
+
+    /**
+     * Pick la première clé non vide depuis la Request (payload).
+     */
+    private function pickInput(Request $r, array $keys, $default = null) {
+        foreach ($keys as $k) {
+            $v = $r->input($k);
+            if ($v !== null && $v !== '') return $v;
         }
         return $default;
     }
@@ -331,6 +342,16 @@ class DocusignController extends Controller
             'procuration_start_date' => 'nullable|string',
             'procuration_end_date'   => 'nullable|string',
             'embedded'               => 'sometimes|boolean',
+
+            // Overrides facultatifs si ta BDD n'a pas les données
+            'birth_date'             => 'sometimes|string',
+            'nir_body'               => 'sometimes|string',
+            'nir_key'                => 'sometimes|string',
+            'address'                => 'sometimes|string',
+            'address2'               => 'sometimes|string',
+            'zip'                    => 'sometimes|string',
+            'city'                   => 'sometimes|string',
+            'country'                => 'sometimes|string',
         ];
         $validator = Validator::make($request->all(), $rules);
         if ($validator->fails()) {
@@ -343,7 +364,7 @@ class DocusignController extends Controller
             return response()->json(['error' => 'User not found'], 404);
         }
 
-        // Normalise pour les anciens tabs "principal_*"
+        // Normalise pour les anciens tabs "principal_*" (avec alias)
         $userData = [
             'id'        => $user->id,
             'email'     => $user->email,
@@ -364,10 +385,12 @@ class DocusignController extends Controller
                     })($user->name ?? null),
 
             'name'      => $user->name ?? null,
-            'adr'       => $user->personal_adr ?? $user->address ?? '',
-            'zip'       => $user->personal_zip ?? $user->zip ?? '',
-            'city'      => $user->personal_city ?? $user->city ?? '',
-            'country'   => $user->personal_country ?? $user->country ?? '',
+
+            // Adresse user avec alias
+            'adr'       => $this->pick($user, ['personal_adr','address','adr','street','address1']),
+            'zip'       => $this->pick($user, ['personal_zip','zip','zipcode','zip_code','postal_code']),
+            'city'      => $this->pick($user, ['personal_city','city','ville']),
+            'country'   => $this->pick($user, ['personal_country','country','pays']),
             'phone'     => $user->phone ?? '',
         ];
 
@@ -391,17 +414,32 @@ class DocusignController extends Controller
         $piRow = DB::table('personal_informations')->where('user_id', $user->id)->first();
 
         $pi = [
-            'first_name'       => $this->pick($piRow, ['first_name','firstname','prenom']),
-            'birth_last_name'  => $this->pick($piRow, ['maiden_name','madien_name','birth_last_name','nom_naissance']),
-            'usage_last_name'  => $this->pick($piRow, ['last_name','lastname','nom_usage']),
-            'birth_date'       => $this->pick($piRow, ['birth_date','birthday','birthdate','date_of_birth','dob']),
-            'nir_body'         => $this->pick($piRow, ['secu_social','securite_sociale','nir','num_secu','numero_secu','numero_securite_sociale']),
-            'nir_key'          => $this->pick($piRow, ['secu_social_key','nir_key','cle','key','cle_secu']),
-            'adr1'             => $this->pick($piRow, ['personal_address','address','adr','street','street1','addr1'], ''),
-            'adr2'             => $this->pick($piRow, ['personal_address_2','address2','street2','addr2'], ''),
-            'zip'              => $this->pick($piRow, ['personal_zip_code','personal_zip','zip','zipcode','zip_code','postal_code'], ''),
-            'city'             => $this->pick($piRow, ['personal_city','city','ville'], ''),
-            'country'          => $this->pick($piRow, ['personal_country','country','pays'], ''),
+            'first_name'       => $this->pick($piRow, ['first_name','firstname','prenom']) 
+                                  ?? $this->pickInput($request, ['first_name','firstname','prenom'])
+                                  ?? $this->pick($user, ['first_name','firstname']),
+            'birth_last_name'  => $this->pick($piRow, ['maiden_name','madien_name','birth_last_name','nom_naissance'])
+                                  ?? $this->pickInput($request, ['maiden_name','madien_name','birth_last_name','nom_naissance'])
+                                  ?? $this->pick($user, ['last_name','lastname']),
+            'usage_last_name'  => $this->pick($piRow, ['last_name','lastname','nom_usage'])
+                                  ?? $this->pickInput($request, ['last_name','lastname','nom_usage'])
+                                  ?? $this->pick($user, ['last_name','lastname']),
+            'birth_date'       => $this->pick($piRow, ['birth_date','birthday','birthdate','date_of_birth','dob'])
+                                  ?? $this->pickInput($request, ['birth_date','birthday','birthdate','date_of_birth','dob'])
+                                  ?? $this->pick($user, ['birth_date','birthday','birthdate','date_of_birth','dob']),
+            'nir_body'         => $this->pick($piRow, ['secu_social','securite_sociale','nir','num_secu','numero_secu','numero_securite_sociale'])
+                                  ?? $this->pickInput($request, ['nir_body','nir','secu_social','num_secu','numero_secu','numero_securite_sociale']),
+            'nir_key'          => $this->pick($piRow, ['secu_social_key','nir_key','cle','key','cle_secu'])
+                                  ?? $this->pickInput($request, ['nir_key','cle','cle_secu','key']),
+            'adr1'             => $this->pick($piRow, ['personal_address','address','adr','street','street1','addr1'], '')
+                                  ?? $this->pickInput($request, ['personal_address','address','address1','adr','street','street1','addr1'], ''),
+            'adr2'             => $this->pick($piRow, ['personal_address_2','address2','street2','addr2'], '')
+                                  ?? $this->pickInput($request, ['personal_address_2','address2','street2','addr2'], ''),
+            'zip'              => $this->pick($piRow, ['personal_zip_code','personal_zip','zip','zipcode','zip_code','postal_code'], '')
+                                  ?? $this->pickInput($request, ['personal_zip_code','personal_zip','zip','zipcode','zip_code','postal_code'], ''),
+            'city'             => $this->pick($piRow, ['personal_city','city','ville'], '')
+                                  ?? $this->pickInput($request, ['personal_city','city','ville'], ''),
+            'country'          => $this->pick($piRow, ['personal_country','country','pays'], '')
+                                  ?? $this->pickInput($request, ['personal_country','country','pays'], ''),
         ];
 
         Log::debug('PI raw (after alias pick)', [
@@ -427,15 +465,30 @@ class DocusignController extends Controller
         $nirFull = $this->onlyDigits($nirBody.$nirKey); // nettoie espaces/points/etc.
         $nirChars= $this->splitChars($nirFull, 15);
 
+        // Concat adresse multilignes depuis PI
         $fullAddress = trim(
             trim(($pi['adr1'] ?? '')."\n".($pi['adr2'] ?? '')) . "\n" .
             trim(($pi['zip'] ?? '').' '.($pi['city'] ?? '')) . "\n" .
             trim($pi['country'] ?? '')
         );
 
-        // Fallback sur l'adresse du profil si PI vide
+        // Fallback 1: adresse User (une ligne)
         if ($fullAddress === '') {
             $fullAddress = $this->create_full_address($userData['adr'] ?? '', $userData['zip'] ?? '', $userData['city'] ?? '', $userData['country'] ?? '');
+        }
+
+        // Fallback 2: adresse envoyée en payload (si tu passes "address", "address2", etc.)
+        if ($fullAddress === '') {
+            $addr1 = $this->pickInput($request, ['address','address1','street','personal_address'], '');
+            $addr2 = $this->pickInput($request, ['address2','street2','personal_address_2'], '');
+            $zip   = $this->pickInput($request, ['zip','zipcode','zip_code','postal_code'], '');
+            $city  = $this->pickInput($request, ['city','ville'], '');
+            $ctry  = $this->pickInput($request, ['country','pays'], '');
+            $fullAddress = trim(
+                trim($addr1.($addr2 ? "\n".$addr2 : '')) . "\n" .
+                trim(($zip ? $zip.' ' : '').$city) . "\n" .
+                trim($ctry)
+            );
         }
 
         $extraTextTabs = [];
