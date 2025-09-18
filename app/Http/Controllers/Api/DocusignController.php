@@ -125,6 +125,18 @@ class DocusignController extends Controller
         return preg_replace('/[^0-9A-Za-z_\-]/', '-', (string)$s);
     }
 
+    /**
+     * Pick la première colonne non vide parmi une liste d'alias
+     */
+    private function pick($row, array $candidates, $default = null) {
+        foreach ($candidates as $c) {
+            if ($row && isset($row->$c) && $row->$c !== '' && $row->$c !== null) {
+                return $row->$c;
+            }
+        }
+        return $default;
+    }
+
     /* -----------------------------------------------------------
      | Auth DocuSign (JWT) — via config('services.docusign.*')
      * ----------------------------------------------------------*/
@@ -379,19 +391,29 @@ class DocusignController extends Controller
         $piRow = DB::table('personal_informations')->where('user_id', $user->id)->first();
 
         $pi = [
-            'first_name'       => optional($piRow)->first_name,
-            // Supporte maiden_name et l'éventuelle faute d'orthographe madien_name
-            'birth_last_name'  => optional($piRow)->maiden_name ?? optional($piRow)->madien_name,
-            'usage_last_name'  => optional($piRow)->last_name,
-            'birth_date'       => optional($piRow)->birth_date,        // ex: "1999-03-25" ou "1999-03-25 00:00:00"
-            'nir_body'         => optional($piRow)->secu_social,       // 13 chiffres
-            'nir_key'          => optional($piRow)->secu_social_key,   // 2 chiffres
-            'adr1'             => optional($piRow)->personal_address ?? '',
-            'adr2'             => optional($piRow)->personal_address_2 ?? '',
-            'zip'              => optional($piRow)->personal_zip_code ?? '',
-            'city'             => optional($piRow)->personal_city ?? '',
-            'country'          => optional($piRow)->personal_country ?? '',
+            'first_name'       => $this->pick($piRow, ['first_name','firstname','prenom']),
+            'birth_last_name'  => $this->pick($piRow, ['maiden_name','madien_name','birth_last_name','nom_naissance']),
+            'usage_last_name'  => $this->pick($piRow, ['last_name','lastname','nom_usage']),
+            'birth_date'       => $this->pick($piRow, ['birth_date','birthday','birthdate','date_of_birth','dob']),
+            'nir_body'         => $this->pick($piRow, ['secu_social','securite_sociale','nir','num_secu','numero_secu','numero_securite_sociale']),
+            'nir_key'          => $this->pick($piRow, ['secu_social_key','nir_key','cle','key','cle_secu']),
+            'adr1'             => $this->pick($piRow, ['personal_address','address','adr','street','street1','addr1'], ''),
+            'adr2'             => $this->pick($piRow, ['personal_address_2','address2','street2','addr2'], ''),
+            'zip'              => $this->pick($piRow, ['personal_zip_code','personal_zip','zip','zipcode','zip_code','postal_code'], ''),
+            'city'             => $this->pick($piRow, ['personal_city','city','ville'], ''),
+            'country'          => $this->pick($piRow, ['personal_country','country','pays'], ''),
         ];
+
+        Log::debug('PI raw (after alias pick)', [
+            'birth_date_raw' => $pi['birth_date'] ?? null,
+            'nir_body_raw'   => $pi['nir_body'] ?? null,
+            'nir_key_raw'    => $pi['nir_key'] ?? null,
+            'adr1_raw'       => $pi['adr1'] ?? null,
+            'adr2_raw'       => $pi['adr2'] ?? null,
+            'zip_raw'        => $pi['zip'] ?? null,
+            'city_raw'       => $pi['city'] ?? null,
+            'country_raw'    => $pi['country'] ?? null,
+        ]);
 
         $firstName = (string)($pi['first_name'] ?? $userData['first_name'] ?? '');
         $birthLN   = (string)($pi['birth_last_name'] ?? $userData['last_name'] ?? '');
