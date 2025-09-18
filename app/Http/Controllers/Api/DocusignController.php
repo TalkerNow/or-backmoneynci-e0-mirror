@@ -469,11 +469,11 @@ class DocusignController extends Controller
         $fullAddress = implode(' ', array_filter(array_map(function ($s) {
             return trim((string)$s);
         }, [
-            $pi['adr1']   ?? '',
-            $pi['adr2']   ?? '',
-            $pi['zip']    ?? '',
-            $pi['city']   ?? '',
-            $pi['country']?? ''
+            $pi['adr1']    ?? '',
+            $pi['adr2']    ?? '',
+            $pi['zip']     ?? '',
+            $pi['city']    ?? '',
+            $pi['country'] ?? ''
         ]), fn($s) => $s !== ''));
 
         // Sécurité : supprime \r/\n éventuels et compresse les espaces
@@ -481,29 +481,35 @@ class DocusignController extends Controller
 
         // Fallback 1: adresse User (une ligne)
         if ($fullAddress === '') {
-            $fullAddress = $this->create_full_address($userData['adr'] ?? '', $userData['zip'] ?? '', $userData['city'] ?? '', $userData['country'] ?? '');
+            $fullAddress = $this->create_full_address(
+                $userData['adr'] ?? '',
+                $userData['zip'] ?? '',
+                $userData['city'] ?? '',
+                $userData['country'] ?? ''
+            );
         }
 
-        // Fallback 2: adresse envoyée en payload (si tu passes "address", "address2", etc.)
+        // Fallback 2: adresse envoyée en payload
         if ($fullAddress === '') {
             $addr1 = $this->pickInput($request, ['address','address1','street','personal_address'], '');
             $addr2 = $this->pickInput($request, ['address2','street2','personal_address_2'], '');
             $zip   = $this->pickInput($request, ['zip','zipcode','zip_code','postal_code'], '');
             $city  = $this->pickInput($request, ['city','ville'], '');
             $ctry  = $this->pickInput($request, ['country','pays'], '');
+
             $fullAddress = implode(' ', array_filter(array_map(function ($s) {
                 return trim((string)$s);
             }, [
-                $pi['adr1']   ?? '',
-                $pi['adr2']   ?? '',
-                $pi['zip']    ?? '',
-                $pi['city']   ?? '',
-                $pi['country']?? ''
+                $addr1,
+                $addr2,
+                $zip,
+                $city,
+                $ctry
             ]), fn($s) => $s !== ''));
 
-            // Sécurité : supprime \r/\n éventuels et compresse les espaces
             $fullAddress = preg_replace('/\s+/', ' ', str_replace(["\r", "\n"], ' ', $fullAddress));
         }
+
 
         $extraTextTabs = [];
         $extraTextTabs[] = new Text(['tab_label' => 'birth_last_name', 'value' => $birthLN]);
