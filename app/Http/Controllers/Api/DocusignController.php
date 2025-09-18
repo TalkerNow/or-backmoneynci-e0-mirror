@@ -420,6 +420,15 @@ class DocusignController extends Controller
         try {
             $api       = $this->dsClient();
             $accountId = (string) config('services.docusign.account_id');
+            Log::debug('DS prefill', [
+                'dobJJMMYYYY' => $dobJJMMYYYY,
+                'dobChars'    => $dobChars,
+                'nirFull'     => $nirFull,
+                'nirLen'      => strlen($nirFull),
+                'firstName'   => $firstName,
+                'usageLN'     => $usageLN,
+                ]);
+
 
             $env   = $this->make_procuration_envelope($userData, $procu, $templateId, $embedded, $extraTextTabs, $forcedSignerName);
             $res   = $api->createEnvelope($accountId, $env);
