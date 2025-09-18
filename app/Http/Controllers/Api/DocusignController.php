@@ -466,11 +466,18 @@ class DocusignController extends Controller
         $nirChars= $this->splitChars($nirFull, 15);
 
         // Concat adresse multilignes depuis PI
-        $fullAddress = trim(
-            trim(($pi['adr1'] ?? '')."\n".($pi['adr2'] ?? '')) . "\n" .
-            trim(($pi['zip'] ?? '').' '.($pi['city'] ?? '')) . "\n" .
-            trim($pi['country'] ?? '')
-        );
+        $fullAddress = implode(' ', array_filter(array_map(function ($s) {
+            return trim((string)$s);
+        }, [
+            $pi['adr1']   ?? '',
+            $pi['adr2']   ?? '',
+            $pi['zip']    ?? '',
+            $pi['city']   ?? '',
+            $pi['country']?? ''
+        ]), fn($s) => $s !== ''));
+
+        // Sécurité : supprime \r/\n éventuels et compresse les espaces
+        $fullAddress = preg_replace('/\s+/', ' ', str_replace(["\r", "\n"], ' ', $fullAddress));
 
         // Fallback 1: adresse User (une ligne)
         if ($fullAddress === '') {
@@ -484,11 +491,18 @@ class DocusignController extends Controller
             $zip   = $this->pickInput($request, ['zip','zipcode','zip_code','postal_code'], '');
             $city  = $this->pickInput($request, ['city','ville'], '');
             $ctry  = $this->pickInput($request, ['country','pays'], '');
-            $fullAddress = trim(
-                trim($addr1.($addr2 ? "\n".$addr2 : '')) . "\n" .
-                trim(($zip ? $zip.' ' : '').$city) . "\n" .
-                trim($ctry)
-            );
+            $fullAddress = implode(' ', array_filter(array_map(function ($s) {
+                return trim((string)$s);
+            }, [
+                $pi['adr1']   ?? '',
+                $pi['adr2']   ?? '',
+                $pi['zip']    ?? '',
+                $pi['city']   ?? '',
+                $pi['country']?? ''
+            ]), fn($s) => $s !== ''));
+
+            // Sécurité : supprime \r/\n éventuels et compresse les espaces
+            $fullAddress = preg_replace('/\s+/', ' ', str_replace(["\r", "\n"], ' ', $fullAddress));
         }
 
         $extraTextTabs = [];
