@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\DB;
 
 use App\Models\User;
 use App\Models\Documents;
-use App\Models\SignatureRequest;
 
 use DocuSign\eSign\Configuration;
 use DocuSign\eSign\Client\ApiClient;
@@ -62,14 +61,20 @@ class DocusignController extends Controller
     }
 
     private function dobToJJMMYYYY(?string $birthDate): string {
-        // DB : AAAA_MM_DD (accepte aussi AAAA-MM-DD/AAAA/MM/DD)
-        $d = preg_replace('/\D+/', '', (string)$birthDate); // garde que les chiffres
-        // attend 8 chiffres : AAAAMMDD -> JJMMYYYY
+        // Tolérant: gère YYYY-MM-DD, YYYY/MM/DD, YYYYMMDD, avec ou sans heure
+        $s = trim((string)$birthDate);
+        if ($s === '') return '';
+        if (preg_match('/(\d{4})\D?(\d{2})\D?(\d{2})/', $s, $m)) {
+            $yyyy = $m[1]; $mm = $m[2]; $dd = $m[3];
+            return $dd.$mm.$yyyy; // JJMMYYYY
+        }
+        // Fallback strict 8 chiffres
+        $d = preg_replace('/\D+/', '', $s);
         if (strlen($d) === 8) {
             $yyyy = substr($d, 0, 4);
             $mm   = substr($d, 4, 2);
             $dd   = substr($d, 6, 2);
-            return $dd.$mm.$yyyy; // JJMMYYYY
+            return $dd.$mm.$yyyy;
         }
         return '';
     }
@@ -374,17 +379,18 @@ class DocusignController extends Controller
         $piRow = DB::table('personal_informations')->where('user_id', $user->id)->first();
 
         $pi = [
-            'first_name'       => $piRow->first_name        ?? null,
-            'birth_last_name'  => $piRow->madien_name       ?? null, // nom de naissance
-            'usage_last_name'  => $piRow->last_name         ?? null, // nom d’usage
-            'birth_date'       => $piRow->birth_date        ?? null, // AAAA_MM_DD
-            'nir_body'         => $piRow->secu_social       ?? null, // 13 chiffres
-            'nir_key'          => $piRow->secu_social_key   ?? null, // 2 chiffres
-            'adr1'             => $piRow->personal_address  ?? '',
-            'adr2'             => $piRow->personal_address_2?? '',
-            'zip'              => $piRow->personal_zip_code ?? '',
-            'city'             => $piRow->personal_city     ?? '',
-            'country'          => $piRow->personal_country  ?? '',
+            'first_name'       => optional($piRow)->first_name,
+            // Supporte maiden_name et l'éventuelle faute d'orthographe madien_name
+            'birth_last_name'  => optional($piRow)->maiden_name ?? optional($piRow)->madien_name,
+            'usage_last_name'  => optional($piRow)->last_name,
+            'birth_date'       => optional($piRow)->birth_date,        // ex: "1999-03-25" ou "1999-03-25 00:00:00"
+            'nir_body'         => optional($piRow)->secu_social,       // 13 chiffres
+            'nir_key'          => optional($piRow)->secu_social_key,   // 2 chiffres
+            'adr1'             => optional($piRow)->personal_address ?? '',
+            'adr2'             => optional($piRow)->personal_address_2 ?? '',
+            'zip'              => optional($piRow)->personal_zip_code ?? '',
+            'city'             => optional($piRow)->personal_city ?? '',
+            'country'          => optional($piRow)->personal_country ?? '',
         ];
 
         $firstName = (string)($pi['first_name'] ?? $userData['first_name'] ?? '');
@@ -394,14 +400,21 @@ class DocusignController extends Controller
         $dobJJMMYYYY = $this->dobToJJMMYYYY($pi['birth_date'] ?? null);
         $dobChars    = $this->splitChars($dobJJMMYYYY, 8);
 
-        $nirFull  = $this->onlyDigits(($pi['nir_body'] ?? '').($pi['nir_key'] ?? ''));
-        $nirChars = $this->splitChars($nirFull, 15);
+        $nirBody = (string)($pi['nir_body'] ?? '');
+        $nirKey  = (string)($pi['nir_key']  ?? '');
+        $nirFull = $this->onlyDigits($nirBody.$nirKey); // nettoie espaces/points/etc.
+        $nirChars= $this->splitChars($nirFull, 15);
 
         $fullAddress = trim(
             trim(($pi['adr1'] ?? '')."\n".($pi['adr2'] ?? '')) . "\n" .
             trim(($pi['zip'] ?? '').' '.($pi['city'] ?? '')) . "\n" .
             trim($pi['country'] ?? '')
         );
+
+        // Fallback sur l'adresse du profil si PI vide
+        if ($fullAddress === '') {
+            $fullAddress = $this->create_full_address($userData['adr'] ?? '', $userData['zip'] ?? '', $userData['city'] ?? '', $userData['country'] ?? '');
+        }
 
         $extraTextTabs = [];
         $extraTextTabs[] = new Text(['tab_label' => 'birth_last_name', 'value' => $birthLN]);
@@ -427,8 +440,8 @@ class DocusignController extends Controller
                 'nirLen'      => strlen($nirFull),
                 'firstName'   => $firstName,
                 'usageLN'     => $usageLN,
-                ]);
-
+                'fullAddress' => $fullAddress,
+            ]);
 
             $env   = $this->make_procuration_envelope($userData, $procu, $templateId, $embedded, $extraTextTabs, $forcedSignerName);
             $res   = $api->createEnvelope($accountId, $env);
@@ -454,18 +467,6 @@ class DocusignController extends Controller
                 } catch (DSEApiException $e) {
                     Log::warning('createRecipientView failed: '.$e->getMessage());
                 }
-            }
-
-            // (optionnel) stocker une SignatureRequest
-            try {
-                SignatureRequest::create([
-                    'user_id'     => $user->id,
-                    'envelope_id' => $envId,
-                    'type'        => 'procuration',
-                    'meta'        => json_encode($procu),
-                ]);
-            } catch (\Throwable $e) {
-                Log::warning('SignatureRequest create failed: '.$e->getMessage());
             }
 
             return response()->json([
@@ -568,15 +569,6 @@ class DocusignController extends Controller
 
         $envelopeId = $summary['envelopeId'] ?? $summary['envelopeID'] ?? null;
         $status     = strtolower($summary['status'] ?? '');
-
-        // 2) Si completed → nettoyer SignatureRequest
-        if ($envelopeId && $status === 'completed') {
-            try {
-                SignatureRequest::where('envelope_id', $envelopeId)->delete();
-            } catch (\Throwable $e) {
-                Log::warning('SignatureRequest cleanup failed: '.$e->getMessage());
-            }
-        }
 
         $customFields = $summary['customFields']['textCustomFields'] ?? [];
         $docType = null;
