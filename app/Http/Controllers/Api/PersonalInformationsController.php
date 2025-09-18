@@ -66,6 +66,8 @@ class PersonalInformationsController extends Controller
             'society_country' => 'nullable',
             'notes' => 'nullable',
             'business_introducer_id' => 'nullable',
+            'secu_social' => 'nullable',
+            'secu_social_key' => 'nullable',
         ]);
         $information->update($request->all());
     }

@@ -42,6 +42,8 @@ class PersonalInformations extends Model
         'notes',
         'comments',
         'parent_id',
-        'business_introducer_id'
+        'business_introducer_id',
+        'secu_social',
+        'secu_social_key'
     ];
 }
