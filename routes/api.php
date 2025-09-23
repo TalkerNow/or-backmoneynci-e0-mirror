@@ -61,6 +61,6 @@ Route::namespace('App\Http\Controllers')->group(function () {
     Route::post('/docusign/get-signing-link',  'Api\DocusignController@getSigningLink')->name('docusign.get_signing_link');
     // Webhook DocuSign Connect (NE PAS protéger par auth)
     Route::post('/docusign/connect',           'Api\DocusignController@docusignConnectCallback')->name('docusign.connect');
-    Route::apiResource('kpis', KpiController::class);
+    Route::apiResource('/kpis', 'Api\KpiController');
 
 });
