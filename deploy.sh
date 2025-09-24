@@ -1,37 +1,39 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Turn on maintenance mode
-php artisan down || true
+# Raccourci pour exécuter des commandes dans le conteneur PHP
+C='docker compose exec -T php bash -lc'
 
-# Pull the latest changes from the git repository
-# git reset --hard
-# git clean -df
-# git pull origin master
+echo "🔄 Git pull…"
+git pull --ff-only
 
-# Install/update composer dependecies
- composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+echo "🐳 Sanity check conteneur PHP…"
+$C 'php -v'
 
-# Run database migrations
- php artisan migrate --force
+echo "🛑 Maintenance ON…"
+$C 'php artisan down || true'
 
-# Clear caches
- php artisan cache:clear
+echo "📦 Dépendances Composer (si besoin)…"
+$C 'composer install --no-dev --prefer-dist --no-interaction'
 
-# Clear expired password reset tokens
- php artisan auth:clear-resets
+echo "🧹 Clear caches avant build…"
+$C 'php artisan config:clear && php artisan cache:clear && php artisan route:clear && php artisan view:clear'
 
-# Clear and cache routes
- php artisan route:cache
+echo "🗃️  Migrations…"
+$C 'php artisan migrate --force'
 
-# Clear and cache config
- php artisan config:cache
+echo "🧼 Nettoyage tokens reset (optionnel)…"
+$C 'php artisan auth:clear-resets || true'
 
-# Clear and cache views
- php artisan view:cache
+echo "⚡ Rebuild caches…"
+# (tu peux aussi faire 'php artisan optimize', mais je préfère expliciter)
+$C 'php artisan config:cache && php artisan route:cache && php artisan view:cache'
 
-# Turn off maintenance mode
-php artisan up
+echo "✅ Maintenance OFF…"
+$C 'php artisan up'
 
-echo "" > storage/logs/laravel.log
+echo "📄 Petit tail des logs pour vérifier (100 lignes)…"
+$C 'tail -n 100 storage/logs/laravel.log || true'
 
-php artisan serve --port=8000
+echo "🎉 Déploiement terminé."
+
