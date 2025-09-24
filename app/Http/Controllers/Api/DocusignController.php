@@ -149,6 +149,7 @@ class DocusignController extends Controller
         $recipientName  = $data['recipient_name']  ?: trim(($user->first_name ?? '').' '.($user->last_name ?? '')) ?: $recipientEmail;
         $embedded       = (bool)$request->get('embedded', false);
 
+
         try {
             $api       = $this->dsClient();
             $accountId = (string) config('services.docusign.account_id');
