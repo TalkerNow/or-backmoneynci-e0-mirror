@@ -2,45 +2,55 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
+  <title>Contrat</title>
   <style>
-    body { font-family: Arial, sans-serif; font-size: 12px; }
-    .contract-div { display:inline-block; min-width:80px; border:1px solid #8d8d8d; padding:3px 6px; }
-    .center { text-align:center; }
+    body{font-family: Arial, sans-serif; font-size:12px; line-height:1.4}
+    .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+    .logo{height:50px}
+    .section{margin:18px 0}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid #ddd;padding:6px;text-align:left}
   </style>
 </head>
 <body>
-  <img src="{{ $logoUrl }}" alt="logo" style="height:130px" />
+  <div class="head">
+    <div>
+      <h2 style="margin:0">Votre contrat</h2>
+      <div>{{ now()->format('d/m/Y') }}</div>
+    </div>
+    @if(!empty($logoUrl))
+      <img class="logo" src="{{ $logoUrl }}" alt="logo">
+    @endif
+  </div>
 
-  <h1 class="center" style="margin-top:30px">
-    Contrat de {{ $row['civility'] ?? '' }} {{ $row['first_name'] ?? '' }} {{ $row['last_name'] ?? '' }}
-  </h1>
+  <div class="section">
+    <strong>Client :</strong>
+    {{ $row['civility'] ?? '' }} {{ $row['first_name'] ?? '' }} {{ $row['last_name'] ?? '' }}<br>
+    Email : {{ $row['email'] ?? '' }} – Tél : {{ $row['mobile_number'] ?? '' }}
+  </div>
 
-  <p>Total HT: <b>{{ $fv['TOTALHT'] }} €</b> —
-     TVA ({{ $fv['TVAP'] }}%): <b>{{ $fv['TVA'] }} €</b> —
-     Total TTC: <b>{{ $fv['TOTALTTC'] }} €</b>
-  </p>
-
-  <h3 style="margin-top:30px">Échéancier</h3>
-  <p>{{ $fv['fp1'] }}% : {{ $fv['FINAL75'] }} € —
-     {{ $fv['fp2'] }}% : {{ $fv['FINAL25'] }} €</p>
+  <div class="section">
+    <h3>Récapitulatif</h3>
+    <table>
+      <tr><th>Total HT</th><td>{{ number_format($fv['TOTALHT'] ?? 0, 2, ',', ' ') }} €</td></tr>
+      <tr><th>TVA ({{ $fv['TVAP'] ?? 20 }}%)</th><td>{{ number_format($fv['TVA'] ?? 0, 2, ',', ' ') }} €</td></tr>
+      <tr><th>Total TTC</th><td>{{ number_format($fv['TOTALTTC'] ?? 0, 2, ',', ' ') }} €</td></tr>
+      <tr><th>Acompte ({{ $fv['fp1'] ?? 75 }}%)</th><td>{{ $fv['FINAL75'] ?? '0.00' }} €</td></tr>
+      <tr><th>Solde ({{ $fv['fp2'] ?? 25 }}%)</th><td>{{ $fv['FINAL25'] ?? '0.00' }} €</td></tr>
+    </table>
+  </div>
 
   @if(!empty($notes))
-    <h3 style="margin-top:20px">Notes</h3>
-    <div style="white-space:pre-wrap; font-size:13px">{!! nl2br(e($notes)) !!}</div>
+    <div class="section"><strong>Notes :</strong><br>{!! nl2br(e($notes)) !!}</div>
   @endif
 
   @if(!empty($generalCondition))
-    <h3 style="margin-top:20px">Conditions Générales</h3>
-    <div style="white-space:pre-wrap; font-size:12px">{!! nl2br(e($generalCondition)) !!}</div>
+    <div class="section"><strong>Conditions générales :</strong><br>{!! $generalCondition !!}</div>
   @endif
 
-  <!-- GARDE EXACTEMENT ce texte pour l’ancrage DocuSign -->
-  <div style="margin-top:60px">
-    <u>Date & signature du client:</u>
-  </div>
-
-  <div style="margin-top:120px" class="center">
-    EOR - 36, RUE DE LABORDE 75008 PARIS - SIRET N° 48488721100023 - APE N° 7022Z
+  <div class="section" style="margin-top:50px">
+    <!-- ⚠️ TEXTE D'ANCRAGE EXACT pour DocuSign -->
+    <strong>Date & signature du client:</strong>
   </div>
 </body>
 </html>
