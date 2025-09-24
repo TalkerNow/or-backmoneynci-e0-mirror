@@ -26,7 +26,13 @@ use DocuSign\eSign\Model\CustomFields;
 use DocuSign\eSign\Model\EventNotification;
 use DocuSign\eSign\Model\EnvelopeEvent;
 use DocuSign\eSign\Model\RecipientViewRequest;
+use Illuminate\Support\Facades\Http;
 
+use DocuSign\eSign\Model\Document as DSDocument;
+use DocuSign\eSign\Model\Signer;
+use DocuSign\eSign\Model\Recipients;
+use DocuSign\eSign\Model\SignHere;
+use DocuSign\eSign\Model\DateSigned;
 use DocuSign\eSign\Client\ApiException as DSEApiException;
 use DocuSign\eSign\Client\Auth\OAuth;
 
@@ -77,6 +83,62 @@ class DocusignController extends Controller
             return $dd.$mm.$yyyy;
         }
         return '';
+    }
+
+    private function computeContractTotals(array $v): array
+    {
+        $num = fn($k)=> (float)($v[$k] ?? 0);
+        $int = fn($k)=> (int)($v[$k] ?? 0);
+        $bool= fn($k)=> (bool)($v[$k] ?? false);
+
+        $TVAP = $num('TVAP') ?: 20;
+        $VTA  = 1 + $TVAP/100;
+
+        // S1
+        $nbHT1 = 0;
+        if ($bool('c1')) {
+            $nbHT1 = (int) floor( (($num('nb1-price') ?: 0) / 60) * $int('nb1') );
+        }
+        $TTC1 = $nbHT1 * $VTA;
+
+        // S2
+        $HT2   = $bool('c2') ? $num('p2') : 0;
+        $nbHT2 = ($bool('c2') && $bool('cnb2')) ? (($num('nb2-price') ?: 0) * $num('nb2')) : 0;
+        $TTC2  = ($HT2 + $nbHT2) * $VTA;
+
+        // S3 & S4
+        $HT3  = $bool('c3') ? $num('p3') : 0;
+        $HT4  = $bool('c4') ? $num('p4') : 0;
+        $TTC4 = ($HT3 + $HT4) * $VTA;
+        $nbHT4= $bool('cnb4') ? (($num('nb4-price') ?: 0) * $num('nb4')) : 0;
+        $TTC34= ($HT3 + $HT4 + $nbHT4) * $VTA;
+
+        // S5
+        $HT5   = ($bool('c5') && !$bool('cc5')) ? $num('p5') : 0;
+        $nbHT5 = ($bool('c5') && $bool('cnb5')) ? (($num('nb5-price') ?: 0) * $num('nb5')) : 0;
+        $TTC5  = ($HT5 + $nbHT5) * $VTA;
+
+        // S6 & S7
+        $HT6  = $bool('c6') ? $num('p6') : 0;
+        $TTC6 = $HT6 * $VTA;
+        $HT7  = $bool('c7') ? $num('p7') : 0;
+        $TTC7 = $HT7 * $VTA;
+
+        $TOTALHT = (int) floor($nbHT1 + $HT2 + $nbHT2 + $HT3 + $HT4 + $nbHT4 + $HT5 + $nbHT5 + $HT6 + $HT7);
+        $TVA     = (float) round($TOTALHT * $TVAP / 100, 2);
+        $TOTALTTC= (int) floor($TOTALHT * $VTA);
+
+        $fp1 = max(0, min(100, (float)($v['fp1'] ?? 75)));
+        $fp2 = 100 - $fp1;
+
+        $FINAL75 = (int) floor($TOTALTTC * ($fp1/100)) . ".00";
+        $FINAL25 = (int) floor($TOTALTTC * ($fp2/100)) . ".00";
+
+        return array_merge($v, compact(
+            'nbHT1','TTC1','HT2','nbHT2','TTC2','HT3','HT4','TTC4','nbHT4','TTC34',
+            'HT5','nbHT5','TTC5','HT6','TTC6','HT7','TTC7',
+            'TOTALHT','TVAP','TVA','TOTALTTC','fp1','fp2','FINAL75','FINAL25'
+        ));
     }
 
     private function signerNameFromPI(array $pi, array $userData): string {
@@ -689,42 +751,71 @@ class DocusignController extends Controller
         }
 
         // 3) Stockage
-        try {
-            $file   = base64_decode($pdfBytes);
-            $userId = (string)$user->id;
-            $time   = $this->safeFileSuffix($summary['completedDateTime'] ?? now()->toIso8601String());
+// 3) Stockage
+try {
+    $file   = base64_decode($pdfBytes);
+    $userId = (string)$user->id;
+    $time   = $this->safeFileSuffix($summary['completedDateTime'] ?? now()->toIso8601String());
 
-            if ($docType === 'procuration') {
-                Storage::disk('users')->makeDirectory("$userId/contract/procuration");
-                $storedPath = "$userId/contract/procuration/procuration-$time.pdf";
+    if ($docType === 'procuration') {
+        Storage::disk('users')->makeDirectory("$userId/contract/procuration");
+        $storedPath = "$userId/contract/procuration/procuration-$time.pdf";
 
-                if (!Storage::disk('users')->exists($storedPath)) {
-                    Storage::disk('users')->put($storedPath, $file);
-                }
-
-                $exists = Documents::where([
-                    'user_id'     => $userId,
-                    'type'        => 'procuration',
-                    'link_to_doc' => $storedPath,
-                ])->exists();
-
-                if (!$exists) {
-                    Documents::create([
-                        'user_id'     => $userId,
-                        'link_to_doc' => $storedPath,
-                        'title'       => basename($storedPath),
-                        'type'        => 'procuration',
-                        'is_approuved'=> true,
-                    ]);
-                }
-            } else {
-                Log::info("Doc type non géré: $docType");
-                return response()->json(['success' => false, 'error' => 'Unhandled documentType'], 422);
-            }
-        } catch (\Throwable $e) {
-            Log::error('Connect store error: '.$e->getMessage());
-            return response()->json(['error' => "Couldn't store file"], 422);
+        if (!Storage::disk('users')->exists($storedPath)) {
+            Storage::disk('users')->put($storedPath, $file);
         }
+
+        $exists = Documents::where([
+            'user_id'     => $userId,
+            'type'        => 'procuration',
+            'link_to_doc' => $storedPath,
+        ])->exists();
+
+        if (!$exists) {
+            Documents::create([
+                'user_id'     => $userId,
+                'link_to_doc' => $storedPath,
+                'title'       => basename($storedPath),
+                'type'        => 'procuration',
+                'is_approuved'=> true,
+            ]);
+        }
+
+        return response()->json(['success'=>true], 200); // <-- AJOUTE UN RETURN ICI
+        } elseif ($docType === 'contract') {                 // <-- ICI: elseif au lieu d’un 2e if
+            Storage::disk('users')->makeDirectory("$userId/contract/signed");
+            $storedPath = "$userId/contract/signed/contract-$time.pdf";
+
+            if (!Storage::disk('users')->exists($storedPath)) {
+                Storage::disk('users')->put($storedPath, $file);
+            }
+
+            $exists = Documents::where([
+                'user_id'     => $userId,
+                'type'        => 'contract',
+                'link_to_doc' => $storedPath,
+            ])->exists();
+
+            if (!$exists) {
+                Documents::create([
+                    'user_id'     => $userId,
+                    'link_to_doc' => $storedPath,
+                    'title'       => basename($storedPath),
+                    'type'        => 'contract',
+                    'is_approuved'=> true,
+                ]);
+            }
+
+            return response()->json(['success'=>true], 200);
+        } else {
+            Log::info("Doc type non géré: $docType");
+            return response()->json(['success' => false, 'error' => 'Unhandled documentType'], 422);
+        }
+    } catch (\Throwable $e) {
+        Log::error('Connect store error: '.$e->getMessage());
+        return response()->json(['error' => "Couldn't store file"], 422);
+    }
+
 
         return response()->json(['success' => true], 200);
     }
