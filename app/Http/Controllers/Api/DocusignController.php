@@ -35,6 +35,7 @@ use DocuSign\eSign\Model\SignHere;
 use DocuSign\eSign\Model\DateSigned;
 use DocuSign\eSign\Client\ApiException as DSEApiException;
 use DocuSign\eSign\Client\Auth\OAuth;
+use Illuminate\Http\UploadedFile;
 
 use Firebase\JWT\JWT;
 use Exception;
@@ -85,161 +86,161 @@ class DocusignController extends Controller
         return '';
     }
 
-    public function sendFilledContract(Request $request)
-    {
-        // Protège comme tes autres endpoints
-        try { $auth = auth()->userOrFail(); } catch (\Throwable $e) {
-            return response()->json(['error'=>'Unauthorized'], 401);
-        }
-
-        $data = $request->validate([
-            'user_id'          => 'required|integer',
-            'recipient_email'  => 'nullable|email',
-            'recipient_name'   => 'nullable|string',
-            'rowData'          => 'nullable|array',   // infos affichées (civilité, prénom, nom, etc.)
-            'formValues'       => 'required|array',   // valeurs du contrat (c1..c7, p2..p7, TVAP, fp1, etc.)
-            'notes'            => 'nullable|string',
-            'generalCondition' => 'nullable|string',
-            'embedded'         => 'sometimes|boolean',
-        ]);
-
-        $user = \App\Models\User::find($data['user_id']);
-        if (!$user) return response()->json(['error'=>'User not found'], 404);
-
-        // 1) Recalcule serveur pour éviter la triche côté front
-        $fv = $this->computeContractTotals($data['formValues']);
-
-        // 2) Données d’affichage
-        $row = $data['rowData'] ?? [
-            'civility'   => $user->civility  ?? '',
-            'first_name' => $user->first_name?? '',
-            'last_name'  => $user->last_name ?? '',
-            'birth_date' => $user->birth_date ?? null,
-            'mobile_number' => $user->phone ?? '',
-            'email' => $user->email ?? '',
-        ];
-        $notes            = $data['notes'] ?? '';
-        $generalCondition = $data['generalCondition'] ?? '';
-
-        // 3) Logo en base64 (mets l’image dans backend/public/images/contract_logo.jpg)
-        $logoPath = public_path('images/contract_logo.jpg');
-        $logoUrl  = file_exists($logoPath)
-            ? 'data:image/jpeg;base64,'.base64_encode(file_get_contents($logoPath))
-            : '';
-
-        // 4) HTML -> PDF via le service browsershot (docker)
-        $html = view('contracts.contract', compact('row','fv','logoUrl','notes','generalCondition'))->render();
-
-        $response = \Illuminate\Support\Facades\Http::timeout(60)->post('http://browsershot:3000/pdf', [
-            'html' => $html,
-            'options' => [
-                'format' => 'A4',
-                'printBackground' => true,
-                'margin' => ['top'=>'20mm','right'=>'15mm','bottom'=>'20mm','left'=>'15mm'],
-            ],
-        ]);
-        if (!$response->ok()) {
-            return response()->json(['error'=>'PDF service error', 'detail'=>$response->body()], 500);
-        }
-        $pdfBinary = $response->body();
-        $docBase64 = base64_encode($pdfBinary);
-
-        // 5) Envoi DocuSign (ancre sur "Date & signature du client:")
-        $recipientEmail = $data['recipient_email'] ?: $user->email;
-        $recipientName  = $data['recipient_name']  ?: trim(($user->first_name ?? '').' '.($user->last_name ?? '')) ?: $recipientEmail;
-        $embedded       = (bool)$request->get('embedded', false);
-
-
-        try {
-            $api       = $this->dsClient();
-            $accountId = (string) config('services.docusign.account_id');
-
-            $document = new \DocuSign\eSign\Model\Document([
-                'document_base64' => $docBase64,
-                'name'            => 'Contrat.pdf',
-                'file_extension'  => 'pdf',
-                'document_id'     => '1',
-            ]);
-
-            // Champs ancrés
-            $signHere = new \DocuSign\eSign\Model\SignHere([
-                'anchor_string'                => 'Date & signature du client:',
-                'anchor_units'                 => 'pixels',
-                'anchor_x_offset'              => '280',   // ajuste si besoin
-                'anchor_y_offset'              => '-10',
-                'anchor_ignore_if_not_present' => 'false',
-            ]);
-            $dateSigned = new \DocuSign\eSign\Model\DateSigned([
-                'anchor_string'                => 'Date & signature du client:',
-                'anchor_units'                 => 'pixels',
-                'anchor_x_offset'              => '0',
-                'anchor_y_offset'              => '15',
-                'anchor_ignore_if_not_present' => 'false',
-            ]);
-
-            $tabs = new \DocuSign\eSign\Model\Tabs([
-                'sign_here_tabs'   => [$signHere],
-                'date_signed_tabs' => [$dateSigned],
-            ]);
-
-            $signerPayload = [
-                'email'         => $recipientEmail,
-                'name'          => $recipientName,
-                'recipient_id'  => '1',
-                'routing_order' => '1',
-                'tabs'          => $tabs,
-            ];
-            if ($embedded) {
-                $signerPayload['client_user_id'] = (string)$user->id;
-            }
-            $signer     = new \DocuSign\eSign\Model\Signer($signerPayload);
-            $recipients = new \DocuSign\eSign\Model\Recipients(['signers'=>[$signer]]);
-
-            $envelope = new \DocuSign\eSign\Model\EnvelopeDefinition([
-                'email_subject' => 'Signature de votre contrat',
-                'documents'     => [$document],
-                'recipients'    => $recipients,
-                'status'        => 'sent',
-            ]);
-
-            // Tag pour le webhook
-            $envelope->setCustomFields(new \DocuSign\eSign\Model\CustomFields([
-                'text_custom_fields' => [
-                    ['name'=>'documentType','value'=>'contract'],
-                ],
-            ]));
-
-            $res   = $api->createEnvelope($accountId, $envelope);
-            $envId = $res->getEnvelopeId();
-
-            // Lien de signature embarquée
-            $signingUrl = null;
-            if ($embedded) {
-                $viewReq = new \DocuSign\eSign\Model\RecipientViewRequest([
-                    'authentication_method' => 'none',
-                    'client_user_id'        => (string)$user->id,
-                    'email'                 => $recipientEmail,
-                    'user_name'             => $recipientName,
-                    'return_url'            => rtrim(config('app.url'), '/').'/docusign-return?envelopeId='.$envId,
-                ]);
-                try {
-                    $viewRes   = $api->createRecipientView($accountId, $envId, $viewReq);
-                    $signingUrl = $viewRes->getUrl();
-                } catch (\DocuSign\eSign\Client\ApiException $e) {
-                    \Log::warning('createRecipientView failed: '.$e->getMessage());
-                }
-            }
-
-            return response()->json([
-                'success'     => true,
-                'envelope_id' => $envId,
-                'signing_url' => $signingUrl,
-            ]);
-        } catch (\Throwable $e) {
-            \Log::error('sendFilledContract error: '.$e->getMessage());
-            return response()->json(['error'=>'DocuSign error','detail'=>$e->getMessage()], 500);
-        }
+ public function sendFilledContract(Request $request)
+{
+    // Auth (identique)
+    try { $auth = auth()->userOrFail(); } catch (\Throwable $e) {
+        return response()->json(['error'=>'Unauthorized'], 401);
     }
+
+    // Validation : on exige le PDF exact, pas de HTML
+    $data = $request->validate([
+        'user_id'            => 'required|integer',
+        'recipient_email'    => 'nullable|email',
+        'recipient_name'     => 'nullable|string',
+        'embedded'           => 'sometimes|boolean',
+
+        // L'un des deux est requis :
+        'exact_pdf'          => 'sometimes|file|mimes:pdf',
+        'exact_pdf_base64'   => 'sometimes|string',
+
+        // (optionnel) override des coords DocuSign (en pixels @72dpi)
+        'sign_page'          => 'sometimes|integer|min:1',
+        'sign_x'             => 'sometimes|integer|min:0',
+        'sign_y'             => 'sometimes|integer|min:0',
+        'date_page'          => 'sometimes|integer|min:1',
+        'date_x'             => 'sometimes|integer|min:0',
+        'date_y'             => 'sometimes|integer|min:0',
+    ]);
+
+    $user = \App\Models\User::find($data['user_id']);
+    if (!$user) return response()->json(['error'=>'User not found'], 404);
+
+    // Récup destinataire
+    $recipientEmail = $data['recipient_email'] ?? $user->email;
+    $recipientName  = $data['recipient_name']  ?? trim(($user->first_name ?? '').' '.($user->last_name ?? '')) ?: $recipientEmail;
+    $embedded       = (bool)$request->boolean('embedded', false);
+
+    // 1) Récupération des octets du PDF EXACT (aucun stockage)
+    $pdfBytes = null;
+
+    if ($request->hasFile('exact_pdf') && $request->file('exact_pdf') instanceof UploadedFile) {
+        $pdfBytes = @file_get_contents($request->file('exact_pdf')->getRealPath());
+    } elseif (!empty($data['exact_pdf_base64'])) {
+        // Accepte base64 "propre" avec/without header
+        $b64 = $data['exact_pdf_base64'];
+        if (preg_match('#^data:application/pdf;base64,#i', $b64)) {
+            $b64 = preg_replace('#^data:application/pdf;base64,#i', '', $b64);
+        }
+        $pdfBytes = base64_decode($b64, true);
+    }
+
+    if (!$pdfBytes || strlen($pdfBytes) < 100) { // simple sanity check
+        return response()->json(['error'=>'No valid PDF provided. Send exact_pdf (file) or exact_pdf_base64 (string).'], 422);
+    }
+
+    $docBase64 = base64_encode($pdfBytes);
+
+    // 2) Coordonnées DocuSign (px @72dpi) — valeurs par défaut à ajuster UNE FOIS
+    $signPage = (string)($data['sign_page'] ?? 2);  // ex: signature page 2
+    $signX    = (string)($data['sign_x']    ?? 420); // ex: 420 px
+    $signY    = (string)($data['sign_y']    ?? 700); // ex: 700 px
+
+    $datePage = (string)($data['date_page'] ?? 2);
+    $dateX    = (string)($data['date_x']    ?? 120);
+    $dateY    = (string)($data['date_y']    ?? 700);
+
+    try {
+        // 3) DocuSign client + doc
+        $api       = $this->dsClient();
+        $accountId = (string) config('services.docusign.account_id');
+
+        $document = new \DocuSign\eSign\Model\Document([
+            'document_base64' => $docBase64,
+            'name'            => 'Contrat.pdf',
+            'file_extension'  => 'pdf',
+            'document_id'     => '1',
+        ]);
+
+        // 4) Tabs en coordonnées ABSOLUES (pixel-perfect)
+        $signHere = new \DocuSign\eSign\Model\SignHere([
+            'document_id' => '1',
+            'page_number' => $signPage,
+            'x_position'  => $signX,
+            'y_position'  => $signY,
+        ]);
+        $dateSigned = new \DocuSign\eSign\Model\DateSigned([
+            'document_id' => '1',
+            'page_number' => $datePage,
+            'x_position'  => $dateX,
+            'y_position'  => $dateY,
+        ]);
+
+        $tabs = new \DocuSign\eSign\Model\Tabs([
+            'sign_here_tabs'   => [$signHere],
+            'date_signed_tabs' => [$dateSigned],
+        ]);
+
+        $signerPayload = [
+            'email'         => $recipientEmail,
+            'name'          => $recipientName,
+            'recipient_id'  => '1',
+            'routing_order' => '1',
+            'tabs'          => $tabs,
+        ];
+        if ($embedded) {
+            $signerPayload['client_user_id'] = (string)$user->id;
+        }
+
+        $signer     = new \DocuSign\eSign\Model\Signer($signerPayload);
+        $recipients = new \DocuSign\eSign\Model\Recipients(['signers'=>[$signer]]);
+
+        $envelope = new \DocuSign\eSign\Model\EnvelopeDefinition([
+            'email_subject' => 'Signature de votre contrat',
+            'documents'     => [$document],
+            'recipients'    => $recipients,
+            'status'        => 'sent',
+        ]);
+
+        // Tag (pour ton webhook existant qui classe en "contract")
+        $envelope->setCustomFields(new \DocuSign\eSign\Model\CustomFields([
+            'text_custom_fields' => [
+                ['name'=>'documentType','value'=>'contract'],
+            ],
+        ]));
+
+        // 5) Envoi et (optionnel) lien de signature embarqué
+        $res   = $api->createEnvelope($accountId, $envelope);
+        $envId = $res->getEnvelopeId();
+
+        $signingUrl = null;
+        if ($embedded) {
+            $viewReq = new \DocuSign\eSign\Model\RecipientViewRequest([
+                'authentication_method' => 'none',
+                'client_user_id'        => (string)$user->id,
+                'email'                 => $recipientEmail,
+                'user_name'             => $recipientName,
+                'return_url'            => rtrim(config('app.url'), '/').'/docusign-return?envelopeId='.$envId,
+            ]);
+            try {
+                $viewRes   = $api->createRecipientView($accountId, $envId, $viewReq);
+                $signingUrl = $viewRes->getUrl();
+            } catch (\DocuSign\eSign\Client\ApiException $e) {
+                \Log::warning('createRecipientView failed: '.$e->getMessage());
+            }
+        }
+
+        return response()->json([
+            'success'     => true,
+            'envelope_id' => $envId,
+            'signing_url' => $signingUrl,
+        ]);
+    } catch (\Throwable $e) {
+        \Log::error('sendFilledContract error: '.$e->getMessage());
+        return response()->json(['error'=>'DocuSign error','detail'=>$e->getMessage()], 500);
+    }
+}
+
 
     private function computeContractTotals(array $v): array
     {
