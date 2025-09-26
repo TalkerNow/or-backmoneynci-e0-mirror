@@ -35,6 +35,7 @@ class KpiController extends Controller
             'nom_prenom',
             'email',
             'telephone',
+            'note',
         ]);
 
         $kpi = Kpi::create($data);
@@ -52,6 +53,7 @@ class KpiController extends Controller
             'nom_prenom',
             'email',
             'telephone',
+            'note',
         ]);
 
         $kpi->fill($data)->save();

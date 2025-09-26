@@ -11,7 +11,7 @@ class Kpi extends Model
     // aucun champ obligatoire côté validation : on rend tout fillable
     protected $fillable = [
         'kpi_date', 'admin_id', 'objet', 'action',
-        'nom_prenom', 'email', 'telephone',
+        'nom_prenom', 'email', 'telephone', 'note',
     ];
 
     protected $casts = [
