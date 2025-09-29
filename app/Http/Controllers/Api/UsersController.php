@@ -101,43 +101,69 @@ class UsersController extends Controller
             $auth = auth()->userOrFail();
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
-        }
-        if ($request->kind === 'oldclient') {
-            $user = OldClients::where('clcleunik', $id)->first();
-            if ($user === null) {
-                return response()->json(['error' => 'User does not exist'], 404);
             }
-            if ($request['parent_id'] !== $user['parent_id']) {
-                DB::table('documents')
-                    ->where('user_id', $user->clcleunik)
-                    ->where('document_state', '!=', 'Termine')
-                    ->update(['parent_id' => $request['parent_id']]);
-            }
-            $user->update($request->except(['updated_at']));
-        } else {
-            $user = $this->get_user($id);
-            if ($user === null) {
-                return response()->json(['error' => 'User does not exist'], 404);
-            }
-            $status = $request['status'];
-            $status_fa = $request['status_fa'];
-            if (!($user->status_fa === $status_fa && $user->status === $status)) {
-                $request['status_update_date'] = date("Y-m-d");
-            }
-            if ($request['parent_id'] !== $user['parent_id']) {
-                DB::table('documents')
-                    ->where('user_id', $user->id)
-                    ->where('document_state', '!=', 'Termine')
-                    ->update(['parent_id' => $request['parent_id']]);
-            }
-            $user->update($request->all());
+        
+            if ($request->kind === 'oldclient') {
+                $user = OldClients::where('clcleunik', $id)->first();
+                if ($user === null) {
+                    return response()->json(['error' => 'User does not exist'], 404);
+                    }
+                
+                    if ($request['parent_id'] !== $user['parent_id']) {
+                        DB::table('documents')
+                            ->where('user_id', $user->clcleunik)
+                            ->where('document_state', '!=', 'Termine')
+                            ->update(['parent_id' => $request['parent_id']]);
+                    }
+                
+                    $user->update($request->except(['updated_at']));
+            } else {
+                    $user = $this->get_user($id);
+                    if ($user === null) {
+                        return response()->json(['error' => 'User does not exist'], 404);
+                    }
+                
+                    // ✅ Vérifier si l'email est déjà utilisé par un autre utilisateur
+                    if ($request->has('email')) {
+                        $existing = User::where('email', $request->email)
+                            ->where('id', '!=', $id)
+                            ->first();
+                    
+                    if ($existing) {
+                        return response()->json(['error' => 'Cet email est déjà utilisé'], 409);
+                    }
+                }
+            
+                $status = $request['status'];
+                $status_fa = $request['status_fa'];
+                if (!($user->status_fa === $status_fa && $user->status === $status)) {
+                    $request['status_update_date'] = date("Y-m-d");
+                }
+            
+                if ($request['parent_id'] !== $user['parent_id']) {
+                    DB::table('documents')
+                        ->where('user_id', $user->id)
+                        ->where('document_state', '!=', 'Termine')
+                        ->update(['parent_id' => $request['parent_id']]);
+                }
+            
+                try {
+                    $user->update($request->all());
+                } catch (\Illuminate\Database\QueryException $e) {
+                    if ($e->getCode() === '23000') { // Duplicate entry
+                        return response()->json(['error' => 'Cet email est déjà utilisé'], 409);
+                    }
+                    throw $e;
+                }
+            
             if (isset($request->p_password)) {
                 $user->update(['password' => Hash::make($request->p_password)]);
             }
         }
-
-
+    
+        return response()->json(['success' => true, 'message' => 'Utilisateur mis à jour avec succès']);
     }
+
     public function destroy(Request $request, $id)
     {
         try {
