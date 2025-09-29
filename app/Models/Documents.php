@@ -15,11 +15,26 @@ class Documents extends Model
      * @var array
      */
     protected $fillable = [
-        'id', 'link_to_documents', 'type', 'document_state', 'comment',
-        'advanced_payment','pre_payment', 'end_payment', 'status_payment','subscribe_services',
-        'values',  'user_id', 'parent_id','deposit_date', 'sold_date',
+        'id',
+        'link_to_documents',
+        'type',
+        'document_state',
+        'comment',
+        'payment_method',
+        'advanced_payment',
+        'pre_payment',
+        'end_payment',
+        'status_payment',
+        'subscribe_services',
+        'values',
+        'user_id',
+        'parent_id',
+        'deposit_date',
+        'sold_date',
+        'creator_id'
     ];
-    public function user() {
+    public function user()
+    {
         return $this->belongsTo('App\Models\User', 'user_id');
     }
 }

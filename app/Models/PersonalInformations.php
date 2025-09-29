@@ -15,8 +15,35 @@ class PersonalInformations extends Model
      * @var array
      */
     protected $fillable = [
-        'id','civility', 'first_name', 'maiden_name', 'last_name', 'birth_date', "martial_status", "children_number", "mobile_number", "office_number",
-        "personal_address","personal_address_2", "personal_zip_code", "personal_city", "personal_country", "society_address", "society_address_2", "society_zip_code",
-        'military_service', 'society_name','society_city', 'society_country', 'user_id', 'notes','comments','parent_id'
+        'id',
+        'civility',
+        'first_name',
+        'maiden_name',
+        'last_name',
+        'birth_date',
+        'birth_place',
+        "martial_status",
+        "children_number",
+        "mobile_number",
+        "office_number",
+        "personal_address",
+        "personal_address_2",
+        "personal_zip_code",
+        "personal_city",
+        "personal_country",
+        "society_address",
+        "society_address_2",
+        "society_zip_code",
+        'military_service',
+        'society_name',
+        'society_city',
+        'society_country',
+        'user_id',
+        'notes',
+        'comments',
+        'parent_id',
+        'business_introducer_id',
+        'secu_social',
+        'secu_social_key'
     ];
 }

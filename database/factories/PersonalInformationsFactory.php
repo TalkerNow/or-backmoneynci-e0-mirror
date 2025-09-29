@@ -44,6 +44,8 @@ class PersonalInformationsFactory extends Factory
             'society_city' => $this->faker->city,
             'society_country' => $this->faker->country,
             'user_id' => $this->faker->unique()->randomNumber(),
+            'secu_social' => $this->faker->secu_social,
+            'secu_social_key' => $this->faker->secu_social_key,
         ];
     }
 }

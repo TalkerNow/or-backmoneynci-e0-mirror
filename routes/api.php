@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\DocumentsController;
 use App\Http\Controllers\Api\ServicesController;
 use App\Http\Controllers\Api\ContractTemplateController;
+use App\Http\Controllers\Api\DocusignController;
+use App\Http\Controllers\Api\KpiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -54,4 +56,12 @@ Route::namespace('App\Http\Controllers')->group(function () {
     Route::get('/get_statistics_total_income', 'Api\StatisticsController@getStatisticsTotalIncome')->name('get_statistics_total_income');
     Route::get('/getPrestation', 'Api\StatisticsController@getPrestation')->name('getPrestation');
     Route::get('/getMembersPrestation', 'Api\StatisticsController@getMembersPrestation')->name('getMembersPrestation');
+    // ---- DocuSign (OptionRetraite) ----
+    Route::post('/docusign/request-signature', 'Api\DocusignController@requestSignature')->name('docusign.request_signature');
+    Route::post('/docusign/get-signing-link',  'Api\DocusignController@getSigningLink')->name('docusign.get_signing_link');
+    // Webhook DocuSign Connect (NE PAS protéger par auth)
+    Route::post('/docusign/connect',           'Api\DocusignController@docusignConnectCallback')->name('docusign.connect');
+    Route::post('/contracts/send-docusign', 'Api\DocusignController@sendFilledContract')->name('contracts.send-docusign');
+    Route::apiResource('/kpis', 'Api\KpiController');
+
 });
