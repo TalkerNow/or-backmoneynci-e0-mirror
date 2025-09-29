@@ -117,7 +117,7 @@ class UsersController extends Controller
                     }
                 
                     $user->update($request->except(['updated_at']));
-            } el       se {
+            } else {
                     $user = $this->get_user($id);
                     if ($user === null) {
                         return response()->json(['error' => 'User does not exist'], 404);
