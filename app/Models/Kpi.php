@@ -9,7 +9,10 @@ class Kpi extends Model
     protected $table = 'kpis';
 
     // aucun champ obligatoire côté validation : on rend tout fillable
-    protected $fillable = ['kpi_date', 'admin_id', 'objet', 'action'];
+    protected $fillable = [
+        'kpi_date', 'admin_id', 'objet', 'action',
+        'nom_prenom', 'email', 'telephone', 'note',
+    ];
 
     protected $casts = [
         'kpi_date' => 'date', // pratique si tu fournis une date
