@@ -14,8 +14,8 @@ class RegisterController extends Controller
     public function register(Request $request)
     {
         $rules = [
-            'name' => 'unique:users|required',
-            'email' => 'unique:users|required',
+            'name'     => 'required|unique:users,name',
+            'email'    => 'nullable|email|unique:users,email',
             'password' => 'required',
         ];
         $input = $request->only('name', 'email', 'password');
