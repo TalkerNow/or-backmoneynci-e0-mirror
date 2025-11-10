@@ -14,7 +14,7 @@ class Files extends Model
      * @var array
      */
     protected $fillable = [
-        'user_id', 'filename', 'url'
+        'user_id', 'filename', 'url', 'dossier'
     ];
     public function fileCreator() {
         return $this->belongsTo('App\Models\User', 'creator_id');
