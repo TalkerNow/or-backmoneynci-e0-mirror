@@ -38,45 +38,56 @@ class FilesController extends Controller
         $file->delete();
     }
 
-    public function uploadFiles(Request $request){
-        $image_urls = [];
-        $user_id = $request->user_id;
-        foreach($request->files as $file){
-            $size = $file->getSize();
-            if ($size > 5000000) return false;
-            $ext = $file->getClientOriginalExtension();
-            $filename = $file->getClientOriginalName();
-            $file_path = public_path(). "/img/".$filename;
+public function uploadFiles(Request $request)
+{
+    $image_urls = [];
 
-            if (file_exists($file_path)) {
-                unlink($file_path);
-            }
+    $user_id = $request->input('user_id');
+    $dossier = (int) $request->input('dossier', 0); // 👈 récupère le dossier (0 = non trié)
 
-            $file->move(public_path() . '/img', $filename);
-
-            //---- import RTC file -------
-            //reading payment_history.csv file
-
-//            $image_url = url('/')."/public/img/".$filename;
-            $image_url = url('/')."/img/".$filename;
-            if (!file_exists($file_path) || !is_readable($file_path))
-                return response()->json(['data'=>['success' => false]]);
-            else {
-                $file = new Files();
-                $file->user_id = $user_id;
-                $file->filename = $filename;
-                $file->url = $image_url;
-
-                $file->save();
-
-                array_push($image_urls, $file);
-            }
+    // $request->allFiles() récupère tous les fichiers envoyés (photoUpload0, photoUpload1, etc.)
+    foreach ($request->allFiles() as $file) {
+        $size = $file->getSize();
+        if ($size > 5000000) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Fichier trop volumineux (> 5 Mo)',
+            ]);
         }
-        return response()->json([
-            'success' => true,
-            'files' => $image_urls
-        ]);
+
+        $ext = $file->getClientOriginalExtension();
+        $filename = $file->getClientOriginalName();
+        $file_path = public_path() . "/img/" . $filename;
+
+        if (file_exists($file_path)) {
+            unlink($file_path);
+        }
+
+        $file->move(public_path() . '/img', $filename);
+
+        $image_url = url('/') . "/img/" . $filename;
+
+        if (!file_exists($file_path) || !is_readable($file_path)) {
+            return response()->json(['success' => false]);
+        } else {
+            $fileModel = new Files();
+            $fileModel->user_id = $user_id;
+            $fileModel->filename = $filename;
+            $fileModel->url = $image_url;
+            $fileModel->dossier = $dossier; // 👈 ICI : on l’associe bien au dossier
+
+            $fileModel->save();
+
+            $image_urls[] = $fileModel;
+        }
     }
+
+    return response()->json([
+        'success' => true,
+        'files' => $image_urls,
+    ]);
+}
+
     public function downloadFile(Request $request){
         $file_id = $request->file_id;
         $file = Files::find($file_id);
