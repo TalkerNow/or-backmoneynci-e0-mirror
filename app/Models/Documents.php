@@ -32,8 +32,6 @@ class Documents extends Model
         'deposit_date',
         'sold_date',
         'creator_id',
-        'acompte_dates',
-        'sold_dates',
     ];
     public function user()
     {
