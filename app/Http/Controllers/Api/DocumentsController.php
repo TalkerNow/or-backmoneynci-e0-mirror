@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Models\Documents;
 use App\Models\User;
 use App\Models\PersonalInformations;
@@ -24,10 +25,12 @@ class DocumentsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
+
         if ($auth->role == "admin" || $auth->role == "Consultant") {
             $doc = Documents::with(['user'])->get();
             $services = Services::all();
             $servtab = array();
+
             foreach ($doc as $do) {
                 foreach ($services as $service) {
                     if ($do->id == $service->document_id) {
@@ -40,6 +43,7 @@ class DocumentsController extends Controller
         } else {
             $doc = Documents::with(['user'])->where('parent_id', $auth->id)->get();
         }
+
         return $doc->toJson(JSON_PRETTY_PRINT);
     }
 
@@ -55,8 +59,7 @@ class DocumentsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        //        if ($auth->role != "admin")
-//            return response()->json(['error' => 'Unauthorized'], 401);
+        // if ($auth->role != "admin") return response()->json(['error' => 'Unauthorized'], 401);
 
         return view('create');
     }
@@ -74,38 +77,42 @@ class DocumentsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        //        if ($auth->role != "admin")
-//            return response()->json(['error' => 'Unauthorized'], 401);
+        // if ($auth->role != "admin") return response()->json(['error' => 'Unauthorized'], 401);
+
         $newdoc = Documents::create([
-            'parent_id' => $request['parent_id'],
-            'creator_id' => $request['creator_id'],
-            'link_to_documents' => $request['link_to_documents'],
-            'type' => $request['type'],
-            'status_payment' => $request['status_payment'],
-            'subscribe_services' => $request['subscribe_services'],
-            'end_payment' => $request['end_payment'],
-            'pre_payment' => $request['pre_payment'],
-            'document_state' => $request['document_state'],
-            'comment' => $request['comment'],
-            'advanced_payment' => $request['advanced_payment'],
-            'user_id' => $request['user_id'],
-            'id' => $request['id'],
-            'payment_method' => $request['payment_method'],
-            'values' => $request['values']
+            'parent_id'          => $request->input('parent_id'),
+            'creator_id'         => $request->input('creator_id'),
+            'link_to_documents'  => $request->input('link_to_documents'),
+            'type'               => $request->input('type'),
+            'status_payment'     => $request->input('status_payment'),
+            'subscribe_services' => $request->input('subscribe_services'),
+            'end_payment'        => $request->input('end_payment'),
+            'pre_payment'        => $request->input('pre_payment'),
+            'document_state'     => $request->input('document_state'),
+            'comment'            => $request->input('comment'),
+            'advanced_payment'   => $request->input('advanced_payment'),
+            'user_id'            => $request->input('user_id'),
+            'id'                 => $request->input('id'), // si tu tiens à setter l'id manuellement
+            'payment_method'     => $request->input('payment_method'),
+            'values'             => $request->input('values'),
+
+            // IMPORTANT : toujours envoyer une valeur non nulle
+            'sold_dates'         => $this->normalizeJsonText($request->input('sold_dates', '[]')),
+            'acompte_dates'      => $this->normalizeJsonText($request->input('acompte_dates', '[]')),
         ]);
 
         if ($newdoc->type == "contrat") {
             $newdoc["services"] = $this->get_selected_services("template", $newdoc['id'], true);
             $newdoc["advanced_payment"] = $this->get_selected_total("template", $newdoc['id']);
         }
-        // if user status is null, set the pending('En attente')
-        $user = User::where('id', $request['user_id'])->get();
-        if (count($user) > 0 && $user[0]->status == null) {
-            User::where(['id' => $request['user_id']])
-                ->limit(1)
-                ->update(['status' => 'En attente']);
+
+        // if user status is null, set pending ('En attente')
+        $user = User::where('id', $request->input('user_id'))->first();
+        if ($user && $user->status === null) {
+            $user->update(['status' => 'En attente']);
         }
-        return $newdoc->toJSON(JSON_PRETTY_PRINT);
+
+        return $newdoc->toJson(JSON_PRETTY_PRINT);
     }
 
     /**
@@ -122,16 +129,16 @@ class DocumentsController extends Controller
         if ($doc == null) {
             return response()->json(['error' => 'Document does not exist'], 500);
         }
+
         try {
             $auth = auth()->userOrFail();
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        //        if ($auth->role != "admin" && $auth->id != $doc->user_id)
-//            return response()->json(['error' => 'Unauthorized'], 401);
+        // if ($auth->role != "admin" && $auth->id != $doc->user_id) return response()->json(['error' => 'Unauthorized'], 401);
 
         $doc["services"] = $service;
-        return $doc->toJSON(JSON_PRETTY_PRINT);
+        return $doc->toJson(JSON_PRETTY_PRINT);
     }
 
     /**
@@ -163,8 +170,7 @@ class DocumentsController extends Controller
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        //        if ($auth->role != "admin")
-//            return response()->json(['error' => 'Unauthorized'], 401);
+        // if ($auth->role != "admin") return response()->json(['error' => 'Unauthorized'], 401);
         return view('edit', compact('document'));
     }
 
@@ -179,17 +185,34 @@ class DocumentsController extends Controller
     {
         $doc = Documents::find($id);
 
-        if ($doc == null)
+        if ($doc == null) {
             return response()->json(['error' => 'Document does not exist'], 500);
+        }
 
         try {
             $auth = auth()->userOrFail();
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
-        $doc->update($request->all());
-        //        if ($request->advanced_payment)
-//            $doc->update(['advanced_payment' => $this->get_selected_total("selected", $doc->id)]);
+
+        $data = $request->all();
+
+        // Ne pas écraser par NULL ; normaliser si fourni
+        if (!array_key_exists('sold_dates', $data) || $data['sold_dates'] === null) {
+            $data['sold_dates'] = $doc->sold_dates ?? '[]';
+        } else {
+            $data['sold_dates'] = $this->normalizeJsonText($data['sold_dates']);
+        }
+
+        if (!array_key_exists('acompte_dates', $data) || $data['acompte_dates'] === null) {
+            $data['acompte_dates'] = $doc->acompte_dates ?? '[]';
+        } else {
+            $data['acompte_dates'] = $this->normalizeJsonText($data['acompte_dates']);
+        }
+
+        $doc->update($data);
+
+        // if ($request->advanced_payment) $doc->update(['advanced_payment' => $this->get_selected_total("selected", $doc->id)]);
         return "Document Updated !";
     }
 
@@ -203,23 +226,45 @@ class DocumentsController extends Controller
     {
         $doc = Documents::find($id);
 
-        if ($doc == null)
+        if ($doc == null) {
             return response()->json(['error' => 'Document does not exist'], 500);
+        }
+
         try {
             $auth = auth()->userOrFail();
         } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
             return response()->json(['error' => $e->getMessage()], 401);
         }
+
         $this->delete_services($id);
         $doc->delete();
         return "Document Deleted !";
     }
+
     public function get_contract($id)
     {
         $result = Documents::where('documents.id', $id)
             ->join('users', 'documents.user_id', '=', 'users.id')
             ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
             ->first();
+
         return response()->json(['data' => $result]);
+    }
+
+    /**
+     * Normalise un champ JSON (accepte array|string|null) en texte JSON.
+     * - array => json_encode()
+     * - string non vide => renvoyé tel quel
+     * - null / string vide => '[]'
+     */
+    private function normalizeJsonText($value): string
+    {
+        if (is_array($value)) {
+            return json_encode($value, JSON_UNESCAPED_UNICODE);
+        }
+        if (is_string($value) && trim($value) !== '') {
+            return $value;
+        }
+        return '[]';
     }
 }
