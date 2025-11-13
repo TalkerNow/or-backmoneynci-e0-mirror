@@ -63,5 +63,10 @@ Route::namespace('App\Http\Controllers')->group(function () {
     Route::post('/docusign/connect',           'Api\DocusignController@docusignConnectCallback')->name('docusign.connect');
     Route::post('/contracts/send-docusign', 'Api\DocusignController@sendFilledContract')->name('contracts.send-docusign');
     Route::apiResource('/kpis', 'Api\KpiController');
+    Route::get('/debug-db', function () {
+        return response()->json([
+            'db' => config('database.connections.mysql.database'),
+        ]);
+    });
 
 });
