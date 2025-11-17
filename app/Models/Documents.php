@@ -33,7 +33,8 @@ class Documents extends Model
         'sold_date',
         'creator_id',
         'sold_dates',
-        'acompte_dates'
+        'acompte_dates',
+        'unipro'
     ];
     public function user()
     {
