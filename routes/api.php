@@ -68,5 +68,14 @@ Route::namespace('App\Http\Controllers')->group(function () {
             'db' => config('database.connections.mysql.database'),
         ]);
     });
+    // -------- Suivi d'avancement --------
+    Route::prefix('suivi-avancement')->group(function () {
+        Route::post('/', 'Api\SuiviAvancementController@store');
+        Route::post('{id}/steps/{step}', 'Api\SuiviAvancementController@addStepDate');
+        Route::put('{id}/steps/{step}', 'Api\SuiviAvancementController@updateStepDate');
+        Route::delete('{id}/steps/{step}', 'Api\SuiviAvancementController@deleteStepDate');
+        Route::get('client/{clientId}', 'Api\SuiviAvancementController@getByClient');
+        Route::get('client/{clientId}/facture/{factureId}', 'Api\SuiviAvancementController@getByClientAndFacture');
+    });
 
 });
