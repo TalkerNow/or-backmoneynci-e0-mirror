@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Models\SuiviAvancement;
 use Illuminate\Http\Request;
 
@@ -30,7 +31,7 @@ class SuiviAvancementController extends Controller
 
         return response()->json($suivi, 201);
     }
-    
+
     public function getByClient(int $clientId)
     {
         // Tous les suivis (toutes les factures) pour ce client
