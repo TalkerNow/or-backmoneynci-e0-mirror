@@ -70,6 +70,7 @@ Route::namespace('App\Http\Controllers')->group(function () {
     });
     // -------- Suivi d'avancement --------
     Route::prefix('suivi-avancement')->group(function () {
+        Route::get('all', 'Api\SuiviAvancementController@getAllWithDocuments');
         Route::post('/', 'Api\SuiviAvancementController@store');
         Route::post('{id}/steps/{step}', 'Api\SuiviAvancementController@addStepDate');
         Route::put('{id}/steps/{step}', 'Api\SuiviAvancementController@updateStepDate');

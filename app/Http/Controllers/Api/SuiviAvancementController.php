@@ -9,6 +9,54 @@ use Illuminate\Http\Request;
 class SuiviAvancementController extends Controller
 {
     /**
+     * 0) Récupérer tous les suivis + les documents associés
+     * (documents.id lié à suivi_avancement.facture_id)
+     */
+    public function getAllWithDocuments()
+    {
+        $suivis = SuiviAvancement::query()
+            ->leftJoin('documents', 'suivi_avancement.facture_id', '=', 'documents.id')
+            ->select(
+                // Champs SuiviAvancement
+                'suivi_avancement.id as suivi_id',
+                'suivi_avancement.client_id',
+                'suivi_avancement.facture_id',
+                'suivi_avancement.step1_completed_at',
+                'suivi_avancement.step2_completed_at',
+                'suivi_avancement.step3_completed_at',
+                'suivi_avancement.step4_completed_at',
+                'suivi_avancement.step5_completed_at',
+                'suivi_avancement.step6_completed_at',
+                'suivi_avancement.step7_completed_at',
+
+                // Champs Documents
+                'documents.id as document_id',
+                'documents.link_to_documents',
+                'documents.type',
+                'documents.document_state',
+                'documents.comment',
+                'documents.payment_method',
+                'documents.advanced_payment',
+                'documents.pre_payment',
+                'documents.end_payment',
+                'documents.status_payment',
+                'documents.subscribe_services',
+                'documents.values',
+                'documents.user_id',
+                'documents.parent_id',
+                'documents.deposit_date',
+                'documents.sold_date',
+                'documents.creator_id',
+                'documents.sold_dates',
+                'documents.acompte_dates',
+                'documents.unipro'
+            )
+            ->get();
+
+        return response()->json($suivis);
+    }
+
+    /**
      * 1) Créer un avancement pour un client + une facture
      * Body attendu:
      * {
