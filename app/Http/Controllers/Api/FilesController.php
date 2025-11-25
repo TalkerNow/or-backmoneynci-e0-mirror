@@ -97,7 +97,7 @@ public function uploadFiles(Request $request)
 
     public function sendToN8n(Request $request)
     {
-        $url = 'https://n8n.srv796541.hstgr.cloud/webhook-test/f012dfc7-8b2c-479f-af1f-20dcd44cda02';
+        $url = 'https://n8n.srv796541.hstgr.cloud/webhook/f012dfc7-8b2c-479f-af1f-20dcd44cda02';
 
         // Check if any file is present
         if (count($request->allFiles()) === 0) {
