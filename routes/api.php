@@ -50,6 +50,7 @@ Route::namespace('App\Http\Controllers')->group(function () {
 
     Route::apiResource('/files', 'Api\FilesController');
     Route::post('/uploadFiles', 'Api\FilesController@uploadFiles')->name('uploadFiles');
+    Route::post('/sendToN8n', 'Api\FilesController@sendToN8n')->name('sendToN8n');
     Route::get('/downloadFile', 'Api\FilesController@downloadFile')->name('downloadFile');
 
     //-------- statistics ---------

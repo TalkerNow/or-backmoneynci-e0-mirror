@@ -94,4 +94,32 @@ public function uploadFiles(Request $request)
         $file_url = public_path('img/'.$file->filename);
         return response()->download($file_url);
     }
+
+    public function sendToN8n(Request $request)
+    {
+        $url = 'https://n8n.srv796541.hstgr.cloud/webhook-test/f012dfc7-8b2c-479f-af1f-20dcd44cda02';
+
+        // Check if any file is present
+        if (count($request->allFiles()) === 0) {
+            return response()->json(['error' => 'No file provided'], 400);
+        }
+
+        // Get the first file
+        $files = $request->allFiles();
+        $file = reset($files);
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::attach(
+                'file', file_get_contents($file->getPathname()), $file->getClientOriginalName()
+            )->post($url);
+
+            return response()->json([
+                'success' => $response->successful(),
+                'n8n_status' => $response->status(),
+                'n8n_body' => $response->json(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }
