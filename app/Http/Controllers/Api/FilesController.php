@@ -113,13 +113,86 @@ public function uploadFiles(Request $request)
                 'file', file_get_contents($file->getPathname()), $file->getClientOriginalName()
             )->post($url);
 
+            $n8nData = $response->json();
+            
+            // Generate Report if data is valid
+            $reportUrls = [];
+            if ($response->successful() && !empty($n8nData)) {
+                // Handle array response (n8n often returns an array of items)
+                $dataToProcess = is_array($n8nData) && isset($n8nData[0]) ? $n8nData[0] : $n8nData;
+                
+                // Check if the text field contains the JSON string
+                if (isset($dataToProcess['text'])) {
+                     // Clean up markdown code blocks if present
+                    $jsonString = str_replace(['```json', '```'], '', $dataToProcess['text']);
+                    $parsedData = json_decode($jsonString, true);
+                    if ($parsedData) {
+                        $reportUrls = $this->generateReportNative($parsedData);
+                    }
+                } else {
+                     // Assume data is directly in the object
+                    $reportUrls = $this->generateReportNative($dataToProcess);
+                }
+            }
+
             return response()->json([
                 'success' => $response->successful(),
                 'n8n_status' => $response->status(),
-                'n8n_body' => $response->json(),
+                'n8n_body' => $n8nData,
+                'report_urls' => $reportUrls
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    private function generateReportNative($data)
+    {
+        $templatePath = storage_path('app/templates/consultation_retraite.docx');
+        
+        if (!file_exists($templatePath)) {
+            return ['error' => 'Template file not found at ' . $templatePath];
+        }
+
+        // Generate unique filename
+        $filename = 'Rapport_Retraite_' . ($data['CLIENT_NOM'] ?? 'Client') . '_' . time() . '.docx';
+        $outputPath = public_path('reports/' . $filename);
+
+        // Ensure directory exists
+        if (!file_exists(public_path('reports'))) {
+            mkdir(public_path('reports'), 0755, true);
+        }
+
+        // Copy template to output
+        if (!copy($templatePath, $outputPath)) {
+            return ['error' => 'Failed to copy template'];
+        }
+
+        // Use ZipArchive to edit the document.xml inside the .docx
+        $zip = new \ZipArchive;
+        if ($zip->open($outputPath) === TRUE) {
+            // Read the document content
+            $xml = $zip->getFromName('word/document.xml');
+            
+            // Perform replacements
+            // Note: In Word XML, variables might be split by formatting tags. 
+            // This simple replacement assumes the placeholders are clean in the XML.
+            foreach ($data as $key => $value) {
+                if (is_string($value) || is_numeric($value)) {
+                    $xml = str_replace('{{' . $key . '}}', htmlspecialchars($value), $xml);
+                }
+            }
+
+            // Write back to the zip
+            $zip->addFromString('word/document.xml', $xml);
+            $zip->close();
+
+            return [
+                'docx' => url('reports/' . $filename),
+                'pdf' => null // PDF generation requires external libraries (dompdf/wkhtmltopdf) which are not installed.
+            ];
+        } else {
+            return ['error' => 'Failed to open DOCX file'];
         }
     }
 }
