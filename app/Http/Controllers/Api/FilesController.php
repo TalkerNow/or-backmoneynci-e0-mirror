@@ -123,12 +123,21 @@ public function uploadFiles(Request $request)
                 
                 // Check if the text field contains the JSON string
                 if (isset($dataToProcess['text'])) {
-                     // Clean up markdown code blocks if present
-                    $jsonString = str_replace(['```json', '```'], '', $dataToProcess['text']);
-                    $parsedData = json_decode($jsonString, true);
-                    if ($parsedData) {
-                        $reportUrls = $this->generateReportNative($parsedData);
-                    }
+                     // Try to extract JSON using regex (finds content between first { and last })
+                     if (preg_match('/\{.*\}/s', $dataToProcess['text'], $matches)) {
+                        $jsonString = $matches[0];
+                        $parsedData = json_decode($jsonString, true);
+                        if ($parsedData) {
+                            $reportUrls = $this->generateReportNative($parsedData);
+                        }
+                     } else {
+                        // Fallback: try cleaning markdown manually if regex didn't match (unlikely for valid JSON)
+                        $jsonString = str_replace(['```json', '```'], '', $dataToProcess['text']);
+                        $parsedData = json_decode($jsonString, true);
+                        if ($parsedData) {
+                            $reportUrls = $this->generateReportNative($parsedData);
+                        }
+                     }
                 } else {
                      // Assume data is directly in the object
                     $reportUrls = $this->generateReportNative($dataToProcess);
