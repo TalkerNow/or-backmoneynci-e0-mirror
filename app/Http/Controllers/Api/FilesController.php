@@ -139,7 +139,9 @@ public function uploadFiles(Request $request)
                 'success' => $response->successful(),
                 'n8n_status' => $response->status(),
                 'n8n_body' => $n8nData,
-                'report_urls' => $reportUrls
+                'report_urls' => $reportUrls,
+                'debug_json_error' => json_last_error_msg(),
+                'debug_data_to_process' => isset($dataToProcess) ? $dataToProcess : 'Not Set'
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
