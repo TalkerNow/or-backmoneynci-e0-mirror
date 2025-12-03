@@ -260,34 +260,33 @@ class FilesController extends Controller
                 return ['error' => 'document.xml not found in template'];
             }
 
-            // ⚠️ Word coupe les placeholders en plusieurs <w:t>/<w:r>.
-            // On fusionne les runs de texte pour recoller les {{CLIENT_...}}.
+            // 🧠 TRUC MAGIQUE : on matche TOUT ce qui va de {{ ... }} même si entre les deux il y a du XML
+            // Exemple réel dans le XML :
+            //   <w:t>{{CLIENT_</w:t></w:r><w:r><w:t>PRENOM}}</w:t>
+            // => le regex /{{.*?}}/s va quand même matcher tout le bloc avec les balises
 
-            // 5.1 On enlève les bordures entre <w:t>...</w:t> consécutifs
-            // en tolérant un éventuel <w:rPr> entre les deux.
-            $xml = preg_replace(
-                '/<\/w:t>\s*<\/w:r>\s*<w:r[^>]*>\s*(?:<w:rPr>.*?<\/w:rPr>\s*)?<w:t[^>]*>/s',
-                '',
-                $xml
-            );
+            $xml = preg_replace_callback('/\{\{.*?\}\}/s', function ($matches) use ($data) {
+                $raw = $matches[0]; // ex: "{{CLIENT_</w:t></w:r><w:r><w:t>PRENOM}}"
 
-            // 6. Remplacement des {{CLES}} par les valeurs
-            foreach ($data as $key => $value) {
-                if (is_string($value) || is_numeric($value)) {
-                    $placeholder = '{{' . $key . '}}';
-                    $xml = str_replace(
-                        $placeholder,
-                        htmlspecialchars((string) $value, ENT_QUOTES | ENT_XML1),
-                        $xml
-                    );
-                }
-            }
+                // 1) On vire toutes les balises XML à l'intérieur
+                $textOnly = strip_tags($raw);          // => "{{CLIENT_PRENOM}}"
 
-            // 7. Réécrire le XML dans le DOCX
+                // 2) On enlève tout sauf lettres/chiffres/underscore pour garder juste la clé
+                //    "{{CLIENT_PRENOM}}" -> "CLIENT_PRENOM"
+                $key = preg_replace('/[^\w]/', '', $textOnly);
+
+                // 3) On cherche la valeur dans le JSON renvoyé par n8n
+                $value = $data[$key] ?? '';
+
+                // 4) On renvoie la valeur échappée pour XML
+                return htmlspecialchars((string) $value, ENT_QUOTES | ENT_XML1);
+            }, $xml);
+
+            // 6. Écrire le XML modifié dans le DOCX
             $zip->addFromString('word/document.xml', $xml);
             $zip->close();
 
-            // 8. URL publique
+            // 7. URL publique pour ton front
             return [
                 'docx' => url('reports/' . $filename),
                 'pdf'  => null,
