@@ -238,7 +238,6 @@ class FilesController extends Controller
         $outputDir = public_path('reports');
 
         if (!is_dir($outputDir)) {
-            // Ce code ne sera PAS exécuté si tu crées le dossier à la main
             if (!mkdir($outputDir, 0775, true) && !is_dir($outputDir)) {
                 return ['error' => 'Failed to create reports directory: ' . $outputDir];
             }
@@ -251,7 +250,7 @@ class FilesController extends Controller
             return ['error' => 'Failed to copy template'];
         }
 
-        // 5. Modifier le DOCX (Zip)
+        // 5. Ouvrir le DOCX comme zip
         $zip = new \ZipArchive;
         if ($zip->open($outputPath) === true) {
             $xml = $zip->getFromName('word/document.xml');
@@ -261,16 +260,28 @@ class FilesController extends Controller
                 return ['error' => 'document.xml not found in template'];
             }
 
+            // ⚠️ Word coupe souvent les balises dans plusieurs <w:t> :
+            // ex: <w:t>{{CLIENT_</w:t></w:r><w:r><w:t>PRENOM}}</w:t>
+            // On fusionne les morceaux de texte consécutifs pour recoller les {{...}}
+            $xml = preg_replace(
+                '/<\/w:t>\s*<\/w:r>\s*<w:r[^>]*>\s*<w:t[^>]*>/',
+                '',
+                $xml
+            );
+
+            // 6. Remplacement des {{CLES}} par les valeurs
             foreach ($data as $key => $value) {
                 if (is_string($value) || is_numeric($value)) {
-                    $xml = str_replace('{{' . $key . '}}', htmlspecialchars((string) $value), $xml);
+                    $placeholder = '{{' . $key . '}}';
+                    $xml = str_replace($placeholder, htmlspecialchars((string) $value), $xml);
                 }
             }
 
+            // 7. Réécrire le XML dans le DOCX
             $zip->addFromString('word/document.xml', $xml);
             $zip->close();
 
-            // 6. URL publique : /reports/xxx.docx
+            // 8. URL publique
             return [
                 'docx' => url('reports/' . $filename),
                 'pdf'  => null,
@@ -279,5 +290,6 @@ class FilesController extends Controller
 
         return ['error' => 'Failed to open DOCX file'];
     }
+
 
 }
