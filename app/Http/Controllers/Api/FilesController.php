@@ -224,7 +224,7 @@ class FilesController extends Controller
      */
     private function generateReportNative(array $data)
     {
-        // 1. Chemin de la template (tu laisses comme avant)
+        // 1. Template DOCX
         $templatePath = storage_path('app/templates/consultation_retraite.docx');
 
         if (!file_exists($templatePath)) {
@@ -234,13 +234,12 @@ class FilesController extends Controller
         // 2. Nom du fichier de sortie
         $filename = 'Rapport_Retraite_' . ($data['CLIENT_NOM'] ?? 'Client') . '_' . time() . '.docx';
 
-        // 3. Dossier de sortie dans storage (écriture autorisée sur OVH)
-        $outputDir = storage_path('app/public/reports');
+        // 3. Dossier de sortie DANS public (comme /img)
+        $outputDir = public_path('reports');
 
         if (!is_dir($outputDir)) {
-            // true = création récursive (reports, etc.)
-            // 0755 : droits standard
-            if (!mkdir($outputDir, 0755, true) && !is_dir($outputDir)) {
+            // Ce code ne sera PAS exécuté si tu crées le dossier à la main
+            if (!mkdir($outputDir, 0775, true) && !is_dir($outputDir)) {
                 return ['error' => 'Failed to create reports directory: ' . $outputDir];
             }
         }
@@ -252,7 +251,7 @@ class FilesController extends Controller
             return ['error' => 'Failed to copy template'];
         }
 
-        // 5. Ouvrir le DOCX comme une archive zip
+        // 5. Modifier le DOCX (Zip)
         $zip = new \ZipArchive;
         if ($zip->open($outputPath) === true) {
             $xml = $zip->getFromName('word/document.xml');
@@ -262,7 +261,6 @@ class FilesController extends Controller
                 return ['error' => 'document.xml not found in template'];
             }
 
-            // Remplacement des {{CLES}} par les valeurs
             foreach ($data as $key => $value) {
                 if (is_string($value) || is_numeric($value)) {
                     $xml = str_replace('{{' . $key . '}}', htmlspecialchars((string) $value), $xml);
@@ -272,9 +270,9 @@ class FilesController extends Controller
             $zip->addFromString('word/document.xml', $xml);
             $zip->close();
 
-            // 6. URL publique : /storage/reports/xxx.docx
+            // 6. URL publique : /reports/xxx.docx
             return [
-                'docx' => url('storage/reports/' . $filename),
+                'docx' => url('reports/' . $filename),
                 'pdf'  => null,
             ];
         }
