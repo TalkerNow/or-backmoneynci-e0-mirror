@@ -196,28 +196,57 @@ class FilesController extends Controller
      */
     public function generateReportFromJson(Request $request)
     {
-        // On récupère toutes les données du rapport
-        $payload = $request->all();
+        // On récupère tout le body JSON
+        $payload = $request->json()->all();
 
-        // Optionnel : extraire l'id client si tu l'envoies
-        $clientId = $request->input('client_id');
-        unset($payload['client_id']); // on le retire pour ne pas polluer les placeholders
-
-        if (empty($payload) || !is_array($payload)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No report data provided',
-            ], 422);
+        // n8n envoie souvent un tableau [ {...} ]
+        if (isset($payload[0]) && is_array($payload[0])) {
+            $item = $payload[0];
+        } else {
+            $item = $payload;
         }
 
-        $reportUrls = $this->generateReportNative($payload);
+        $clientId = $item['client_id'] ?? null;
+
+        // CAS 1 : réponse de n8n comme tu l’as collée : [ { "text": "```json\n{...}\n```" } ]
+        if (isset($item['text']) && is_string($item['text'])) {
+            $rawText = $item['text'];
+
+            // On récupère juste le JSON entre { ... }
+            if (preg_match('/\{.*\}/s', $rawText, $matches)) {
+                $jsonString = $matches[0];
+                $data = json_decode($jsonString, true);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Aucun JSON trouvé dans text'
+                ], 400);
+            }
+
+            if (!is_array($data)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'JSON invalide dans text'
+                ], 400);
+            }
+        } else {
+            // CAS 2 : si un jour tu envoies déjà un JSON propre
+            $data = $item;
+        }
+
+        // DEBUG si tu veux voir ce qui arrive :
+        // dd(array_keys($data));
+
+        $reportUrls = $this->generateReportNative($data);
 
         return response()->json([
-            'success'     => !isset($reportUrls['error']),
+            'success'     => true,
             'report_urls' => $reportUrls,
             'client_id'   => $clientId,
+            'debug_keys'  => array_slice(array_keys($data), 0, 10),
         ]);
     }
+
 
     /**
      * Remplit la template Word avec les données fournies.
