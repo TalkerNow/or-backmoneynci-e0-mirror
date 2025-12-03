@@ -234,7 +234,7 @@ class FilesController extends Controller
         // 2. Nom du fichier de sortie
         $filename = 'Rapport_Retraite_' . ($data['CLIENT_NOM'] ?? 'Client') . '_' . time() . '.docx';
 
-        // 3. Dossier de sortie DANS public (comme /img)
+        // 3. Dossier de sortie dans public/reports
         $outputDir = public_path('reports');
 
         if (!is_dir($outputDir)) {
@@ -260,11 +260,13 @@ class FilesController extends Controller
                 return ['error' => 'document.xml not found in template'];
             }
 
-            // ⚠️ Word coupe souvent les balises dans plusieurs <w:t> :
-            // ex: <w:t>{{CLIENT_</w:t></w:r><w:r><w:t>PRENOM}}</w:t>
-            // On fusionne les morceaux de texte consécutifs pour recoller les {{...}}
+            // ⚠️ Word coupe les placeholders en plusieurs <w:t>/<w:r>.
+            // On fusionne les runs de texte pour recoller les {{CLIENT_...}}.
+
+            // 5.1 On enlève les bordures entre <w:t>...</w:t> consécutifs
+            // en tolérant un éventuel <w:rPr> entre les deux.
             $xml = preg_replace(
-                '/<\/w:t>\s*<\/w:r>\s*<w:r[^>]*>\s*<w:t[^>]*>/',
+                '/<\/w:t>\s*<\/w:r>\s*<w:r[^>]*>\s*(?:<w:rPr>.*?<\/w:rPr>\s*)?<w:t[^>]*>/s',
                 '',
                 $xml
             );
@@ -273,7 +275,11 @@ class FilesController extends Controller
             foreach ($data as $key => $value) {
                 if (is_string($value) || is_numeric($value)) {
                     $placeholder = '{{' . $key . '}}';
-                    $xml = str_replace($placeholder, htmlspecialchars((string) $value), $xml);
+                    $xml = str_replace(
+                        $placeholder,
+                        htmlspecialchars((string) $value, ENT_QUOTES | ENT_XML1),
+                        $xml
+                    );
                 }
             }
 
@@ -290,6 +296,7 @@ class FilesController extends Controller
 
         return ['error' => 'Failed to open DOCX file'];
     }
+
 
 
 }
