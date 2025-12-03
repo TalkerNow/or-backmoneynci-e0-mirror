@@ -52,6 +52,7 @@ Route::namespace('App\Http\Controllers')->group(function () {
     Route::post('/uploadFiles', 'Api\FilesController@uploadFiles')->name('uploadFiles');
     Route::post('/sendToN8n', 'Api\FilesController@sendToN8n')->name('sendToN8n');
     Route::get('/downloadFile', 'Api\FilesController@downloadFile')->name('downloadFile');
+    Route::post('/generate-report', 'Api\FilesController@generateReportFromJson')->name('generateReport');
 
     //-------- statistics ---------
     Route::get('/get_statistics_total_income', 'Api\StatisticsController@getStatisticsTotalIncome')->name('get_statistics_total_income');
