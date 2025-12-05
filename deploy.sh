@@ -1,10 +1,32 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Raccourci pour exécuter des commandes dans le conteneur PHP
-C='docker compose exec -T php bash -lc'
+# Usage:
+#   ./deploy.sh        # déploiement sur PROD (php-prod / DB moneynci)
+#   ./deploy.sh test   # déploiement sur TEST (php-test / DB moneynci_test)
 
-echo "🔄 Git pull…"
+ENVIRONMENT="${1:-prod}"
+
+case "$ENVIRONMENT" in
+  prod)
+    SERVICE="php-prod"
+    ;;
+  test)
+    SERVICE="php-test"
+    ;;
+  *)
+    echo "❌ Environnement inconnu: $ENVIRONMENT"
+    echo "   Utilise: ./deploy.sh [prod|test]"
+    exit 1
+    ;;
+esac
+
+# Raccourci pour exécuter des commandes dans le conteneur PHP ciblé
+C="docker compose exec -T $SERVICE bash -lc"
+
+echo "🚀 Déploiement sur l'environnement: $ENVIRONMENT (service: $SERVICE)"
+
+echo "�� Git pull…"
 git pull --ff-only
 
 echo "🐳 Sanity check conteneur PHP…"
@@ -17,7 +39,8 @@ echo "📦 Dépendances Composer (si besoin)…"
 $C 'composer install --no-dev --prefer-dist --no-interaction'
 
 echo "🧹 Clear caches avant build…"
-$C 'php artisan config:clear && php artisan cache:clear && php artisan route:clear && php artisan view:clear'
+# on NE reconstruit PAS le cache config, on le vide juste
+$C 'php artisan optimize:clear || true'
 
 echo "🗃️  Migrations…"
 $C 'php artisan migrate --force'
@@ -25,15 +48,11 @@ $C 'php artisan migrate --force'
 echo "🧼 Nettoyage tokens reset (optionnel)…"
 $C 'php artisan auth:clear-resets || true'
 
-echo "⚡ Rebuild caches…"
-# (tu peux aussi faire 'php artisan optimize', mais je préfère expliciter)
-$C 'php artisan config:cache && php artisan route:cache && php artisan view:cache'
-
 echo "✅ Maintenance OFF…"
 $C 'php artisan up'
 
 echo "📄 Petit tail des logs pour vérifier (100 lignes)…"
 $C 'tail -n 100 storage/logs/laravel.log || true'
 
-echo "🎉 Déploiement terminé."
+echo "🎉 Déploiement terminé sur $ENVIRONMENT."
 

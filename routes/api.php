@@ -80,5 +80,12 @@ Route::namespace('App\Http\Controllers')->group(function () {
         Route::get('client/{clientId}', 'Api\SuiviAvancementController@getByClient');
         Route::get('client/{clientId}/facture/{factureId}', 'Api\SuiviAvancementController@getByClientAndFacture');
     });
-
+    // -------- Conversation Archives --------
+    Route::prefix('conversation-archives')->group(function () {
+        Route::get('/', 'Api\ConversationArchiveController@index');
+        Route::post('/', 'Api\ConversationArchiveController@store');
+        Route::get('{id}', 'Api\ConversationArchiveController@show');
+        Route::put('{id}', 'Api\ConversationArchiveController@update');
+        Route::delete('{id}', 'Api\ConversationArchiveController@destroy');
+    });
 });
