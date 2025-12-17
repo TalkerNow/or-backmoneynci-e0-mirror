@@ -182,6 +182,19 @@ class SuiviAvancementController extends Controller
     }
 
     /**
+     * 5) Supprimer un suivi complet
+     */
+    public function destroy($id)
+    {
+        $suivi = SuiviAvancement::findOrFail($id);
+        $suivi->delete();
+
+        return response()->json([
+            'message' => 'Suivi supprimé avec succès.'
+        ]);
+    }
+
+    /**
      * Petit helper privé pour sécuriser l'accès aux colonnes stepX_completed_at
      */
     private function getStepColumn(int $step): string
