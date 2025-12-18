@@ -5,7 +5,6 @@ use App\Http\Controllers\Api\ServicesController;
 use App\Http\Controllers\Api\ContractTemplateController;
 use App\Http\Controllers\Api\DocusignController;
 use App\Http\Controllers\Api\KpiController;
-use App\Http\Controllers\Api\SimulatorDifficultyResultController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -90,7 +89,8 @@ Route::namespace('App\Http\Controllers')->group(function () {
         Route::put('{id}', 'Api\ConversationArchiveController@update');
         Route::delete('{id}', 'Api\ConversationArchiveController@destroy');
     });
-    Route::prefix('v1')->group(function () {
-    Route::apiResource('simulator-difficulty-results', SimulatorDifficultyResultController::class);
+Route::prefix('v1')->group(function () {
+    Route::apiResource('simulator-difficulty-results', 'Api\SimulatorDifficultyResultController');
 });
+
 });
