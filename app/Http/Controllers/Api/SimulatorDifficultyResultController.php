@@ -33,30 +33,44 @@ class SimulatorDifficultyResultController extends Controller
 
     public function store(Request $request)
     {
-        // accepte:
-        //  - { ... } (flat)
-        //  - { "contact": { ... } }
-        //  - { "contacts": [ { ... } ] }
-        $contact = $this->extractContactPayload($request);
+        $payload = $request->json()->all();
 
-        // validation minimale (tu peux durcir si tu veux)
-        $request->validate([
-            'email' => ['nullable','email'],
-            'contact.email' => ['nullable','email'],
-            'contacts.0.email' => ['nullable','email'],
-        ]);
+        // 1) { "contacts": [ ... ] }
+        if (isset($payload['contacts']) && is_array($payload['contacts'])) {
+            $contacts = $payload['contacts'];
+        }
+        // 2) body = [ ... ] (array root)
+        elseif (is_array($payload) && array_is_list($payload)) {
+            $contacts = $payload;
+        }
+        // 3) { "contact": { ... } } ou payload single (fallback)
+        else {
+            $contact = $this->extractContactPayload($request);
+            $data = $this->mapPayloadToDb($contact);
 
-        $data = $this->mapPayloadToDb($contact);
+            if (empty($data['email'])) {
+                return response()->json(['message' => 'email is required'], 422);
+            }
 
-        if (empty($data['email'])) {
-            return response()->json([
-                'message' => 'email is required (either at root, contact.email, or contacts[0].email)',
-            ], 422);
+            $row = SimulatorDifficultyResult::create($data);
+            return response()->json($row, 201);
         }
 
-        $row = SimulatorDifficultyResult::create($data);
+        // BULK create
+        $created = [];
+        foreach ($contacts as $contact) {
+            if (!is_array($contact)) continue;
 
-        return response()->json($row, 201);
+            $data = $this->mapPayloadToDb($contact);
+
+            if (empty($data['email'])) {
+                return response()->json(['message' => 'Each contact must have an email'], 422);
+            }
+
+            $created[] = SimulatorDifficultyResult::create($data);
+        }
+
+        return response()->json($created, 201);
     }
 
     public function update(Request $request, SimulatorDifficultyResult $simulatorDifficultyResult)
