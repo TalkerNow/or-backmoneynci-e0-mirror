@@ -70,6 +70,8 @@ Route::namespace('App\Http\Controllers')->group(function () {
             'db' => config('database.connections.mysql.database'),
         ]);
     });
+    Route::post('/fetch-html', 'Api\PdfController@fetchHtml');
+
     // -------- Suivi d'avancement --------
     Route::prefix('suivi-avancement')->group(function () {
         Route::get('all', 'Api\SuiviAvancementController@getAllWithDocuments');
