@@ -95,4 +95,15 @@ Route::prefix('v1')->group(function () {
     Route::apiResource('simulator-difficulty-results', 'Api\SimulatorDifficultyResultController');
 });
 
+Route::prefix('v1')->group(function () {
+    // custom routes AVANT apiResource sinon conflit avec {id}
+    Route::get('simulator-error-tags/client/{clientId}', 'Api\SimulatorErrorTagController@getByClient');
+    Route::get('simulator-error-tags/document/{documentId}', 'Api\SimulatorErrorTagController@getByDocument');
+
+    Route::apiResource('simulator-error-tags', 'Api\SimulatorErrorTagController');
+
+    // existant
+    Route::apiResource('simulator-difficulty-results', 'Api\SimulatorDifficultyResultController');
+});
+
 });
