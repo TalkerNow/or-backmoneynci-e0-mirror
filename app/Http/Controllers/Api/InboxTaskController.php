@@ -17,6 +17,14 @@ class InboxTaskController extends Controller
             $q->where('user_id', $request->integer('user_id'));
         }
 
+        if ($request->filled('admin_id')) {
+            $q->where('admin_id', $request->integer('admin_id'));
+        }
+
+        if ($request->filled('date')) {
+            $q->whereDate('date', $request->date('date'));
+        }
+
         return response()->json(
             $q->paginate((int) $request->query('per_page', 50))
         );
@@ -32,8 +40,10 @@ class InboxTaskController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'user_id' => ['nullable', 'integer'],
-            'data' => ['nullable', 'array'], // Accepte n'importe quel JSON
+            'user_id'  => ['nullable', 'integer'],
+            'admin_id' => ['nullable', 'integer'],
+            'date'     => ['nullable', 'date'],
+            'data'     => ['nullable'], // Data libre (string, json, etc.)
         ]);
 
         $row = InboxTask::create($data);
@@ -45,11 +55,13 @@ class InboxTaskController extends Controller
     public function update(Request $request, InboxTask $inboxTask)
     {
         $request->validate([
-            'user_id' => ['nullable', 'integer'],
-            'data' => ['nullable', 'array'],
+            'user_id'  => ['nullable', 'integer'],
+            'admin_id' => ['nullable', 'integer'],
+            'date'     => ['nullable', 'date'],
+            'data'     => ['nullable'],
         ]);
 
-        $inboxTask->fill($request->only(['user_id', 'data']))->save();
+        $inboxTask->fill($request->only(['user_id', 'admin_id', 'date', 'data']))->save();
 
         return response()->json($inboxTask);
     }

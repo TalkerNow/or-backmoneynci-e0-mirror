@@ -10,10 +10,12 @@ class InboxTask extends Model
 
     protected $fillable = [
         'user_id',
+        'admin_id',
+        'date',
         'data',
     ];
 
     protected $casts = [
-        'data' => 'array',
+        'date' => 'date',
     ];
 }
