@@ -170,6 +170,7 @@ class SimulatorDifficultyResultController extends Controller
             'newsletter','automation_recap_retraite','date_depart',
             'email_blacklisted','sms_blacklisted','list_ids','list_unsubscribed',
             'external_created_at','external_modified_at',
+            'invisible', 'user_id',
         ];
 
         foreach ($flatOverrides as $k) {
@@ -179,7 +180,7 @@ class SimulatorDifficultyResultController extends Controller
         }
 
         // normalise bool si flat
-        foreach (['newsletter','automation_recap_retraite','email_blacklisted','sms_blacklisted'] as $b) {
+        foreach (['newsletter','automation_recap_retraite','email_blacklisted','sms_blacklisted', 'invisible'] as $b) {
             if (array_key_exists($b, $data)) {
                 $data[$b] = $this->toBool($data[$b]) ?? $data[$b];
             }

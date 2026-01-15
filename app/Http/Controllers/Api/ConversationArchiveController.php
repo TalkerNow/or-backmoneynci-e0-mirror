@@ -46,11 +46,15 @@ class ConversationArchiveController extends Controller
             // Validation douce de la structure
             'messages.*.role'    => ['nullable', 'string'],
             'messages.*.content' => ['nullable', 'string'],
+            'user_id'   => ['nullable', 'integer'],
+            'invisible' => ['nullable', 'boolean'],
         ]);
 
         $conv = ConversationArchive::create([
-            'summary'  => $data['summary'] ?? null,
-            'messages' => $data['messages'],
+            'summary'   => $data['summary'] ?? null,
+            'messages'  => $data['messages'],
+            'user_id'   => $data['user_id'] ?? null,
+            'invisible' => $data['invisible'] ?? false,
         ]);
 
         return response()->json($conv, 201);
@@ -96,6 +100,8 @@ class ConversationArchiveController extends Controller
 
             'messages.*.role'    => ['nullable', 'string'],
             'messages.*.content' => ['nullable', 'string'],
+            'user_id'   => ['nullable', 'integer'],
+            'invisible' => ['nullable', 'boolean'],
         ]);
 
         // Update partiel propre
@@ -105,6 +111,14 @@ class ConversationArchiveController extends Controller
 
         if (array_key_exists('messages', $data)) {
             $conv->messages = $data['messages'];
+        }
+
+        if (array_key_exists('user_id', $data)) {
+            $conv->user_id = $data['user_id'];
+        }
+
+        if (array_key_exists('invisible', $data)) {
+            $conv->invisible = $data['invisible'];
         }
 
         $conv->save();
