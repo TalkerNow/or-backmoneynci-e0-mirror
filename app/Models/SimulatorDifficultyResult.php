@@ -15,11 +15,13 @@ class SimulatorDifficultyResult extends Model
         'newsletter','automation_recap_retraite','date_depart',
         'email_blacklisted','sms_blacklisted','list_ids','list_unsubscribed',
         'raw_payload','external_created_at','external_modified_at',
+        'invisible', 'user_id',
     ];
 
     protected $casts = [
         'date_naissance' => 'date',
         'date_depart' => 'date',
+        'invisible' => 'boolean',
         'newsletter' => 'boolean',
         'automation_recap_retraite' => 'boolean',
         'email_blacklisted' => 'boolean',

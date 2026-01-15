@@ -11,10 +11,13 @@ class ConversationArchive extends Model
     protected $fillable = [
         'summary',
         'messages',
+        'user_id',
+        'invisible',
     ];
 
     protected $casts = [
         'messages' => 'array',
+        'invisible' => 'boolean',
     ];
 }
 
