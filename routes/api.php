@@ -97,6 +97,7 @@ Route::
                 Route::get('simulator-error-tags/client/{clientId}', 'Api\SimulatorErrorTagController@getByClient');
                 Route::get('simulator-error-tags/document/{documentId}', 'Api\SimulatorErrorTagController@getByDocument');
                 Route::apiResource('simulator-error-tags', 'Api\SimulatorErrorTagController');
+    Route::apiResource('extraction-data-ris', 'Api\ExtractionDataRisController');
 
                 // simulator-difficulty-results
                 Route::apiResource('simulator-difficulty-results', 'Api\SimulatorDifficultyResultController');
