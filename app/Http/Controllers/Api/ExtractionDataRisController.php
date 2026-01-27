@@ -14,7 +14,7 @@ class ExtractionDataRisController extends Controller
         $q = ExtractionDataRis::query()->orderByDesc('id');
 
         if ($request->filled('user_id')) {
-            $q->where('user_id', $request->integer('user_id'));
+$q->where('user_id', (int) $request->query('user_id'));
         }
 
         if ($request->filled('nir')) {
