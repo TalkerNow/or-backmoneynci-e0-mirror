@@ -13,6 +13,10 @@ class ExtractionDataRisController extends Controller
     {
         $q = ExtractionDataRis::query()->orderByDesc('id');
 
+        if ($request->filled('user_id')) {
+            $q->where('user_id', $request->integer('user_id'));
+        }
+
         if ($request->filled('nir')) {
             $nir = preg_replace('/\s+/', '', (string) $request->query('nir'));
             $q->where('nir', $nir);
@@ -37,15 +41,16 @@ class ExtractionDataRisController extends Controller
     // POST /api/v1/extraction-data-ris
     public function store(Request $request)
     {
-        // Supporte aussi le format tableau n8n: [ { ... } ]
+        // Supporte format n8n: [ { ... } ]
         $payload = $request->all();
         if (is_array($payload) && array_is_list($payload) && isset($payload[0]) && is_array($payload[0])) {
             $payload = $payload[0];
         }
 
         $data = validator($payload, [
-            'text' => ['required', 'string'],
-            'nir'  => ['nullable', 'string', 'max:32'],
+            'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'text'    => ['required', 'string'],
+            'nir'     => ['nullable', 'string', 'max:32'],
         ])->validate();
 
         $row = ExtractionDataRis::create($data);
@@ -57,11 +62,12 @@ class ExtractionDataRisController extends Controller
     public function update(Request $request, ExtractionDataRis $extractionDataRi)
     {
         $request->validate([
-            'text' => ['sometimes', 'required', 'string'],
-            'nir'  => ['sometimes', 'nullable', 'string', 'max:32'],
+            'user_id' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
+            'text'    => ['sometimes', 'required', 'string'],
+            'nir'     => ['sometimes', 'nullable', 'string', 'max:32'],
         ]);
 
-        $data = $request->only(['text', 'nir']);
+        $data = $request->only(['user_id', 'text', 'nir']);
         $extractionDataRi->fill($data)->save();
 
         return response()->json($extractionDataRi);
