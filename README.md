@@ -59,3 +59,63 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+
+
+
+
+## Lancement du docker en local (dev)
+
+- (Optionnel) Charger les variables d'environnement de `.env.local` dans ton shell
+  pour les scripts bash (ex: sync-db-from-prod.sh) :
+  - `export $(grep -v '^#' .env.local | xargs)`
+  - ⚠️ Ça ne change rien pour Laravel dans le conteneur. Laravel lit le fichier `.env`
+    **du conteneur**, qui est monté depuis `.env.local` via `docker.compose.override.yml`.
+
+- Démarrer l'environnement local :
+  - `docker compose up -d`
+    - lit automatiquement :
+      - `docker-compose.yml`
+      - `docker.compose.override.yml` (DB docker `db`, nginx dev, montage `.env.local` → `.env`)
+
+- Migrations dev (DB locale dans Docker : service `db`, base `moneynci_local`) :
+  - Appliquer les migrations :
+    - `docker compose exec php-test php artisan migrate`
+  - Réinitialiser complètement la base + seed :
+    - `docker compose exec php-test php artisan migrate:fresh --seed`
+  - Si tu modifies `.env.local`, vider le cache de config avant :
+    - `docker compose exec php-test php artisan config:clear`
+
+## Prod ACTUELLE (DB externe, hors Docker)
+
+Sur le serveur de prod actuel, **uniquement** :
+
+- Fichier d'environnement :
+  - `.env` présent sur le serveur (APP_ENV=production)
+  - Ne pas utiliser `.env.local` ni `export $(grep -v '^#' .env.local | xargs)` en prod.
+
+- Démarrer les conteneurs :
+  - `docker compose -f docker-compose.yml up -d`
+
+- Migrations prod (DB externe, valeurs de `.env` en prod) :
+  - Pour `php-prod` :
+    - `docker compose exec php-prod php artisan migrate`
+  - Pour l'environnement de test prod (`php-test` avec DB `moneynci_test`) :
+    - `docker compose exec php-test php artisan migrate`
+
+> Ne PAS utiliser `docker.compose.override.yml` ni `docker.compose.prod.yml` sur ce serveur.  
+> En prod actuelle, la base reste externe (DB_HOST=host.docker.internal).
+
+## Prod FULL Docker DB (future, optionnelle)
+
+Sur un serveur prévu pour tout dockeriser (y compris MySQL), utiliser :
+
+- `docker compose -f docker.compose.prod.yml up -d`
+- Migrations dans ce cas (DB dans le service `db`) :
+  - `docker compose -f docker.compose.prod.yml exec php-prod php artisan migrate`
+
+Sur un serveur prévu pour tout dockeriser (y compris MySQL), utiliser :
+
+- `docker compose -f docker.compose.prod.yml up -d`
+- Migrations dans ce cas (DB dans le service `db`) :
+  - `docker compose -f docker.compose.prod.yml exec php-prod php artisan migrate`
