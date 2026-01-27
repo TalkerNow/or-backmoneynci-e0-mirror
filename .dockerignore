@@ -1,0 +1,24 @@
+# Fichiers et dossiers à ignorer lors du build Docker
+
+.git
+.gitignore
+.env
+.env._
+!.env.example
+node_modules
+vendor
+storage/logs/_
+storage/framework/cache/_
+storage/framework/sessions/_
+storage/framework/views/_
+bootstrap/cache/_
+README.md
+.editorconfig
+.phpunit.result.cache
+docker-compose*.yml
+Dockerfile
+.dockerignore
+*.md
+tests
+.vscode
+.idea
