@@ -47,40 +47,58 @@ echo ""
 # 3. CRITIQUE : Vérifier la syntaxe PHP de tous les fichiers
 echo "🔍 Vérification de la syntaxe PHP..."
 echo "   Analyse de app/..."
-if ! docker compose exec -T php-test sh -c 'for file in $(find app -name "*.php"); do php -l "$file" || exit 1; done' > /dev/null 2>&1; then
-    error "Erreurs de syntaxe PHP détectées dans app/"
+SYNTAX_ERRORS=$(docker compose exec -T php-test sh -c 'for file in $(find app -name "*.php"); do php -l "$file" 2>&1 | grep -v "No syntax errors" | grep -v "Deprecated:" || true; done')
+if [ ! -z "$SYNTAX_ERRORS" ]; then
+    echo -e "${RED}Erreurs de syntaxe détectées dans app/:${NC}"
+    echo "$SYNTAX_ERRORS"
+    error "Corrigez les erreurs de syntaxe ci-dessus"
 fi
 
 echo "   Analyse de routes/..."
-if ! docker compose exec -T php-test sh -c 'for file in $(find routes -name "*.php"); do php -l "$file" || exit 1; done' > /dev/null 2>&1; then
-    error "Erreurs de syntaxe dans les routes"
+SYNTAX_ERRORS=$(docker compose exec -T php-test sh -c 'for file in $(find routes -name "*.php"); do php -l "$file" 2>&1 | grep -v "No syntax errors" | grep -v "Deprecated:" || true; done')
+if [ ! -z "$SYNTAX_ERRORS" ]; then
+    echo -e "${RED}Erreurs de syntaxe détectées dans routes/:${NC}"
+    echo "$SYNTAX_ERRORS"
+    error "Corrigez les erreurs de syntaxe ci-dessus"
 fi
 
 echo "   Analyse de config/..."
-if ! docker compose exec -T php-test sh -c 'for file in $(find config -name "*.php"); do php -l "$file" || exit 1; done' > /dev/null 2>&1; then
-    error "Erreurs de syntaxe dans la config"
+SYNTAX_ERRORS=$(docker compose exec -T php-test sh -c 'for file in $(find config -name "*.php"); do php -l "$file" 2>&1 | grep -v "No syntax errors" | grep -v "Deprecated:" || true; done')
+if [ ! -z "$SYNTAX_ERRORS" ]; then
+    echo -e "${RED}Erreurs de syntaxe détectées dans config/:${NC}"
+    echo "$SYNTAX_ERRORS"
+    error "Corrigez les erreurs de syntaxe ci-dessus"
 fi
 
-success "Aucune erreur de syntaxe PHP (warnings de dépréciation PHP 8.4 ignorés)"
+success "Aucune erreur de syntaxe PHP"
 echo ""
 
 # 4. CRITIQUE : Vérifier que Composer peut installer les dépendances
 echo "📦 Vérification de Composer..."
-if ! docker compose exec -T php-test composer validate --no-check-publish 2>&1 | grep -q "valid"; then
-    error "composer.json ou composer.lock invalide"
+COMPOSER_VALIDATE=$(docker compose exec -T php-test composer validate --no-check-publish 2>&1)
+if ! echo "$COMPOSER_VALIDATE" | grep -q "valid"; then
+    echo -e "${RED}Problème avec composer.json ou composer.lock:${NC}"
+    echo "$COMPOSER_VALIDATE"
+    error "Corrigez les erreurs Composer ci-dessus"
 fi
 
 # Vérifier que l'installation fonctionne
 if ! docker compose exec -T php-test test -f vendor/autoload.php; then
     echo "   Installation des dépendances Composer..."
-    if ! docker compose exec -T php-test composer install --no-interaction --optimize-autoloader 2>&1; then
-        error "Impossible d'installer les dépendances Composer"
+    COMPOSER_INSTALL=$(docker compose exec -T php-test composer install --no-interaction --optimize-autoloader 2>&1)
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Erreur lors de l'installation Composer:${NC}"
+        echo "$COMPOSER_INSTALL"
+        error "Impossible d'installer les dépendances"
     fi
 fi
 
 # Vérifier l'autoload
-if ! docker compose exec -T php-test composer dump-autoload --optimize > /dev/null 2>&1; then
-    error "Problème avec l'autoload Composer"
+AUTOLOAD_OUTPUT=$(docker compose exec -T php-test composer dump-autoload --optimize 2>&1)
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Erreur avec l'autoload Composer:${NC}"
+    echo "$AUTOLOAD_OUTPUT"
+    error "Problème avec l'autoload"
 fi
 
 success "Dépendances Composer valides"
@@ -90,13 +108,19 @@ echo ""
 echo "🚀 Vérification du démarrage de Laravel..."
 
 # Tester que artisan fonctionne
-if ! docker compose exec -T php-test php artisan --version > /dev/null 2>&1; then
+ARTISAN_VERSION=$(docker compose exec -T php-test php artisan --version 2>&1)
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Erreur au démarrage de Laravel:${NC}"
+    echo "$ARTISAN_VERSION"
     error "Laravel ne démarre pas correctement"
 fi
 
 # Vérifier la configuration
-if ! docker compose exec -T php-test php artisan config:clear > /dev/null 2>&1; then
-    error "Problème avec la configuration Laravel"
+CONFIG_CLEAR=$(docker compose exec -T php-test php artisan config:clear 2>&1)
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Erreur de configuration Laravel:${NC}"
+    echo "$CONFIG_CLEAR"
+    error "Problème avec la configuration"
 fi
 
 success "Laravel démarre correctement"
@@ -126,13 +150,18 @@ echo ""
 echo "🔄 Vérification de l'autoload des classes..."
 docker compose exec -T php-test php artisan clear-compiled > /dev/null 2>&1 || true
 
-if ! docker compose exec -T php-test php artisan optimize:clear > /dev/null 2>&1; then
+OPTIMIZE_CLEAR=$(docker compose exec -T php-test php artisan optimize:clear 2>&1)
+if [ $? -ne 0 ]; then
     warning "Certains caches n'ont pas pu être nettoyés"
+    echo "$OPTIMIZE_CLEAR" | head -5
 fi
 
 # Tenter de charger toutes les classes
-if ! docker compose exec -T php-test composer dump-autoload --optimize --strict-psr > /dev/null 2>&1; then
-    error "Problème avec les namespaces PSR-4"
+AUTOLOAD_STRICT=$(docker compose exec -T php-test composer dump-autoload --optimize --strict-psr 2>&1)
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Problème avec les namespaces PSR-4:${NC}"
+    echo "$AUTOLOAD_STRICT" | grep -E "error|Error|PSR-4|Class|namespace" || echo "$AUTOLOAD_STRICT"
+    error "Corrigez les namespaces ci-dessus"
 fi
 
 success "Autoload des classes valide"
