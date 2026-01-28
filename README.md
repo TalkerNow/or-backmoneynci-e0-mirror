@@ -60,19 +60,74 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
 
-
-
-
-
 ## Lancement du docker en local (dev)
+
+### Premier démarrage et installation des hooks Git
+
+**Installer les Git hooks pour validation automatique :**
+
+```bash
+./scripts/install-hooks.sh
+```
+
+Ce hook validera automatiquement votre code avant chaque push.
+
+**Démarrer l'environnement local :**
+
+```bash
+docker compose up -d
+```
+
+Cela lit automatiquement :
+
+- `docker-compose.yml` (configuration de base)
+- `docker-compose.override.yml` (DB Docker `db`, nginx dev, montage `.env.local` → `.env`)
+
+L'API sera disponible sur : **http://localhost:8000**
+
+### Validation du code
+
+**Valider manuellement avant de pusher :**
+
+```bash
+./scripts/validate.sh
+```
+
+Ce script vérifie :
+
+- ✅ Docker est lancé
+- ✅ Syntaxe PHP valide
+- ✅ Dépendances Composer à jour
+- ✅ Configuration Laravel valide
+- ✅ Routes Laravel valides
+- ✅ Tests PHPUnit (si présents)
+- ✅ Permissions correctes
+
+**Bypass la validation (déconseillé) :**
+
+```bash
+git push --no-verify
+```
+
+### CI/CD GitLab
+
+Le fichier `.gitlab-ci.yml` lance automatiquement :
+
+- **validate** : Validation de la syntaxe et configuration
+- **test** : Tests PHPUnit
+- **build** : Build des images Docker
+
+Ces jobs se lancent automatiquement sur les branches `main`, `develop`, et les merge requests.
 
 - (Optionnel) Charger les variables d'environnement de `.env.local` dans ton shell
   pour les scripts bash (ex: sync-db-from-prod.sh) :
+
   - `export $(grep -v '^#' .env.local | xargs)`
   - ⚠️ Ça ne change rien pour Laravel dans le conteneur. Laravel lit le fichier `.env`
     **du conteneur**, qui est monté depuis `.env.local` via `docker.compose.override.yml`.
 
 - Démarrer l'environnement local :
+
   - `docker compose up -d`
     - lit automatiquement :
       - `docker-compose.yml`
@@ -91,10 +146,12 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 Sur le serveur de prod actuel, **uniquement** :
 
 - Fichier d'environnement :
+
   - `.env` présent sur le serveur (APP_ENV=production)
   - Ne pas utiliser `.env.local` ni `export $(grep -v '^#' .env.local | xargs)` en prod.
 
 - Démarrer les conteneurs :
+
   - `docker compose -f docker-compose.yml up -d`
 
 - Migrations prod (DB externe, valeurs de `.env` en prod) :
