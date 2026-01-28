@@ -97,6 +97,15 @@ Route::
                 Route::put('{id}', 'Api\ConversationArchiveController@update');
                 Route::delete('{id}', 'Api\ConversationArchiveController@destroy');
             });
+
+            // Kanban routes
+            Route::post('kanbans/reorder', 'Api\KanbanController@reorder');
+            Route::apiResource('kanbans', 'Api\KanbanController');
+
+            // User Kanban routes (cartes de rendez-vous)
+            Route::post('user-kanbans/{id}/move', 'Api\UserKanbanController@move');
+            Route::get('user-kanbans/user/{userId}', 'Api\UserKanbanController@getByUser');
+            Route::apiResource('user-kanbans', 'Api\UserKanbanController');
             Route::prefix('v1')->group(function () {
                 // simulator-error-tags
                 Route::get('simulator-error-tags/client/{clientId}', 'Api\SimulatorErrorTagController@getByClient');
@@ -114,14 +123,7 @@ Route::
                 Route::apiResource('call-reports', 'Api\CallReportController');
                 Route::get('call-reports/client/{clientId}', 'Api\CallReportController@getByClient');
 
-                // kanbans
-                Route::post('kanbans/reorder', 'Api\KanbanController@reorder');
-                Route::apiResource('kanbans', 'Api\KanbanController');
-
-                // user-kanbans (cartes de rendez-vous)
-                Route::post('user-kanbans/{id}/move', 'Api\UserKanbanController@move');
-                Route::get('user-kanbans/user/{userId}', 'Api\UserKanbanController@getByUser');
-                Route::apiResource('user-kanbans', 'Api\UserKanbanController');
+                
             });
 
 
