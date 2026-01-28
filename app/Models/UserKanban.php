@@ -26,6 +26,7 @@ class UserKanban extends Model
         'kanban_id',
         'description',
         'date',
+        'hour',
         'status',
     ];
 

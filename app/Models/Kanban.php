@@ -16,6 +16,7 @@ class Kanban extends Model
      */
     protected $fillable = [
         'title',
+        'color',
         'order',
     ];
 

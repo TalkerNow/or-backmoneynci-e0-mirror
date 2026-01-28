@@ -54,6 +54,7 @@ class UserKanbanController extends Controller
             'kanban_id' => 'required|exists:kanbans,id',
             'description' => 'nullable|string',
             'date' => 'required|date',
+            'hour' => 'nullable|date_format:H:i',
             'status' => 'nullable|string|max:255',
         ]);
 
@@ -85,6 +86,7 @@ class UserKanbanController extends Controller
             'kanban_id' => 'sometimes|required|exists:kanbans,id',
             'description' => 'nullable|string',
             'date' => 'sometimes|required|date',
+            'hour' => 'nullable|date_format:H:i',
             'status' => 'nullable|string|max:255',
         ]);
 

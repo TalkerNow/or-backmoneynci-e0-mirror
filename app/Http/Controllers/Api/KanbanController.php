@@ -27,11 +27,13 @@ class KanbanController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255|unique:kanbans,title',
+            'color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
             'order' => 'nullable|integer|min:0',
         ], [
             'title.required' => 'Le titre est obligatoire',
             'title.unique' => 'Un kanban avec ce titre existe déjà',
             'title.max' => 'Le titre ne peut pas dépasser 255 caractères',
+            'color.regex' => 'La couleur doit être au format hexadécimal (#RRGGBB)',
             'order.min' => 'L\'ordre doit être un nombre positif',
         ]);
 
@@ -78,11 +80,13 @@ class KanbanController extends Controller
 
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255|unique:kanbans,title,' . $id,
+            'color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
             'order' => 'sometimes|required|integer|min:0',
         ], [
             'title.required' => 'Le titre est obligatoire',
             'title.unique' => 'Un autre kanban avec ce titre existe déjà',
             'title.max' => 'Le titre ne peut pas dépasser 255 caractères',
+            'color.regex' => 'La couleur doit être au format hexadécimal (#RRGGBB)',
             'order.required' => 'L\'ordre est obligatoire',
             'order.min' => 'L\'ordre doit être un nombre positif',
         ]);
