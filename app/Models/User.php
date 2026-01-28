@@ -83,4 +83,9 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->belongsTo('app\Models\OldClients');
     }
+
+    public function userKanbans()
+    {
+        return $this->hasMany(UserKanban::class, 'user_id');
+    }
 }

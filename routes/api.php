@@ -23,6 +23,11 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+Route::get('/health', function () {
+    return response()->json(['status' => 'ok']);
+});
+
+
 Route::
         namespace('App\Http\Controllers')->group(function () {
             Route::post('/login', 'Api\Auth\LoginController@login')->name('login');
@@ -108,6 +113,15 @@ Route::
                 // call-reports
                 Route::apiResource('call-reports', 'Api\CallReportController');
                 Route::get('call-reports/client/{clientId}', 'Api\CallReportController@getByClient');
+
+                // kanbans
+                Route::post('kanbans/reorder', 'Api\KanbanController@reorder');
+                Route::apiResource('kanbans', 'Api\KanbanController');
+
+                // user-kanbans (cartes de rendez-vous)
+                Route::post('user-kanbans/{id}/move', 'Api\UserKanbanController@move');
+                Route::get('user-kanbans/user/{userId}', 'Api\UserKanbanController@getByUser');
+                Route::apiResource('user-kanbans', 'Api\UserKanbanController');
             });
 
 
