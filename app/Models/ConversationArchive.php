@@ -19,5 +19,13 @@ class ConversationArchive extends Model
         'messages' => 'array',
         'invisible' => 'boolean',
     ];
+
+    /**
+     * Get the user associated with this conversation archive.
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 }
 
