@@ -93,4 +93,9 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(ConversationArchive::class, 'user_id');
     }
+
+    public function simulatorDifficultyResults()
+    {
+        return $this->hasMany(SimulatorDifficultyResult::class, 'user_id');
+    }
 }

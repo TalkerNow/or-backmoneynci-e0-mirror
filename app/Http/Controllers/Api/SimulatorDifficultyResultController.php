@@ -11,7 +11,9 @@ class SimulatorDifficultyResultController extends Controller
 {
     public function index(Request $request)
     {
-        $q = SimulatorDifficultyResult::query()->orderByDesc('id');
+        $q = SimulatorDifficultyResult::query()
+            ->with('user')
+            ->orderByDesc('id');
 
         // petits filtres pratiques
         if ($request->filled('email')) {
@@ -28,6 +30,7 @@ class SimulatorDifficultyResultController extends Controller
 
     public function show(SimulatorDifficultyResult $simulatorDifficultyResult)
     {
+        $simulatorDifficultyResult->load('user');
         return response()->json($simulatorDifficultyResult);
     }
 
@@ -53,6 +56,7 @@ class SimulatorDifficultyResultController extends Controller
             }
 
             $row = SimulatorDifficultyResult::create($data);
+            $row->load('user');
             return response()->json($row, 201);
         }
 
@@ -69,6 +73,9 @@ class SimulatorDifficultyResultController extends Controller
 
             $created[] = SimulatorDifficultyResult::create($data);
         }
+
+        // Charger les relations user pour tous les résultats
+        SimulatorDifficultyResult::whereIn('id', array_map(fn($r) => $r->id, $created))->with('user')->get();
 
         return response()->json($created, 201);
     }
@@ -89,6 +96,7 @@ class SimulatorDifficultyResultController extends Controller
         $data = array_filter($data, fn($v) => $v !== null);
 
         $simulatorDifficultyResult->fill($data)->save();
+        $simulatorDifficultyResult->load('user');
 
         return response()->json($simulatorDifficultyResult);
     }
