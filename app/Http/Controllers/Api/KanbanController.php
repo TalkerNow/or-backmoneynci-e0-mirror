@@ -99,6 +99,7 @@ class KanbanController extends Controller
 
     /**
      * Remove the specified kanban.
+     * Les user_kanbans associés seront automatiquement supprimés (ON DELETE CASCADE).
      */
     public function destroy($id)
     {
@@ -110,15 +111,7 @@ class KanbanController extends Controller
                 'error' => 'kanban_not_found'
             ], 404);
         }
-        
-        // Vérifier si le kanban contient des cartes
-        if ($kanban->userKanbans()->count() > 0) {
-            return response()->json([
-                'message' => 'Impossible de supprimer ce kanban car il contient des rendez-vous',
-                'error' => 'kanban_not_empty'
-            ], 422);
-        }
-        
+
         $kanban->delete();
 
         return response()->json(['message' => 'Kanban supprimé avec succès'], 200);
