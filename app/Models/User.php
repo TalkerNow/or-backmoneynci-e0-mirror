@@ -103,4 +103,64 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(SuiviAvancement::class, 'client_id');
     }
+
+    public function callReportsAsClient()
+    {
+        return $this->hasMany(CallReport::class, 'client_id');
+    }
+
+    public function callReportsAsAdmin()
+    {
+        return $this->hasMany(CallReport::class, 'admin_id');
+    }
+
+    public function inboxTasksAsUser()
+    {
+        return $this->hasMany(InboxTask::class, 'user_id');
+    }
+
+    public function inboxTasksAsAdmin()
+    {
+        return $this->hasMany(InboxTask::class, 'admin_id');
+    }
+
+    public function extractionDataRis()
+    {
+        return $this->hasMany(ExtractionDataRis::class, 'user_id');
+    }
+
+    public function files()
+    {
+        return $this->hasMany(Files::class, 'user_id');
+    }
+
+    public function kpisAsAdmin()
+    {
+        return $this->hasMany(Kpi::class, 'admin_id');
+    }
+
+    public function simulatorErrorTagsAsUser()
+    {
+        return $this->hasMany(SimulatorErrorTag::class, 'user_id');
+    }
+
+    public function simulatorErrorTagsAsAdmin()
+    {
+        return $this->hasMany(SimulatorErrorTag::class, 'admin_id');
+    }
+
+    public function tasksAsCreator()
+    {
+        return $this->hasMany(Tasks::class, 'creator_id');
+    }
+
+    public function tasksAsCustomer()
+    {
+        return $this->hasMany(Tasks::class, 'customer_id');
+    }
+
+    public function userFunds()
+    {
+        return $this->hasMany(UserFunds::class, 'user_id');
+    }
 }

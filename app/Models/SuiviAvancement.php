@@ -37,6 +37,6 @@ class SuiviAvancement extends Model
 
     public function facture()
     {
-        return $this->belongsTo(Facture::class);
+        return $this->belongsTo(Documents::class, 'facture_id');
     }
 }
