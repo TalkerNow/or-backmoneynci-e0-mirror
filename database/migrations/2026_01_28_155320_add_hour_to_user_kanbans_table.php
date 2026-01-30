@@ -14,7 +14,7 @@ class AddHourToUserKanbansTable extends Migration
     public function up()
     {
         Schema::table('user_kanbans', function (Blueprint $table) {
-            //
+            $table->time('hour')->nullable()->after('date');
         });
     }
 
@@ -26,7 +26,7 @@ class AddHourToUserKanbansTable extends Migration
     public function down()
     {
         Schema::table('user_kanbans', function (Blueprint $table) {
-            //
+            $table->dropColumn('hour');
         });
     }
 }

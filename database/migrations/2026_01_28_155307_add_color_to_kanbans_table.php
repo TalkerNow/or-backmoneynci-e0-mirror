@@ -14,7 +14,7 @@ class AddColorToKanbansTable extends Migration
     public function up()
     {
         Schema::table('kanbans', function (Blueprint $table) {
-            //
+            $table->string('color', 7)->nullable()->after('title');
         });
     }
 
@@ -26,7 +26,7 @@ class AddColorToKanbansTable extends Migration
     public function down()
     {
         Schema::table('kanbans', function (Blueprint $table) {
-            //
+            $table->dropColumn('color');
         });
     }
 }
