@@ -98,4 +98,9 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(SimulatorDifficultyResult::class, 'user_id');
     }
+
+    public function suiviAvancementsByUser()
+    {
+        return $this->hasMany(SuiviAvancement::class, 'client_id');
+    }
 }
