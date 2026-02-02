@@ -20,6 +20,7 @@ class ConversationArchiveController extends Controller
         $perPage = $perPage > 200 ? 200 : $perPage;
 
         $convs = ConversationArchive::query()
+            ->with('user')
             ->orderByDesc('id')
             ->paginate($perPage);
 
@@ -57,6 +58,8 @@ class ConversationArchiveController extends Controller
             'invisible' => $data['invisible'] ?? false,
         ]);
 
+        $conv->load('user');
+
         return response()->json($conv, 201);
     }
 
@@ -65,7 +68,7 @@ class ConversationArchiveController extends Controller
      */
     public function show(int $id)
     {
-        $conv = ConversationArchive::find($id);
+        $conv = ConversationArchive::with('user')->find($id);
 
         if (!$conv) {
             return response()->json([
@@ -122,6 +125,7 @@ class ConversationArchiveController extends Controller
         }
 
         $conv->save();
+        $conv->load('user');
 
         return response()->json($conv);
     }

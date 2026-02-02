@@ -31,4 +31,12 @@ class SimulatorDifficultyResult extends Model
         'external_created_at' => 'datetime',
         'external_modified_at' => 'datetime',
     ];
+
+    /**
+     * Get the user associated with this simulator difficulty result.
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 }

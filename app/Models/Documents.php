@@ -40,4 +40,9 @@ class Documents extends Model
     {
         return $this->belongsTo('App\Models\User', 'user_id');
     }
+
+    public function suiviAvancementsByFacture()
+    {
+        return $this->hasMany(SuiviAvancement::class, 'facture_id');
+    }
 }

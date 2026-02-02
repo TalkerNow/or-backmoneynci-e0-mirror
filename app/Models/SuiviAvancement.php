@@ -32,11 +32,11 @@ class SuiviAvancement extends Model
 
     public function client()
     {
-        return $this->belongsTo(Client::class);
+        return $this->belongsTo(User::class, 'client_id');
     }
 
     public function facture()
     {
-        return $this->belongsTo(Facture::class);
+        return $this->belongsTo(Documents::class, 'facture_id');
     }
 }
