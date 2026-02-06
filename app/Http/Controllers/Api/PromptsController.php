@@ -29,6 +29,13 @@ class PromptsController extends Controller
             $query->where('type', $request->type);
         }
 
+        // Filtrer par créateur si spécifié (réservé aux admin/Consultant)
+        if ($request->has('created_by')) {
+            if ($auth->role === 'admin' || $auth->role === 'Consultant') {
+                $query->where('created_by', $request->created_by);
+            }
+        }
+
         // Filtrer par créateur si l'utilisateur n'est pas admin
         if ($auth->role !== 'admin' && $auth->role !== 'Consultant') {
             $query->where('created_by', $auth->id);
@@ -80,8 +87,10 @@ class PromptsController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'nullable|in:general,email,rapport,analyse,autre',
+            'type' => 'nullable|in:general,email,rapport,analyse,autre,role',
             'prompt_text' => 'required|string',
+        ], [
+            'type.in' => 'Type invalide. Types autorisés: general, email, rapport, analyse, autre, role.',
         ]);
 
         if ($validator->fails()) {
@@ -129,8 +138,10 @@ class PromptsController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'nullable|in:general,email,rapport,analyse,autre',
+            'type' => 'nullable|in:general,email,rapport,analyse,autre,role',
             'prompt_text' => 'sometimes|required|string',
+        ], [
+            'type.in' => 'Type invalide. Types autorisés: general, email, rapport, analyse, autre, role.',
         ]);
 
         if ($validator->fails()) {
