@@ -18,6 +18,24 @@ class PdfController extends Controller
         ]);
 
         try {
+            $parsedUrl = parse_url($request->url);
+            if (!empty($parsedUrl['host']) && in_array($parsedUrl['host'], ['localhost', '127.0.0.1'], true)) {
+                $path = $parsedUrl['path'] ?? '';
+                if (str_starts_with($path, '/img/')) {
+                    $localPath = public_path(ltrim($path, '/'));
+                    if (is_readable($localPath)) {
+                        $htmlContent = file_get_contents($localPath);
+                        return response()->json([
+                            'success' => true,
+                            'html' => $htmlContent
+                        ]);
+                    }
+                }
+                $request->merge([
+                    'url' => str_replace($parsedUrl['host'], 'host.docker.internal', $request->url)
+                ]);
+            }
+
             $context = stream_context_create([
                 'ssl' => [
                     'verify_peer' => false,

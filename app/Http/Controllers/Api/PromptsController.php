@@ -87,10 +87,10 @@ class PromptsController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'nullable|in:general,email,rapport,analyse,autre,role',
+            'type' => 'nullable|in:general,email,rapport,analyse,autre',
             'prompt_text' => 'required|string',
         ], [
-            'type.in' => 'Type invalide. Types autorisés: general, email, rapport, analyse, autre, role.',
+            'type.in' => 'Type invalide. Types autorisés: general, email, rapport, analyse, autre.',
         ]);
 
         if ($validator->fails()) {
@@ -138,10 +138,10 @@ class PromptsController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'nullable|in:general,email,rapport,analyse,autre,role',
+            'type' => 'nullable|in:general,email,rapport,analyse,autre',
             'prompt_text' => 'sometimes|required|string',
         ], [
-            'type.in' => 'Type invalide. Types autorisés: general, email, rapport, analyse, autre, role.',
+            'type.in' => 'Type invalide. Types autorisés: general, email, rapport, analyse, autre.',
         ]);
 
         if ($validator->fails()) {
