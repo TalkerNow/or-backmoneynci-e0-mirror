@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Files;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 
 class FilesController extends Controller
@@ -58,6 +59,25 @@ class FilesController extends Controller
     public function uploadFiles(Request $request)
     {
         $image_urls = [];
+
+        $targetDir = public_path('img');
+        try {
+            if (!File::exists($targetDir)) {
+                File::makeDirectory($targetDir, 0755, true);
+            }
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Impossible de créer le dossier public/img.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+        if (!is_writable($targetDir)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Le dossier public/img est inaccessible en écriture.',
+            ], 500);
+        }
 
         $user_id = $request->input('user_id');
         $dossier = (int) $request->input('dossier', 0); // 0 = non trié

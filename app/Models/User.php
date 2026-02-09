@@ -163,4 +163,14 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(UserFunds::class, 'user_id');
     }
+
+    public function prompts()
+    {
+        return $this->hasMany(Prompt::class, 'created_by');
+    }
+
+    public function promptHistories()
+    {
+        return $this->hasMany(PromptHistory::class, 'created_by');
+    }
 }

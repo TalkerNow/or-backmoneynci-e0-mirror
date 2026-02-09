@@ -106,6 +106,12 @@ Route::
             Route::post('user-kanbans/{id}/move', 'Api\UserKanbanController@move');
             Route::get('user-kanbans/user/{userId}', 'Api\UserKanbanController@getByUser');
             Route::apiResource('user-kanbans', 'Api\UserKanbanController');
+
+            // Prompts
+            Route::get('prompts/{id}/history', 'Api\PromptsController@history');
+            Route::post('prompts/{id}/restore/{version}', 'Api\PromptsController@restore');
+            Route::apiResource('prompts', 'Api\PromptsController');
+
             Route::prefix('v1')->group(function () {
                 // simulator-error-tags
                 Route::get('simulator-error-tags/client/{clientId}', 'Api\SimulatorErrorTagController@getByClient');
@@ -122,7 +128,6 @@ Route::
                 // call-reports
                 Route::apiResource('call-reports', 'Api\CallReportController');
                 Route::get('call-reports/client/{clientId}', 'Api\CallReportController@getByClient');
-
                 
             });
 
