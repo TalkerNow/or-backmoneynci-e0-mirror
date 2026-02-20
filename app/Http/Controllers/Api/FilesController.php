@@ -84,10 +84,10 @@ class FilesController extends Controller
 
         foreach ($request->allFiles() as $file) {
             $size = $file->getSize();
-            if ($size > 5000000) {
+            if ($size > 20000000) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Fichier trop volumineux (> 5 Mo)',
+                    'message' => 'Fichier trop volumineux (> 20 Mo)',
                 ], 413);
             }
 
