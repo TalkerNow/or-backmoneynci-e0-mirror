@@ -67,13 +67,13 @@ class SuiviAvancementController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'client_id'  => ['required', 'integer'], // tu peux ajouter exists:clients,id
+            'client_id' => ['required', 'integer'], // tu peux ajouter exists:clients,id
             'facture_id' => ['required', 'integer'], // idem exists:factures,id
         ]);
 
         // On évite les doublons client + facture
         $suivi = SuiviAvancement::firstOrCreate([
-            'client_id'  => $data['client_id'],
+            'client_id' => $data['client_id'],
             'facture_id' => $data['facture_id'],
         ]);
 
@@ -177,7 +177,7 @@ class SuiviAvancementController extends Controller
 
         return response()->json([
             'message' => "Date de la step {$step} supprimée.",
-            'suivi'   => $suivi,
+            'suivi' => $suivi,
         ]);
     }
 
@@ -199,8 +199,8 @@ class SuiviAvancementController extends Controller
      */
     private function getStepColumn(int $step): string
     {
-        if ($step < 1 || $step > 7) {
-            abort(400, 'Step invalide (doit être entre 1 et 7)');
+        if ($step < 1 || $step > 8) {
+            abort(400, 'Step invalide (doit être entre 1 et 8)');
         }
 
         return "step{$step}_completed_at";

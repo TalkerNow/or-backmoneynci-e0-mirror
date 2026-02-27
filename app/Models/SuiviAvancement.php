@@ -18,6 +18,7 @@ class SuiviAvancement extends Model
         'step5_completed_at',
         'step6_completed_at',
         'step7_completed_at',
+        'step8_completed_at',
     ];
 
     protected $casts = [
@@ -28,6 +29,7 @@ class SuiviAvancement extends Model
         'step5_completed_at' => 'datetime',
         'step6_completed_at' => 'datetime',
         'step7_completed_at' => 'datetime',
+        'step8_completed_at' => 'datetime',
     ];
 
     public function client()
