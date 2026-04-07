@@ -64,4 +64,10 @@ Route::namespace('App\Http\Controllers')->group(function () {
     Route::post('/contracts/send-docusign', 'Api\DocusignController@sendFilledContract')->name('contracts.send-docusign');
     Route::apiResource('/kpis', 'Api\KpiController');
 
+    // ---- FROZEN_DATA (Barrière de données carrière) ----
+    Route::get('/frozen_data/{user_id}', 'Api\FrozenDataController@show');
+    Route::post('/frozen_data', 'Api\FrozenDataController@store');
+    Route::post('/frozen_data/{user_id}/lock', 'Api\FrozenDataController@lock');
+    Route::post('/frozen_data/{user_id}/unlock', 'Api\FrozenDataController@unlock');
+
 });
