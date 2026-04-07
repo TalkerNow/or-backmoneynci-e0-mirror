@@ -64,4 +64,9 @@ Route::namespace('App\Http\Controllers')->group(function () {
     Route::post('/contracts/send-docusign', 'Api\DocusignController@sendFilledContract')->name('contracts.send-docusign');
     Route::apiResource('/kpis', 'Api\KpiController');
 
+    // ---- AUDIT_LOG (Traçabilité des exécutions IA) ----
+    Route::get('/audit_log', 'Api\AuditLogController@index');
+    Route::get('/audit_log/{id}', 'Api\AuditLogController@show');
+    Route::post('/audit_log', 'Api\AuditLogController@store');
+
 });
