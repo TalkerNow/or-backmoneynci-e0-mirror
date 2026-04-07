@@ -128,7 +128,12 @@ Route::
                 // call-reports
                 Route::apiResource('call-reports', 'Api\CallReportController');
                 Route::get('call-reports/client/{clientId}', 'Api\CallReportController@getByClient');
-                
+
+                // analysis-reports
+                Route::get('analysis-reports/client/{clientId}', 'Api\AnalysisReportController@getByClient');
+                Route::post('analysis-reports/{analysisReport}/validate', 'Api\AnalysisReportController@validateReport');
+                Route::apiResource('analysis-reports', 'Api\AnalysisReportController');
+
             });
 
 
