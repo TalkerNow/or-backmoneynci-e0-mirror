@@ -23,6 +23,14 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+// ---- API v1 (architecture IA — skills, frozen_data, audit_log) ----
+Route::prefix('v1')->namespace('App\Http\Controllers')->group(function () {
+    // ATTENTION : skills/id/{skillId} DOIT être avant skills/{code}
+    Route::get('skills', 'Api\SkillsCatalogController@index');
+    Route::get('skills/id/{skillId}', 'Api\SkillsCatalogController@showBySkillId');
+    Route::get('skills/{code}', 'Api\SkillsCatalogController@showByCode');
+});
+
 Route::namespace('App\Http\Controllers')->group(function () {
     Route::post('/login', 'Api\Auth\LoginController@login')->name('login');
     Route::get('/refresh', 'Api\Auth\LoginController@refresh')->name('refresh');
