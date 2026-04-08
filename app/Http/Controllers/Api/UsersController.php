@@ -62,7 +62,7 @@ class UsersController extends Controller
                     ->get();
             }
         }
-        return $users->toJson(JSON_PRETTY_PRINT);
+        return response()->json($users);
     }
 
     public function show(Request $request, $id)
@@ -80,18 +80,60 @@ class UsersController extends Controller
             if ($auth->role != "admin" && $auth->id != $oldClient->clcleunik && $auth->role != "Consultant" && $user->parent_id != $auth->id) {
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
-            return $oldClient->toJson(JSON_PRETTY_PRINT);
+            return response()->json($oldClient);
         } else {
-            $user = User::where('users.id', $id)
-                ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
+            // Relations disponibles
+            $availableRelations = [
+                'parent',
+                'business_introducer',
+                'documents',
+                'userKanbans.kanban',
+                'conversationArchives',
+                'simulatorDifficultyResults',
+                'suiviAvancementsByUser.facture',
+                'callReportsAsClient',
+                'callReportsAsAdmin',
+                'inboxTasksAsUser',
+                'inboxTasksAsAdmin',
+                'extractionDataRis',
+                'files',
+                'kpisAsAdmin',
+                'simulatorErrorTagsAsUser',
+                'simulatorErrorTagsAsAdmin',
+                'tasksAsCreator',
+                'tasksAsCustomer',
+                'userFunds',
+            ];
+
+            $query = User::where('users.id', $id);
+
+            // Si include est spécifié, charger uniquement ces relations
+            if ($request->has('include')) {
+                $includeParam = $request->input('include');
+                
+                // Si include=all, charger toutes les relations
+                if ($includeParam === 'all') {
+                    $query->with($availableRelations);
+                } else {
+                    $requestedRelations = explode(',', $includeParam);
+                    $relationsToLoad = array_intersect($requestedRelations, $availableRelations);
+                    
+                    if (!empty($relationsToLoad)) {
+                        $query->with($relationsToLoad);
+                    }
+                }
+            }
+
+            $user = $query->join('personal_informations', 'users.id', '=', 'personal_informations.id')
                 ->first();
+
             if ($user === null) {
                 return response()->json(['error' => 'User does not exist'], 500);
             }
             if ($auth->role != "admin" && $auth->id != $user->id && $auth->role != "Consultant" && $user->parent_id != $auth->id) {
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
-            return $user->toJson(JSON_PRETTY_PRINT);
+            return response()->json($user);
         }
     }
     // ? update information for an user, call by /api/users/id with PUT
@@ -205,5 +247,50 @@ class UsersController extends Controller
             return "duplicated";
         else
             return "not duplicated";
+    }
+
+    /**
+     * Get all user information with all related data
+     */
+    public function getAllInformations(Request $request, $id)
+    {
+        try {
+            $auth = auth()->userOrFail();
+        } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
+            return response()->json(['error' => $e->getMessage()], 401);
+        }
+
+        $user = User::with([
+            'parent',
+            'business_introducer',
+            'documents',
+            'userKanbans.kanban',
+            'conversationArchives',
+            'simulatorDifficultyResults',
+            'suiviAvancementsByUser.facture',
+            'callReportsAsClient',
+            'callReportsAsAdmin',
+            'inboxTasksAsUser',
+            'inboxTasksAsAdmin',
+            'extractionDataRis',
+            'files',
+            'kpisAsAdmin',
+            'simulatorErrorTagsAsUser',
+            'simulatorErrorTagsAsAdmin',
+            'tasksAsCreator',
+            'tasksAsCustomer',
+            'userFunds',
+        ])->find($id);
+
+        if (!$user) {
+            return response()->json(['error' => 'User does not exist'], 404);
+        }
+
+        // Vérification des permissions
+        if ($auth->role != "admin" && $auth->id != $user->id && $auth->role != "Consultant" && $user->parent_id != $auth->id) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        return response()->json($user, 200);
     }
 }

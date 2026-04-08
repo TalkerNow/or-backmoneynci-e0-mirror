@@ -14,8 +14,8 @@ class RegisterController extends Controller
     public function register(Request $request)
     {
         $rules = [
-            'name' => 'unique:users|required',
-            'email' => 'unique:users|required',
+            'name'     => 'nullable|string|max:255|unique:users,name',
+            'email'    => 'nullable|email|unique:users,email',
             'password' => 'required',
         ];
         $input = $request->only('name', 'email', 'password');
@@ -28,6 +28,10 @@ class RegisterController extends Controller
         $email = $request->email;
         $password = $request->password;
         $user = User::create(['name' => $name, 'email' => $email, 'password' => Hash::make($password)]);
+        if (empty($user->name)) {
+            $user->name = 'user-' . $user->id;
+            $user->save();
+        }
         if ($user === null) {
             Log::info("NON");
             return response()->json(['success' => false, 'error' => $validator->messages()]);
@@ -40,6 +44,7 @@ class RegisterController extends Controller
             $user->update(['parent_id' => $request->parent_id]);
         }
         $id = $user->first()->id;
+        $name = $user->first()->name;
         $creds = $request->only(['email', 'password']);
         $token = auth()->attempt($creds);
         return response()->json(['accessToken' => $token, 'user' => ['email' => $email, 'id' => $id, 'name' => $name]]);

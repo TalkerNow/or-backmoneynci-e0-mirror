@@ -29,6 +29,8 @@ class User extends Authenticatable implements JWTSubject
         'status',
         'status_fa',
         'status_update_date',
+        'chatbot_id',
+        'diag_id',
     ];
 
     /**
@@ -80,5 +82,95 @@ class User extends Authenticatable implements JWTSubject
     public function oldClients()
     {
         return $this->belongsTo('app\Models\OldClients');
+    }
+
+    public function userKanbans()
+    {
+        return $this->hasMany(UserKanban::class, 'user_id');
+    }
+
+    public function conversationArchives()
+    {
+        return $this->hasMany(ConversationArchive::class, 'user_id');
+    }
+
+    public function simulatorDifficultyResults()
+    {
+        return $this->hasMany(SimulatorDifficultyResult::class, 'user_id');
+    }
+
+    public function suiviAvancementsByUser()
+    {
+        return $this->hasMany(SuiviAvancement::class, 'client_id');
+    }
+
+    public function callReportsAsClient()
+    {
+        return $this->hasMany(CallReport::class, 'client_id');
+    }
+
+    public function callReportsAsAdmin()
+    {
+        return $this->hasMany(CallReport::class, 'admin_id');
+    }
+
+    public function inboxTasksAsUser()
+    {
+        return $this->hasMany(InboxTask::class, 'user_id');
+    }
+
+    public function inboxTasksAsAdmin()
+    {
+        return $this->hasMany(InboxTask::class, 'admin_id');
+    }
+
+    public function extractionDataRis()
+    {
+        return $this->hasMany(ExtractionDataRis::class, 'user_id');
+    }
+
+    public function files()
+    {
+        return $this->hasMany(Files::class, 'user_id');
+    }
+
+    public function kpisAsAdmin()
+    {
+        return $this->hasMany(Kpi::class, 'admin_id');
+    }
+
+    public function simulatorErrorTagsAsUser()
+    {
+        return $this->hasMany(SimulatorErrorTag::class, 'user_id');
+    }
+
+    public function simulatorErrorTagsAsAdmin()
+    {
+        return $this->hasMany(SimulatorErrorTag::class, 'admin_id');
+    }
+
+    public function tasksAsCreator()
+    {
+        return $this->hasMany(Tasks::class, 'creator_id');
+    }
+
+    public function tasksAsCustomer()
+    {
+        return $this->hasMany(Tasks::class, 'customer_id');
+    }
+
+    public function userFunds()
+    {
+        return $this->hasMany(UserFunds::class, 'user_id');
+    }
+
+    public function prompts()
+    {
+        return $this->hasMany(Prompt::class, 'created_by');
+    }
+
+    public function promptHistories()
+    {
+        return $this->hasMany(PromptHistory::class, 'created_by');
     }
 }

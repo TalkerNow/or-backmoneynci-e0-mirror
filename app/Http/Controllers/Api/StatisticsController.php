@@ -69,7 +69,8 @@ class StatisticsController extends Controller
         // ? terminer
         $ended = DB::table('documents')
             ->whereYear('updated_at', $year)
-            ->where('document_state', 'Termine')
+            // Correction : on inclut aussi Terminé avec accent au cas où
+            ->whereIn('document_state', ['Termine', 'Terminé'])
             ->where('status_payment', 2)
             ->get();
         foreach ($ended as $item) {
@@ -114,23 +115,37 @@ class StatisticsController extends Controller
             ->get();
 
         foreach ($documentsThisYear as $document) {
+            // --- CORRECTION : Normalisation de l'état ---
+            $state = $document->document_state;
+            if ($state === 'Terminé') {
+                $state = 'Termine';
+            }
+            
+            // Si l'état n'est pas reconnu (autre chose que les 4 clés), on ignore
+            if (!isset($listDifferentStatus[$state])) {
+                continue;
+            }
+            // --------------------------------------------
+
+            $monthIndex = (int) date('n', strtotime($document->created_at));
+
             if (strpos($document->subscribe_services, 'CH') !== false) {
-                $listDifferentStatus[$document->document_state][(int) date('n', strtotime($document->created_at))]['CH'] += 1;
+                $listDifferentStatus[$state][$monthIndex]['CH'] += 1;
             }
             if (strpos($document->subscribe_services, ' SIMU') !== false) {
-                $listDifferentStatus[$document->document_state][(int) date('n', strtotime($document->created_at))]['SIMU'] += 1;
+                $listDifferentStatus[$state][$monthIndex]['SIMU'] += 1;
             }
             if (strpos($document->subscribe_services, 'AR') !== false) {
-                $listDifferentStatus[$document->document_state][(int) date('n', strtotime($document->created_at))]['AR'] += 1;
+                $listDifferentStatus[$state][$monthIndex]['AR'] += 1;
             }
             if (strpos($document->subscribe_services, 'TFD') !== false) {
-                $listDifferentStatus[$document->document_state][(int) date('n', strtotime($document->created_at))]['TFD'] += 1;
+                $listDifferentStatus[$state][$monthIndex]['TFD'] += 1;
             }
             if (strpos($document->subscribe_services, 'ACTU') !== false) {
-                $listDifferentStatus[$document->document_state][(int) date('n', strtotime($document->created_at))]['ACTU'] += 1;
+                $listDifferentStatus[$state][$monthIndex]['ACTU'] += 1;
             }
             if (strpos($document->subscribe_services, 'RAC') !== false) {
-                $listDifferentStatus[$document->document_state][(int) date('n', strtotime($document->created_at))]['RAC'] += 1;
+                $listDifferentStatus[$state][$monthIndex]['RAC'] += 1;
             }
         }
         return json_encode($listDifferentStatus);
@@ -223,30 +238,33 @@ class StatisticsController extends Controller
             ->get();
         foreach ($Total as $item) {
             $key = $this->getKeyByID($memberList, $item->parent_id);
-            if ($item->document_state === 'En attente' && $key !== null) {
+            // Normalisation pour le total
+            $state = ($item->document_state === 'Terminé') ? 'Termine' : $item->document_state;
+
+            if ($state === 'En attente' && $key !== null) {
                 $memberList[$key]['totalData']['En attente'] += 1;
                 $memberList[$key]['totalData']['CA En attente'] += $item->advanced_payment;
             }
-            if ($item->document_state === 'En cours' && $key !== null) {
+            if ($state === 'En cours' && $key !== null) {
                 $memberList[$key]['totalData']['En cours'] += 1;
                 $memberList[$key]['totalData']['CA En cours'] += $item->advanced_payment;
             }
-            if ($item->document_state === 'Termine' && $key !== null) {
+            if ($state === 'Termine' && $key !== null) {
                 $memberList[$key]['totalData']['Termine'] += 1;
                 $memberList[$key]['totalData']['CA Termine'] += $item->advanced_payment;
             }
             if ($item->creator_id === null)
                 continue;
             $creator = $this->getKeyByID($memberList, $item->creator_id);
-            if ($creator !== null && $item->document_state === 'En attente') {
+            if ($creator !== null && $state === 'En attente') {
                 $memberList[$creator]['totalData']['creer En attente'] += 1;
                 $memberList[$creator]['totalData']['CA creer En attente'] += $item->advanced_payment;
             }
-            if ($creator !== null && $item->document_state === 'En cours') {
+            if ($creator !== null && $state === 'En cours') {
                 $memberList[$creator]['totalData']['creer En cours'] += 1;
                 $memberList[$creator]['totalData']['CA creer En cours'] += $item->advanced_payment;
             }
-            if ($creator !== null && $item->document_state === 'Termine') {
+            if ($creator !== null && $state === 'Termine') {
                 $memberList[$creator]['totalData']['creer Termine'] += 1;
                 $memberList[$creator]['totalData']['CA creer Termine'] += $item->advanced_payment;
             }
@@ -257,6 +275,7 @@ class StatisticsController extends Controller
             ->get();
         foreach ($waiting as $item) {
             $key = $this->getKeyByID($memberList, $item->parent_id);
+            // En attente ne change pas (pas d'accent), mais on garde la logique propre
             if ($item->document_state === 'En attente' && $key !== null) {
                 $memberList[$key]['monthArray'][(int) date('n', strtotime($item->created_at))]['En attente'] += 1;
                 $memberList[$key]['monthArray'][(int) date('n', strtotime($item->created_at))]['CA En attente'] += $item->advanced_payment;
@@ -293,14 +312,17 @@ class StatisticsController extends Controller
             ->get();
         foreach ($ended as $item) {
             $key = $this->getKeyByID($memberList, $item->parent_id);
-            if ($item->document_state === 'Termine' && $key !== null) {
+            // Normalisation ici aussi
+            $state = ($item->document_state === 'Terminé') ? 'Termine' : $item->document_state;
+
+            if ($state === 'Termine' && $key !== null) {
                 $memberList[$key]['monthArray'][(int) date('n', strtotime($item->updated_at))]['Termine'] += 1;
                 $memberList[$key]['monthArray'][(int) date('n', strtotime($item->updated_at))]['CA Termine'] += $item->advanced_payment;
             }
             if ($item->creator_id === null)
                 continue;
             $creator = $this->getKeyByID($memberList, $item->creator_id);
-            if ($creator !== null && $item->document_state === 'Termine') {
+            if ($creator !== null && $state === 'Termine') {
                 $memberList[$creator]['monthArray'][(int) date('n', strtotime($item->updated_at))]['creer Termine'] += 1;
                 $memberList[$creator]['monthArray'][(int) date('n', strtotime($item->updated_at))]['CA creer Termine'] += $item->advanced_payment;
             }

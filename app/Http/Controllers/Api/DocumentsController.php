@@ -91,7 +91,10 @@ class DocumentsController extends Controller
             'user_id' => $request['user_id'],
             'id' => $request['id'],
             'payment_method' => $request['payment_method'],
-            'values' => $request['values']
+            'values' => $request['values'],
+            'acompte_dates' => $request['acompte_dates'], // acompte
+            'sold_dates'    => $request['sold_dates'],    // solde
+            'unipro'            => $request['unipro'] ?? null
         ]);
 
         if ($newdoc->type == "contrat") {

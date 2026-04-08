@@ -1,5 +1,10 @@
 .env
+.env.local
+.env.prod
 .idea/
 node_modules
 vendor/
 public/img/
+
+.phpunit.result.cache
+docker-compose.override.yml
