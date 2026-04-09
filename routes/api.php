@@ -71,6 +71,13 @@ Route::
             Route::post('/docusign/connect', 'Api\DocusignController@docusignConnectCallback')->name('docusign.connect');
             Route::post('/contracts/send-docusign', 'Api\DocusignController@sendFilledContract')->name('contracts.send-docusign');
             Route::apiResource('/kpis', 'Api\KpiController');
+
+            // ---- FROZEN_DATA (Barrière de données carrière) ----
+            Route::get('/frozen_data/{user_id}', 'Api\FrozenDataController@show');
+            Route::post('/frozen_data', 'Api\FrozenDataController@store');
+            Route::post('/frozen_data/{user_id}/lock', 'Api\FrozenDataController@lock');
+            Route::post('/frozen_data/{user_id}/unlock', 'Api\FrozenDataController@unlock');
+
             Route::get('/debug-db', function () {
                 return response()->json([
                     'db' => config('database.connections.mysql.database'),
