@@ -78,6 +78,11 @@ Route::
             Route::post('/frozen_data/{user_id}/lock', 'Api\FrozenDataController@lock');
             Route::post('/frozen_data/{user_id}/unlock', 'Api\FrozenDataController@unlock');
 
+            // ---- AUDIT_LOG (Traçabilité des exécutions IA) ----
+            Route::get('/audit_log', 'Api\AuditLogController@index');
+            Route::get('/audit_log/{id}', 'Api\AuditLogController@show');
+            Route::post('/audit_log', 'Api\AuditLogController@store');
+
             Route::get('/debug-db', function () {
                 return response()->json([
                     'db' => config('database.connections.mysql.database'),
