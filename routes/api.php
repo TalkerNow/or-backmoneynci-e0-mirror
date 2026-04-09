@@ -71,18 +71,6 @@ Route::
             Route::post('/docusign/connect', 'Api\DocusignController@docusignConnectCallback')->name('docusign.connect');
             Route::post('/contracts/send-docusign', 'Api\DocusignController@sendFilledContract')->name('contracts.send-docusign');
             Route::apiResource('/kpis', 'Api\KpiController');
-
-            // ---- FROZEN_DATA (Barrière de données carrière) ----
-            Route::get('/frozen_data/{user_id}', 'Api\FrozenDataController@show');
-            Route::post('/frozen_data', 'Api\FrozenDataController@store');
-            Route::post('/frozen_data/{user_id}/lock', 'Api\FrozenDataController@lock');
-            Route::post('/frozen_data/{user_id}/unlock', 'Api\FrozenDataController@unlock');
-
-            // ---- AUDIT_LOG (Traçabilité des exécutions IA) ----
-            Route::get('/audit_log', 'Api\AuditLogController@index');
-            Route::get('/audit_log/{id}', 'Api\AuditLogController@show');
-            Route::post('/audit_log', 'Api\AuditLogController@store');
-
             Route::get('/debug-db', function () {
                 return response()->json([
                     'db' => config('database.connections.mysql.database'),
@@ -140,17 +128,7 @@ Route::
                 // call-reports
                 Route::apiResource('call-reports', 'Api\CallReportController');
                 Route::get('call-reports/client/{clientId}', 'Api\CallReportController@getByClient');
-
-                // skills catalog (IA architecture)
-                // ATTENTION : skills/id/{skillId} DOIT être avant skills/{code}
-                Route::get('skills', 'Api\SkillsCatalogController@index');
-                Route::get('skills/id/{skillId}', 'Api\SkillsCatalogController@showBySkillId');
-                Route::get('skills/{code}', 'Api\SkillsCatalogController@showByCode');
-
-                // analysis-reports
-                Route::get('analysis-reports/client/{clientId}', 'Api\AnalysisReportController@getByClient');
-                Route::post('analysis-reports/{analysisReport}/validate', 'Api\AnalysisReportController@validateReport');
-                Route::apiResource('analysis-reports', 'Api\AnalysisReportController');
+                
             });
 
 
