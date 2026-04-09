@@ -13,7 +13,7 @@ class SkillsCatalogSeeder extends Seeder
      */
     private function clientFilesPath(): string
     {
-        return env('SKILLS_PATH', base_path('../client_files/01_REGLEMENTATION/skills'));
+        return env('SKILLS_PATH', base_path('skills'));
     }
 
     public function run()
