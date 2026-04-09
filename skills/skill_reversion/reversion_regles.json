@@ -1,0 +1,127 @@
+{
+  "skill_info": {
+    "skill_id": "SKILL_REVERSION_v1",
+    "nom": "Pension de Réversion",
+    "version": "1.0",
+    "date": "2026-04-06",
+    "script_python": "null — à créer Phase 2",
+    "base_reglementaire": [
+      "Articles L.353-1 à L.353-7 CSS",
+      "Circulaire CNAV 2023-22",
+      "Accord AGIRC-ARRCO 30/10/2015"
+    ]
+  },
+
+  "conditions_communes_tous_regimes": {
+    "lien_requis": "mariage",
+    "pacs_accepte": false,
+    "concubinage_accepte": false,
+    "remariage_beneficiaire": "supprime_le_droit"
+  },
+
+  "regimes": {
+    "cnav": {
+      "taux": 0.54,
+      "condition_age_minimum_ans": 55,
+      "condition_ressources": true,
+      "plafond_ressources_2025": {
+        "personne_seule": 20551.60,
+        "vie_en_couple": 32882.56
+      },
+      "minimum_reversion_mensuel_2025": 311.56,
+      "majoration_3_enfants": 0.10
+    },
+    "agirc_arrco": {
+      "taux": 0.60,
+      "valeur_point": 1.4386,
+      "condition_age": false,
+      "condition_ressources": false,
+      "majoration_3_enfants": 0.10,
+      "ex_conjoints_multiples": "prorata_duree_mariage"
+    },
+    "ircantec": {
+      "taux": 0.50,
+      "valeur_point": 0.56357,
+      "condition_age": false,
+      "condition_ressources": false
+    },
+    "rci_rco": {
+      "taux": 0.54,
+      "condition_age": false,
+      "condition_ressources": false
+    }
+  },
+
+  "controles": [
+    {
+      "code": "REV_C01",
+      "regle": "Lien = mariage uniquement — PACS et concubinage exclus",
+      "gravite": "CRITIQUE"
+    },
+    {
+      "code": "REV_C02",
+      "regle": "Bénéficiaire >= 55 ans pour CNAV",
+      "gravite": "CRITIQUE",
+      "scope": "cnav_uniquement"
+    },
+    {
+      "code": "REV_C03",
+      "regle": "Absence de remariage du bénéficiaire",
+      "gravite": "CRITIQUE"
+    },
+    {
+      "code": "REV_C04",
+      "regle": "Test ressources CNAV avant validation montant",
+      "gravite": "CRITIQUE",
+      "scope": "cnav_uniquement"
+    },
+    {
+      "code": "REV_C05",
+      "regle": "Répartition prorata si plusieurs ex-conjoints AGIRC-ARRCO",
+      "gravite": "IMPORTANT",
+      "scope": "agirc_arrco_uniquement"
+    },
+    {
+      "code": "REV_C06",
+      "regle": "Appliquer minimum 311,56 €/mois si pension CNAV < minimum",
+      "gravite": "IMPORTANT"
+    },
+    {
+      "code": "REV_C07",
+      "regle": "Majoration 10% si >= 3 enfants élevés (CNAV + AGIRC-ARRCO)",
+      "gravite": "IMPORTANT"
+    }
+  ],
+
+  "simulation_temporelle": {
+    "obligatoire_si": "beneficiaire_age < 65 ET revenus_professionnels > 0",
+    "scenarios": {
+      "A": {
+        "label": "Réclamer à 55 ans",
+        "formule": "montant_mensuel = max(0, reversion_brute - ecretement(ressources_actuelles))",
+        "cumul": "montant_mensuel × 12 × (age_actuel - 55)"
+      },
+      "B": {
+        "label": "Attendre la retraite",
+        "formule": "montant_mensuel = reversion_brute (si revenus_retraite < plafond)",
+        "cumul": "montant_mensuel × 12 × (age_actuel - age_retraite)"
+      }
+    },
+    "break_even": "age où cumul_A = cumul_B",
+    "regle_agirc_arrco": "Toujours réclamer immédiatement — aucune condition d'âge ni de ressources",
+    "donnees_necessaires": [
+      "revenus_professionnels_actuels",
+      "age_retraite_prevu_beneficiaire",
+      "revenus_prevus_a_retraite",
+      "esperance_vie_reference_INSEE"
+    ]
+  },
+
+  "cas_particuliers": [
+    "divorce_puis_remariage_défunt",
+    "remariage_beneficiaire",
+    "concubinage_beneficiaire_plafond_ressources",
+    "défunt_décédé_avant_retraite",
+    "allocation_veuvage_avant_55_ans"
+  ]
+}

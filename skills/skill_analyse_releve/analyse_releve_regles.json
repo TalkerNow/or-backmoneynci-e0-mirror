@@ -1,0 +1,375 @@
+{
+  "skill_info": {
+    "nom": "Analyse de Relevé de Carrière Retraite",
+    "version": "2.0",
+    "date": "2025-11-10",
+    "base_reglementaire": "Circulaire CNAV 2024 | Décret n°2023-436 du 03/06/2023 | Loi n°2023-270 du 14/04/2023",
+    "token_estimate_md": 5800,
+    "token_estimate_json": 3200,
+    "token_estimate_total": 9000
+  },
+  
+  "declencheurs": [
+    "releve carriere",
+    "releve de carriere",
+    "analyse carriere",
+    "analyse situation retraite",
+    "RIS",
+    "age depart",
+    "trimestres valides",
+    "pension estimee",
+    "PROMPT 1"
+  ],
+  
+  "methodologie": {
+    "etape_0_emploi_actuel": {
+      "question_obligatoire": "Êtes-vous actuellement en activité professionnelle ? Si oui, jusqu'à quel âge envisagez-vous de travailler ?",
+      "pourquoi_essentiel": "Un relevé de carrière est une photographie à un instant T. Si la personne continue à travailler, elle acquiert de nouveaux trimestres. L'analyse sans projection future serait complètement erronée.",
+      "calcul_projection": {
+        "formule": "trimestres_futurs = (age_depart_prevu - age_actuel) × 4",
+        "total": "trimestres_totaux = trimestres_actuels + trimestres_futurs"
+      },
+      "expliciter_hypothese": "Hypothèse : En poursuivant votre activité jusqu'à [âge], vous validerez environ [X] trimestres supplémentaires, portant votre total à [Y] trimestres."
+    },
+    
+    "etape_1_extraction_donnees": {
+      "informations_a_extraire": [
+        "Date de naissance (NSS ou mention explicite)",
+        "Génération",
+        "Trimestres validés actuels (tous régimes confondus)",
+        "Trimestres cotisés stricts",
+        "Trimestres réputés cotisés (service national, chômage, maladie, maternité)",
+        "Régimes de cotisation (CNAV, AGIRC-ARRCO, IRCANTEC, RCI, autres)",
+        "Périodes de carrière (employeurs, dates)",
+        "Périodes à l'étranger",
+        "Périodes de chômage, maladie, maternité",
+        "Trous de carrière (lacunes)",
+        "Anomalies éventuelles",
+        "Indicateurs carrière longue (trimestres avant 16/18/20/21 ans)"
+      ],
+      "action_automatique": "Si trimestres validés avant 20 ans détectés → Déclencher automatiquement SKILL_racl.md"
+    },
+    
+    "etape_2_calcul_ages_cles": {
+      "module_python": "calcul_pension_base.py",
+      "fonctions_principales": [
+        "determiner_age_legal_depart(date_naissance)",
+        "obtenir_duree_assurance_requise(date_naissance)",
+        "calculer_date_effet_retraite(date_naissance)"
+      ],
+      "ages_a_calculer": [
+        "Âge légal de départ (variable selon génération)",
+        "Trimestres requis pour le taux plein",
+        "Date du taux plein automatique (67 ans)",
+        "Date d'effet possible (1er jour du mois suivant l'anniversaire)"
+      ]
+    },
+    
+    "etape_3_analyse_situation": {
+      "comparaison": "Trimestres validés (projetés si en activité) vs Trimestres requis",
+      "cas_possibles": {
+        "cas_a_taux_plein": {
+          "condition": "trimestres_valides >= trimestres_requis",
+          "conclusion": "Départ possible au taux plein dès l'âge légal ou avant si carrière longue",
+          "action": "Si carrière longue détectée : consulter SKILL_racl.md"
+        },
+        "cas_b_trimestres_manquants": {
+          "condition": "trimestres_valides < trimestres_requis",
+          "conclusion": "Calcul de la décote OU attente jusqu'à 67 ans"
+        },
+        "cas_c_depassement": {
+          "condition": "trimestres_valides > trimestres_requis",
+          "conclusion": "Calcul de la surcote possible"
+        }
+      }
+    },
+    
+    "etape_4_scenarios_depart": {
+      "scenario_1_age_legal": {
+        "module": "calcul_pension_base.calculer_taux_liquidation",
+        "formule_decote": {
+          "decote_par_trimestre": 0.625,
+          "description": "0,625% (soit 1,25% / 2)",
+          "trimestres_manquants": "min(trimestres requis - validés, trimestres jusqu'à 67 ans)",
+          "abattement": "Décote × Trimestres manquants (max 25%)",
+          "taux_minore": "50% - Abattement",
+          "taux_minimal": 37.5
+        },
+        "arbitrage_decote": "Le système prend automatiquement le moins défavorable entre décote par trimestres manquants pour taux plein et décote par âge"
+      },
+      "scenario_2_67_ans": {
+        "taux_garanti": 50,
+        "description": "Taux plein garanti (50%) quel que soit le nombre de trimestres",
+        "avantage": "Aucune décote appliquée, pension calculée au prorata des trimestres validés"
+      },
+      "scenario_3_surcote": {
+        "module": "calcul_pension_base.calculer_surcote",
+        "formule": {
+          "majoration_par_trimestre": 1.25,
+          "description": "1,25% par trimestre de surcote",
+          "taux_majore": "50% × (1 + Majoration)"
+        }
+      }
+    },
+    
+    "etape_5_rachat_trimestres": {
+      "module": "calcul_racl.calculer_cout_rachat_vplr",
+      "periodes_rachetables": [
+        "Années d'études supérieures (diplôme requis)",
+        "Années incomplètes (< 4 trimestres)",
+        "Maximum 12 trimestres au total",
+        "Madelin : jusqu'à 24 trimestres pour indépendants"
+      ],
+      "options": [
+        "taux_seul",
+        "taux_et_duree"
+      ],
+      "impact": [
+        "Départ au taux plein plus tôt",
+        "Calcul de la nouvelle date de taux plein",
+        "Avantage fiscal (déduction du revenu imposable)"
+      ]
+    },
+    
+    "etape_6_complementaires": {
+      "agirc_arrco": {
+        "module": "calcul_complementaires.calculer_pension_agirc_arrco",
+        "formule": "Montant annuel brut = Points × Valeur du point (1,4386 €)",
+        "valeur_point_2025": 1.4386,
+        "malus_temporaire": "Supprimé depuis avril 2024",
+        "pas_abattement_si": [
+          "Départ à l'âge légal ou après ET taux plein",
+          "Départ à 67 ans (taux plein auto)",
+          "RACL (carrière longue avec taux plein)"
+        ]
+      },
+      "ircantec": {
+        "module": "calcul_complementaires.calculer_pension_ircantec",
+        "formule": "Montant annuel = (Points A + Points B) × Valeur du point (0,56357 €)",
+        "valeur_point_2025": 0.56357
+      },
+      "rci": {
+        "module": "calcul_complementaires.calculer_pension_rci",
+        "formule": "Montant annuel = (Points RCO × 1,200 €) + (Points RCI × 1,335 €)",
+        "valeur_point_rco_2025": 1.200,
+        "valeur_point_rci_2025": 1.335,
+        "note": "Si décote : Appliquer abattement selon tableau dans REGIMES-COMPLEMENTAIRE-AGIRC_ARRCO.md"
+      }
+    }
+  },
+  
+  "regimes_couverts": {
+    "base": [
+      "CNAV (régime général)"
+    ],
+    "complementaires": [
+      "AGIRC-ARRCO",
+      "IRCANTEC",
+      "RCI"
+    ],
+    "speciaux": [
+      "Selon le relevé"
+    ]
+  },
+  
+  "controles_coherence": [
+    {
+      "code": "ARC_C01",
+      "condition": "absence_date_naissance",
+      "type": "ERREUR_CRITIQUE",
+      "message": "Absence de date de naissance dans le relevé"
+    },
+    {
+      "code": "ARC_C02",
+      "condition": "trimestres_negatifs_ou_sup_200",
+      "type": "ERREUR",
+      "message": "Trimestres négatifs ou > 200"
+    },
+    {
+      "code": "ARC_C03",
+      "condition": "periode_carriere_sup_age_actuel",
+      "type": "ERREUR",
+      "message": "Période de carrière > âge actuel"
+    },
+    {
+      "code": "ARC_C04",
+      "condition": "trimestres_par_an_sup_4",
+      "type": "AVERTISSEMENT",
+      "message": "Plus de 4 trimestres validés dans une année"
+    },
+    {
+      "code": "ARC_C05",
+      "condition": "lacune_carriere_sup_2ans",
+      "type": "AVERTISSEMENT",
+      "message": "Lacune de carrière > 2 ans non justifiée"
+    },
+    {
+      "code": "ARC_C06",
+      "condition": "points_complementaires_nuls_avec_carriere_complete",
+      "type": "AVERTISSEMENT",
+      "message": "Points complémentaires = 0 avec carrière complète"
+    },
+    {
+      "code": "ARC_C07",
+      "condition": "incoherence_age_generation",
+      "type": "ERREUR",
+      "message": "Incohérence entre âge et génération"
+    }
+  ],
+  
+  "alertes": {
+    "rouge": [
+      "Relevé de carrière incomplet (périodes manquantes)",
+      "Trimestres manquants non justifiés (> 4 trimestres/an manquants)",
+      "Incohérences majeures dates/employeurs",
+      "Périodes à l'étranger non prises en compte"
+    ],
+    "orange": [
+      "Proche du taux plein (1-4 trimestres manquants)",
+      "Lacunes de carrière courtes (< 2 ans)",
+      "Rachats VPLR potentiellement rentables",
+      "Carrière longue potentielle (trimestres avant 20 ans)"
+    ],
+    "jaune": [
+      "Relevé ancien (> 1 an)",
+      "Projection d'activité nécessaire",
+      "Points complémentaires faibles",
+      "Salaires inférieurs au SMIC sur certaines périodes"
+    ]
+  },
+  
+  "pieges_a_eviter": [
+    "Oublier de projeter l'activité future (erreur #1 - fréquente)",
+    "Confondre trimestres validés et trimestres cotisés",
+    "Ne pas vérifier l'éligibilité carrière longue",
+    "Ignorer les périodes à l'étranger",
+    "Négliger le coût fiscal du rachat de trimestres",
+    "Oublier les prélèvements sociaux sur les pensions",
+    "Ne pas mentionner le caractère estimatif (SAM non disponible)",
+    "Compter sur des valeurs de points obsolètes"
+  ],
+  
+  "conseils_strategiques": {
+    "optimisation_depart": {
+      "verifications_systematiques": [
+        "Éligibilité carrière longue (si trimestres avant 20 ans)",
+        "Rentabilité du rachat de trimestres",
+        "Impact surcote (1,25% par trimestre après taux plein)",
+        "Clause de sauvegarde (générations 1961-1963)"
+      ],
+      "arbitrage_rachat_vs_attente": {
+        "gain_anticipation": "Pension annuelle × Années gagnées",
+        "cout_rachat": "Prix VPLR par trimestre × Nombre trimestres",
+        "rentabilite": "Gain > Coût (sur espérance de vie)"
+      }
+    },
+    "cas_particuliers": {
+      "generation_1961_1963": {
+        "action": "Vérifier clause de sauvegarde (168 trimestres avant 01/09/2023)",
+        "avantage": "Peut permettre départ plus tôt"
+      },
+      "periodes_etranger": {
+        "skill": "SKILL_trimestres_etranger.md",
+        "pays_couverts": 73,
+        "action": "Vérifier accords de totalisation"
+      },
+      "independants": {
+        "pourcentage_clients": 20,
+        "regime": "RCI spécifique (points RCO et RCI)",
+        "rachat": "Possibilité rachat Madelin (jusqu'à 24 trimestres)"
+      }
+    }
+  },
+  
+  "format_reponse": {
+    "structure_obligatoire": [
+      "ANALYSE DU RELEVÉ DE CARRIÈRE",
+      "Profil (date naissance, génération, âge actuel)",
+      "Situation actuelle (trimestres validés, manquants, projection)",
+      "CALENDRIER RETRAITE",
+      "  - Âge légal de départ",
+      "  - Taux plein automatique (67 ans)",
+      "  - Vérification carrière longue",
+      "OPTIONS DE RACHAT",
+      "ESTIMATION RETRAITES COMPLÉMENTAIRES",
+      "  - AGIRC-ARRCO",
+      "  - IRCANTEC",
+      "  - RCI",
+      "SYNTHÈSE ET RECOMMANDATIONS"
+    ],
+    "notes_importantes": [
+      "Montants bruts annuels et mensuels",
+      "Valeurs des points 2025",
+      "SAM non disponible dans le relevé (estimation)",
+      "Coefficients de revalorisation non appliqués",
+      "Toujours mentionner : 'Selon la législation en vigueur en 2025'"
+    ],
+    "prelevements_sociaux": {
+      "csg": {
+        "taux_normal": 8.3,
+        "taux_median": 6.6,
+        "taux_reduit": 3.8
+      },
+      "crds": 0.5,
+      "contribution_solidarite": 0.3
+    }
+  },
+  
+  "liens_skills_complementaires": [
+    "SKILL_racl.md (carrière longue - départ anticipé dès 58 ans)",
+    "SKILL_trimestres_etranger.md (périodes à l'étranger - 73 pays)",
+    "SKILL_estimation_pensions_retraite.md (calcul détaillé des pensions)",
+    "SKILL_PROMPT2_rapport_client.md (génération du rapport avec analyse)"
+  ],
+  
+  "scripts_python_utilises": [
+    "calcul_pension_base.py (âges, dates, taux, décote, surcote)",
+    "calcul_complementaires.py (AGIRC-ARRCO, IRCANTEC, RCI)",
+    "calcul_racl.py (coût rachat VPLR)",
+    "calcul_trimestres_etranger.py (périodes étrangères)",
+    "validation_autocontrole.py (validation cohérence)",
+    "validation_continuite_carriere.py (détection lacunes)"
+  ],
+  
+  "workflow_automatique": {
+    "etape_1": "SKILL analyse relevé",
+    "etape_2": "Détection trimestres avant 20 ans ?",
+    "etape_3_si_oui": "DÉCLENCHER AUTOMATIQUEMENT : SKILL_racl.md",
+    "etape_4": "Présenter 2 scénarios",
+    "scenario_1": "Départ âge légal standard",
+    "scenario_2": "Départ anticipé carrière longue (si éligible)"
+  },
+  
+  "sources_reglementaires": {
+    "textes": [
+      "CSS : Articles L.351-1 et suivants (retraite de base)",
+      "Loi n°2023-270 du 14/04/2023 : Réforme 2023",
+      "Décret n°2023-436 du 03/06/2023 : Application",
+      "Circulaire CNAV 2024 : Âges et trimestres",
+      "Accord AGIRC-ARRCO du 17/11/2017 (modifié)"
+    ],
+    "formulaires": [
+      "Cerfa N15675*01 : Demande de retraite personnelle",
+      "Formulaire E205 : Périodes à l'étranger (UE)",
+      "Cerfa N15674*01 : Rachat de trimestres (VPLR)"
+    ]
+  },
+  
+  "fichiers_reference": [
+    "VALEURS_REGLEMENTAIRES_2025.md (valeurs points, plafonds SS, coefficients minoration)",
+    "circulaire_ages_retraite_trimestres_2024.md (âges légaux, trimestres requis, décote/surcote)",
+    "circulaire_rachat_vplr_2025.md (barèmes coûts rachat trimestres)",
+    "circulaire_revalorisation_2025.md (revalorisations pensions)",
+    "REGIMES-COMPLEMENTAIRE-AGIRC_ARRCO.md (règles détaillées AGIRC-ARRCO)",
+    "SKILL_racl.md (analyse carrière longue - départ anticipé)"
+  ],
+  
+  "mise_a_jour_annuelle": {
+    "verifier_dans_VALEURS_REGLEMENTAIRES_2025": [
+      "Valeurs des points (novembre pour AGIRC-ARRCO, janvier pour IRCANTEC/RCI)",
+      "Coefficients de revalorisation",
+      "Barèmes de rachat VPLR (dans circulaire_rachat_vplr_2025.md)",
+      "Plafond Sécurité Sociale"
+    ]
+  }
+}
