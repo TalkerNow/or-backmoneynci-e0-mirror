@@ -1,0 +1,1265 @@
+{
+  "skill_info": {
+    "nom": "Cumul Emploi Retraite",
+    "code": "CER",
+    "version": "1.0",
+    "date_creation": "2025-01",
+    "source_reglementaire": "Circulaire CNAV n°2017-41 du 12 décembre 2017",
+    "date_application": "2017-04-01",
+    "description": "Règles de cumul entre retraite et activité professionnelle - mécanisme d'écrêtement"
+  },
+  
+  "types_cumul": {
+    "CER_TOTAL": {
+      "code": "CER_TOTAL",
+      "libelle": "Cumul Emploi Retraite Total",
+      "description": "Cumul sans aucune restriction de revenus",
+      "article_legal": "Art. L.161-22 al. 4 et 5 CSS",
+      
+      "conditions": {
+        "mode": "cumulatif",
+        
+        "condition_1_subsidiarite": {
+          "obligatoire": true,
+          "description": "Liquidation de toutes retraites personnelles",
+          "regimes_concernes": [
+            "regimes_base_obligatoires",
+            "regimes_complementaires_obligatoires",
+            "regimes_francais",
+            "regimes_etrangers",
+            "legaux_ou_rendus_legalement_obligatoires"
+          ],
+          "article": "Art. L.161-22 al. 4 CSS",
+          
+          "exception": {
+            "cas": "age_ouverture_regime_superieur_age_legal",
+            "description": "Dérogation si âge ouverture sans décote > 62 ans",
+            "application": "jusqu_age_sans_decote_du_regime",
+            "consequence": "obligation_liquidation_a_cet_age_sinon_CER_PLAFONNE"
+          }
+        },
+        
+        "condition_2_age_duree": {
+          "mode": "alternatif",
+          "description": "Option A OU Option B",
+          
+          "option_a": {
+            "libelle": "Âge légal + Taux plein",
+            "conditions_cumulatives": {
+              "age_legal": {
+                "requis": true,
+                "article": "Art. L.351-1 CSS",
+                "valeur_generation_1955_plus": 62
+              },
+              "duree_taux_plein": {
+                "requis": true,
+                "description": "Durée assurance pour taux maximum 50%",
+                "reference_tableau": "durees_assurance_par_generation"
+              }
+            }
+          },
+          
+          "option_b": {
+            "libelle": "Âge taux plein automatique",
+            "age_requis": {
+              "article": "Art. L.351-8 CSS",
+              "valeur_generation_1955_plus": 67,
+              "description": "Pas de condition de durée"
+            }
+          }
+        }
+      },
+      
+      "modalites_reprise": {
+        "delai_dernier_employeur": 0,
+        "delai_autre_employeur": 0,
+        "immediat": true,
+        "declaration_obligatoire": true,
+        "motif_declaration": "controle_condition_subsidiarite"
+      },
+      
+      "restrictions": {
+        "limite_revenus": false,
+        "plafond": null,
+        "surveillance": "verification_subsidiarite_uniquement"
+      }
+    },
+    
+    "CER_PLAFONNE": {
+      "code": "CER_PLAFONNE",
+      "libelle": "Cumul Emploi Retraite Plafonné",
+      "description": "Cumul autorisé dans une certaine limite de revenus",
+      "article_legal": "Art. L.161-22 al. 2 et 3 CSS",
+      
+      "champ_application": {
+        "condition_declenchement": "conditions_CER_TOTAL_non_remplies",
+        
+        "activites_concernees_par_plafond": {
+          "regimes": [
+            "regime_general",
+            "regime_salaries_agricoles",
+            "regimes_speciaux_L711_1"
+          ],
+          "regimes_speciaux_liste": [
+            "IEG",
+            "SNCF",
+            "RATP",
+            "Mines",
+            "Banque_France",
+            "CRPCEN",
+            "Opera_Paris",
+            "Comedie_Francaise",
+            "Port_Strasbourg"
+          ],
+          "article": "Art. D.161-2-5 CSS"
+        },
+        
+        "activites_libres_sans_limite": {
+          "description": "Activités non soumises au plafond",
+          "types": [
+            "activites_non_salariees",
+            "activites_salariees_autres_regimes",
+            "activites_derogatoires_cessation"
+          ],
+          "reference": "Circulaire CNAV 2017-18 pour activités dérogatoires"
+        }
+      },
+      
+      "obligation_declaration": {
+        "article": "Art. D.161-2-13 CSS",
+        "delai_jours": 30,
+        "unite": "mois_suivant",
+        "mode": "ecrit",
+        
+        "evenements_declencheurs": [
+          "reprise_activite",
+          "modification_revenus_augmentation",
+          "modification_revenus_diminution"
+        ],
+        
+        "destinataire": {
+          "regle_1": {
+            "priorite": 1,
+            "organisme": "dernier_regime_affiliation",
+            "description": "Régime qui sert la pension au titre du dernier régime d'affiliation"
+          },
+          "regle_2": {
+            "priorite": 2,
+            "cas": "affiliation_simultanee",
+            "organisme": "regime_plus_longue_duree_assurance",
+            "reference": "Articles R.351-3 et R.351-4 CSS"
+          }
+        },
+        
+        "sanction_non_respect": {
+          "consequence": "reduction_retroactive",
+          "article": "Art. D.161-2-16 IV CSS",
+          "description": "Application rétroactive au mois/trimestre du dépassement"
+        }
+      },
+      
+      "delai_dernier_employeur": {
+        "article": "Art. D.161-2-12 et D.161-2-15 CSS",
+        "duree_mois": 6,
+        "obligation": "delai_6_mois_entre_date_effet_et_reprise",
+        
+        "definition_dernier_employeur": {
+          "description": "Employeur auprès duquel assuré a travaillé dans 6 mois précédant date effet retraite",
+          "periode_reference": "6_mois_avant_date_effet",
+          "si_plusieurs_employeurs": "delai_s_applique_a_chacun"
+        },
+        
+        "sanction_non_respect": {
+          "type": "suspension_pension",
+          "periode": {
+            "debut": "1er_jour_mois_reprise",
+            "fin": "dernier_jour_mois_cessation_activite_ou_fin_6eme_mois",
+            "calcul_fin": "dernier_jour_6eme_mois_a_compter_date_effet_retraite"
+          },
+          "application": "meme_si_plafond_respecte",
+          "note": "Suspension intervient indépendamment du respect du plafond"
+        }
+      },
+      
+      "calcul_plafond": {
+        "article": "Art. D.161-2-5 et D.161-2-7 CSS",
+        "principe": "limite_cumul_revenus_activite_plus_pensions",
+        "formule": "MAX(methode_derniers_salaires, methode_smic)",
+        
+        "methode_derniers_salaires": {
+          "code": "METHODE_A",
+          "description": "Moyenne mensuelle salaires période de référence",
+          
+          "periode_reference": {
+            "definition": "3_derniers_mois_activite",
+            "composition": "mois_cessation_activite + 2_mois_civils_precedents",
+            "regimes_concernes": [
+              "regime_general",
+              "regime_salaries_agricoles",
+              "regimes_speciaux_L711_1"
+            ],
+            
+            "cas_particuliers": {
+              "activite_ancienne": {
+                "condition": "pas_activite_concernee_dans_6_mois_avant_retraite",
+                "action": "remonter_derniere_activite_concernee",
+                "exemple": "Activité RG jusqu'en 1984 puis non-salarié : période = 3 derniers mois 1984"
+              },
+              
+              "activite_1_mois": {
+                "calcul": "revenus_ce_seul_mois",
+                "sur_demande": true
+              },
+              
+              "activite_2_mois": {
+                "calcul": "moyenne_mensuelle_ces_2_mois",
+                "sur_demande": true
+              },
+              
+              "temps_partiel": {
+                "calcul_standard": "salaires_temps_partiel_percus",
+                "option_demande_assuree": {
+                  "base": "salaire_temps_complet_entreprise",
+                  "justificatif_requis": "attestation_employeur",
+                  "description": "Démontrer revenu temps complet appliqué dans entreprise"
+                }
+              },
+              
+              "plusieurs_temps_partiels": {
+                "regle": "total_remunerations >= remuneration_temps_complet_plus_eleve",
+                "description": "Total ne peut être inférieur au temps complet le plus élevé",
+                "justificatif": "attestation_employeur_pour_chaque_activite"
+              },
+              
+              "affiliation_simultanee": {
+                "periode_retenue": "celle_justifiee_dans_au_moins_1_regime_vise",
+                "reference": "Art. D.161-2-5 CSS"
+              }
+            }
+          },
+          
+          "revenus_a_retenir": {
+            "base": "montants_bruts_soumis_CSG",
+            "inclus": "toutes_sommes_assiette_CSG",
+            "exclusions": [
+              "salaires_activites_non_soumises_cessation"
+            ],
+            
+            "option_indemnites_conges_payes": {
+              "sur_demande": true,
+              "action": "reaffectation_periode_reference",
+              "description": "Indemnités CP peuvent être réaffectées à période référence"
+            }
+          },
+          
+          "revalorisation": {
+            "article": "Art. D.161-2-8 CSS",
+            "frequence": "annuelle",
+            "modalite": "memes_conditions_revalorisation_pensions",
+            "base_revalorisation": "regime_ayant_donne_lieu_cotisations",
+            
+            "si_plusieurs_regimes": {
+              "regle": "revalorisation_regime_plus_longue_duree_assurance",
+              "reference": "Articles R.351-3 et R.351-4 CSS"
+            }
+          }
+        },
+        
+        "methode_smic": {
+          "code": "METHODE_B",
+          "article": "Art. D.161-2-9 CSS",
+          "description": "160% du SMIC",
+          
+          "formule": {
+            "coefficient": 1.6,
+            "base": "smic_horaire_au_1er_janvier_annee_en_cours",
+            "heures_annuelles": 1820,
+            "calcul": "SMIC_horaire × 1.6 × (1820 / 12)"
+          },
+          
+          "valeur_2025": {
+            "smic_horaire_brut": 11.88,
+            "calcul_detaille": "11.88 × 1.6 × 151.67",
+            "plafond_mensuel_brut": 2873.76
+          },
+          
+          "application": "si_methode_A_inferieure"
+        },
+        
+        "plafond_retenu": {
+          "regle": "maximum_des_deux_methodes",
+          "formule": "MAX(METHODE_A, METHODE_B)"
+        }
+      },
+      
+      "revenus_a_comparer": {
+        "article": "Art. L.161-22 al. 2 CSS, D.161-2-16, D.161-2-11 CSS",
+        
+        "revenus_activite": {
+          "description": "Nouveaux revenus de la reprise d'activité",
+          "base": "revenus_bruts_soumis_CSG",
+          "article": "Art. D.161-2-5 CSS",
+          
+          "activites_incluses": [
+            "regime_general",
+            "regime_salaries_agricoles",
+            "regimes_speciaux_L711_1"
+          ],
+          
+          "activites_exclues": [
+            "activites_derogatoires_cessation",
+            "activites_autres_regimes"
+          ]
+        },
+        
+        "retraites_personnelles": {
+          "description": "Pensions à prendre en compte",
+          
+          "regimes_inclus": {
+            "base": [
+              "regime_general",
+              "regime_salaries_agricoles",
+              "regimes_speciaux_L711_1"
+            ],
+            "complementaires_obligatoires": [
+              "Arrco_Agirc",
+              "Ircantec",
+              "CRPNAC"
+            ],
+            "reference": "Livre IX CSS"
+          },
+          
+          "montant": "brut",
+          "exclusions": [
+            "majoration_tierce_personne"
+          ],
+          
+          "periodicite": {
+            "si_pension_organismeechéance_mensuelle_et_autres_trimestrielles": {
+              "base_calcul": "mensuelle"
+            },
+            "si_pension_organisme_echeance_trimestrielle_et_autres_mensuelles": {
+              "base_calcul": "trimestrielle"
+            },
+            "prorata": "realiser_prorata_selon_periodes"
+          }
+        },
+        
+        "formule_comparaison": {
+          "total": "revenus_activite + retraites_personnelles",
+          "comparaison": "total <= plafond",
+          "si_depassement": "ecretement_a_appliquer"
+        }
+      },
+      
+      "ecretement": {
+        "article": "Art. D.161-2-16 CSS",
+        "condition": "(revenus_activite + retraites) > plafond",
+        
+        "calcul_depassement": {
+          "formule": "montant_depassement = (revenus_activite + retraites) - plafond"
+        },
+        
+        "calcul_reduction": {
+          "principe": "reduction_egale_montant_depassement",
+          "application": "sur_chaque_pension_base",
+          
+          "pensions_concernees": [
+            "pension_regime_general",
+            "pension_regime_salaries_agricoles",
+            "pensions_regimes_speciaux_L711_1"
+          ],
+          
+          "regles": {
+            "si_depassement_inferieur_montant_pension": {
+              "montant_verse": "montant_pension - depassement"
+            },
+            "si_depassement_superieur_ou_egal_montant_pension": {
+              "montant_verse": 0,
+              "statut": "pension_suspendue"
+            }
+          }
+        },
+        
+        "date_effet_reduction": {
+          "article": "Art. D.161-2-16 III et IV CSS",
+          
+          "si_declaration_dans_delai": {
+            "condition": "declaration <= (date_evenement + 1_mois)",
+            "date_effet": "mois_suivant_notification_decision",
+            "retroactivite": false
+          },
+          
+          "si_declaration_hors_delai": {
+            "condition": "declaration > (date_evenement + 1_mois)",
+            "date_effet": "mois_ou_trimestre_du_depassement_reel",
+            "retroactivite": true,
+            "consequence": "recuperation_indu"
+          }
+        }
+      },
+      
+      "fin_dispositif": {
+        "article": "Art. D.161-2-16 III et V al. 2 CSS",
+        
+        "conditions_fin": [
+          {
+            "type": "respect_plafond",
+            "condition": "(revenus + pensions) <= plafond",
+            "effet": "cessation_reduction_mois_ou_trimestre_suivant"
+          },
+          {
+            "type": "accession_CER_TOTAL",
+            "condition": "conditions_CER_TOTAL_remplies",
+            "effet": "1er_jour_mois_suivant_celui_remplit_conditions"
+          }
+        ]
+      }
+    }
+  },
+  
+  "liaisons_inter_regimes": {
+    "article": "Art. D.161-2-13 et D.161-2-18 CSS",
+    
+    "organisme_competent": {
+      "critere_principal": "dernier_regime_affiliation",
+      "exception_LURA": "sous_reserve_liquidation_unique",
+      "si_affiliation_simultanee": "regime_plus_longue_duree_assurance_et_periodes_equivalentes"
+    },
+    
+    "informations_transmises": [
+      "noms_adresses_employeurs_ou_entreprises",
+      "dates_debut_activites",
+      "montant_nature_revenus_professionnels",
+      "regimes_securite_sociale_affiliation",
+      "bulletins_salaire_periode_reference",
+      "documents_justificatifs_revenus_periode",
+      "noms_adresses_autres_organismes_retraite",
+      "pieces_justificatives_art_D161_2_7_II"
+    ],
+    
+    "opposabilite_decision": {
+      "principe": "decision_reduction_suspension_opposable_tous_regimes",
+      "condition": "echeance_paiement_pensions_identique",
+      "regimes_concernes": [
+        "regime_general",
+        "regime_salaries_agricoles",
+        "regimes_speciaux",
+        "regimes_complementaires"
+      ]
+    }
+  },
+  
+  "controles_a_posteriori": {
+    "article": "Art. D.161-2-14 et D.161-2-17 CSS",
+    
+    "obligations_caisses": {
+      "moment_attribution": "rappel_obligation_declaration",
+      "frequence": "annuelle",
+      "action": "rappel_transmission_elements_reprise_activite"
+    },
+    
+    "organisme_competent_controles": {
+      "principe": "dernier_regime_affiliation",
+      "exception": "sauf_LURA",
+      "si_simultanee": "regime_plus_longue_duree"
+    },
+    
+    "mise_en_oeuvre": {
+      "verification_pour_chaque_echeance": [
+        "respect_delai_6_mois_dernier_employeur",
+        "respect_plafond_cumul"
+      ],
+      "application": "regles_suspension_et_reduction_pour_echeances_anterieures_controle"
+    }
+  },
+  
+  "cas_LURA": {
+    "article": "Circulaire CNAV 2017-41 section 3",
+    "principe": "regime_liquidateur_applique_propres_regles",
+    
+    "si_RSI_liquidateur": {
+      "CER_plafonne_activite_salariee": false,
+      "reduction": false,
+      "controle_posteriori": false,
+      "description": "Règles CER plafonné D.161-2-5+ non applicables"
+    }
+  },
+  
+  "controles_coherence": [
+    {
+      "id": "CER_C01",
+      "libelle": "Âge légal non atteint",
+      "type": "ERREUR_CRITIQUE",
+      "couleur": "ROUGE",
+      "priorite": 1,
+      
+      "condition": {
+        "expression": "age_a_date_effet < age_legal AND demande_CER_TOTAL == true",
+        "variables": {
+          "age_a_date_effet": "calculer_age(date_naissance, date_effet_retraite)",
+          "age_legal": 62,
+          "demande_CER_TOTAL": "boolean"
+        }
+      },
+      
+      "regle_reglementaire": "CER TOTAL impossible avant âge légal (62 ans pour génération 1955+)",
+      "article": "Art. L.351-1 CSS",
+      
+      "message_erreur": "L'assuré n'a pas atteint l'âge légal de {age_legal} ans. Le cumul emploi retraite total n'est pas autorisé. Âge actuel : {age_reel} ans.",
+      
+      "actions_correctives": [
+        "bloquer_demande_CER_TOTAL",
+        "proposer_CER_PLAFONNE",
+        "calculer_date_eligibilite_age_legal"
+      ],
+      
+      "impact": {
+        "blocage": true,
+        "orientation": "CER_PLAFONNE_obligatoire"
+      }
+    },
+    
+    {
+      "id": "CER_C02",
+      "libelle": "Subsidiarité non respectée",
+      "type": "ERREUR_CRITIQUE",
+      "couleur": "ROUGE",
+      "priorite": 1,
+      
+      "condition": {
+        "expression": "EXISTS(retraite_non_liquidee IN regimes_obligatoires) AND demande_CER_TOTAL == true AND NOT exception_age_ouverture",
+        "variables": {
+          "retraites_non_liquidees": "array",
+          "exception_age_ouverture": "age_ouverture_regime > age_legal"
+        }
+      },
+      
+      "regle_reglementaire": "Liquidation ensemble retraites personnelles de TOUS régimes obligatoires",
+      "article": "Art. L.161-22 al. 4 CSS",
+      
+      "citation": "obtenu l'ensemble de ses retraites personnelles auprès de la totalité des régimes légaux ou rendus légalement obligatoires de base et complémentaires, français ou étrangers",
+      
+      "message_erreur": "La condition de subsidiarité n'est pas respectée. Retraite(s) non liquidée(s) : {liste_regimes}. Le cumul emploi retraite total est refusé.",
+      
+      "actions_correctives": [
+        "lister_regimes_manquants",
+        "verifier_exception_age_ouverture",
+        "bloquer_CER_TOTAL",
+        "appliquer_CER_PLAFONNE"
+      ],
+      
+      "exceptions": [
+        {
+          "cas": "age_ouverture_regime_superieur_age_legal",
+          "action": "derogation_temporaire_jusqu_age_sans_decote"
+        }
+      ],
+      
+      "impact": {
+        "blocage": true,
+        "orientation": "CER_PLAFONNE_jusqu_liquidation_toutes_retraites"
+      }
+    },
+    
+    {
+      "id": "CER_C03",
+      "libelle": "Taux plein non atteint",
+      "type": "ALERTE",
+      "couleur": "ORANGE",
+      "priorite": 2,
+      
+      "condition": {
+        "expression": "age >= age_legal AND duree_assurance < duree_requise_taux_plein AND age < age_taux_plein_auto",
+        "variables": {
+          "age_legal": 62,
+          "age_taux_plein_auto": 67,
+          "duree_requise_taux_plein": "fonction(annee_naissance)"
+        }
+      },
+      
+      "regle_reglementaire": "Pour CER TOTAL : (âge légal + taux plein) OU (âge taux plein auto)",
+      
+      "message_alerte": "Âge légal atteint ({age} ans) mais durée d'assurance insuffisante ({duree_actuelle} trimestres sur {duree_requise} requis). CER PLAFONNÉ obligatoire jusqu'à {age_taux_plein_auto} ans ou obtention du taux plein.",
+      
+      "actions_correctives": [
+        "basculer_automatiquement_CER_PLAFONNE",
+        "calculer_trimestres_manquants",
+        "indiquer_date_eligibilite_CER_TOTAL"
+      ],
+      
+      "calculs_associes": {
+        "trimestres_manquants": "duree_requise - duree_actuelle",
+        "date_eligibilite_age": "date_67_ans",
+        "date_eligibilite_duree": "estimer_date_taux_plein"
+      },
+      
+      "impact": {
+        "blocage": false,
+        "orientation_forcee": "CER_PLAFONNE",
+        "application_plafonds": true
+      }
+    },
+    
+    {
+      "id": "CER_C04",
+      "libelle": "Délai 6 mois non respecté",
+      "type": "ERREUR_CRITIQUE",
+      "couleur": "ROUGE",
+      "priorite": 1,
+      
+      "condition": {
+        "expression": "employeur_reprise IN employeurs_6_mois_avant_retraite AND delai_reprise < 6_mois AND mode_cumul == 'CER_PLAFONNE'",
+        "variables": {
+          "employeurs_6_mois_avant": "liste_employeurs_periode(date_effet - 6_mois, date_effet)",
+          "delai_reprise": "calcul_mois(date_effet_retraite, date_reprise)"
+        }
+      },
+      
+      "regle_reglementaire": "Délai obligatoire 6 mois entre date effet et reprise chez dernier employeur",
+      "article": "Art. D.161-2-12 et D.161-2-15 CSS",
+      
+      "citation": "Cette suspension intervient même si la limite de cumul n'est pas dépassée",
+      
+      "message_erreur": "Reprise chez le dernier employeur avant 6 mois : SUSPENSION OBLIGATOIRE du {date_debut} au {date_fin}. La pension sera suspendue même si le plafond de cumul est respecté.",
+      
+      "calcul_suspension": {
+        "date_debut": "1er_jour_mois_reprise",
+        "date_fin": "dernier_jour_6eme_mois_depuis_date_effet_OU_fin_activite",
+        "formule": "MIN(fin_activite, date_effet + 6_mois)"
+      },
+      
+      "actions_correctives": [
+        "calculer_periode_suspension",
+        "suspendre_pension_totalement",
+        "recuperer_sommes_indument_versees",
+        "notifier_assuree"
+      ],
+      
+      "impact": {
+        "blocage": true,
+        "suspension_totale": true,
+        "duree_suspension": "variable_selon_fin_activite",
+        "aucune_alternative": true
+      }
+    },
+    
+    {
+      "id": "CER_C05",
+      "libelle": "Déclaration hors délai",
+      "type": "ALERTE",
+      "couleur": "ORANGE",
+      "priorite": 2,
+      
+      "condition": {
+        "expression": "date_declaration > (date_evenement + 1_mois)",
+        "variables": {
+          "date_evenement": "MAX(date_reprise, date_modification_revenus)",
+          "delai_reglementaire": 30
+        }
+      },
+      
+      "regle_reglementaire": "Déclaration obligatoire dans le mois suivant reprise ou modification",
+      "article": "Art. D.161-2-13 CSS",
+      
+      "consequence_retroactivite": {
+        "article": "Art. D.161-2-16 IV CSS",
+        "application": "reduction_retroactive_au_mois_ou_trimestre_depassement",
+        "recuperation": "indu_depuis_date_depassement_reel"
+      },
+      
+      "message_alerte": "Déclaration effectuée hors délai réglementaire (+{nb_jours} jours). Réduction RÉTROACTIVE appliquée à partir du {date_retroactive}. Montant indu à récupérer : {montant_indu}€.",
+      
+      "calculs": {
+        "retard_jours": "date_declaration - (date_evenement + 30)",
+        "date_application_retroactive": "debut_mois_ou_trimestre(date_evenement)",
+        "montant_indu": "somme_reductions_periode_retroactive"
+      },
+      
+      "actions_correctives": [
+        "calculer_montant_indu",
+        "appliquer_reduction_retroactive",
+        "etablir_plan_recuperation",
+        "notifier_assuree_consequences"
+      ],
+      
+      "impact": {
+        "penalite_financiere": true,
+        "recuperation_retroactive": true,
+        "possible_echelonnement": true
+      }
+    },
+    
+    {
+      "id": "CER_C06",
+      "libelle": "Dépassement plafond",
+      "type": "VIGILANCE",
+      "couleur": "JAUNE",
+      "priorite": 3,
+      
+      "condition": {
+        "expression": "(revenus_activite + total_pensions_brutes) > plafond_calcule"
+      },
+      
+      "regle_reglementaire": "Écrêtement à due concurrence du dépassement",
+      "article": "Art. D.161-2-16 CSS",
+      
+      "citation": "la retraite est réduite à due concurrence du dépassement",
+      
+      "message_alerte": "Plafond de cumul dépassé de {montant_depassement}€. Écrêtement à appliquer sur les pensions de base. Total revenus+pensions : {total}€ - Plafond : {plafond}€.",
+      
+      "calcul_ecretement": {
+        "depassement": "(revenus_activite + pensions) - plafond",
+        "pour_chaque_pension_base": {
+          "reduction": "MIN(depassement, montant_pension)",
+          "montant_verse": "MAX(0, montant_pension - reduction)",
+          "si_reduction_superieure": "pension_suspendue"
+        }
+      },
+      
+      "actions_correctives": [
+        "calculer_ecretement_detaille_par_regime",
+        "notifier_assuree_nouveaux_montants",
+        "proposer_reduction_activite",
+        "calculer_seuil_eviter_ecretement"
+      ],
+      
+      "impact": {
+        "reduction_proportionnelle": true,
+        "possible_suspension_totale": "si_depassement_superieur_pension",
+        "reversible": "si_revenus_diminuent"
+      }
+    },
+    
+    {
+      "id": "CER_C07",
+      "libelle": "Période référence incohérente",
+      "type": "ALERTE",
+      "couleur": "ORANGE",
+      "priorite": 2,
+      
+      "condition": {
+        "expression": "NOT EXISTS(activite_RG_MSA_speciaux IN periode_6_mois_avant_retraite)"
+      },
+      
+      "regle_reglementaire": "Remonter à la dernière activité concernée pour établir période référence",
+      "article": "Circulaire CNAV 2017-41 §2.3.1.1",
+      
+      "exemple_reglementaire": "Assuré RG 1965-1984 puis non-salarié : période = 3 derniers mois 1984",
+      
+      "message_alerte": "Aucune activité RG/MSA/Régimes spéciaux détectée dans les 6 mois précédant la retraite. Recherche de la dernière période d'activité concernée pour établir la période de référence.",
+      
+      "actions_correctives": [
+        "remonter_historique_carriere",
+        "identifier_derniere_activite_concernee",
+        "demander_bulletins_salaire_periode_trouvee",
+        "appliquer_revalorisation_si_ancienne"
+      ],
+      
+      "impact": {
+        "delai_supplementaire": true,
+        "documents_justificatifs_anciens": true,
+        "application_coefficient_revalorisation": true
+      }
+    },
+    
+    {
+      "id": "CER_C08",
+      "libelle": "Activités multiples non déclarées",
+      "type": "VIGILANCE",
+      "couleur": "JAUNE",
+      "priorite": 3,
+      
+      "condition": {
+        "expression": "COUNT(activites_simultanees) > 1 AND NOT ALL(activites IN [RG, MSA, Regimes_speciaux])"
+      },
+      
+      "regle_reglementaire": "Seules activités RG/MSA/Régimes spéciaux comptent pour plafond",
+      "article": "Art. D.161-2-5 CSS",
+      
+      "citation": "Il peut reprendre une activité non salariée ou salariée relevant d'autres régimes, sans limite de revenus",
+      
+      "message_alerte": "Activités multiples détectées. Seules les activités relevant du RG/MSA/Régimes spéciaux sont comptabilisées pour le plafond de cumul. Activités libres (autres régimes) : {liste_activites_libres}.",
+      
+      "verifications": [
+        "lister_toutes_activites_par_regime",
+        "filtrer_uniquement_RG_MSA_speciaux_pour_plafond",
+        "confirmer_activites_autres_regimes_exclues",
+        "verifier_coherence_declarations"
+      ],
+      
+      "actions_correctives": [
+        "clarifier_nature_exacte_chaque_activite",
+        "verifier_regimes_affiliation",
+        "recalculer_plafond_activites_concernees_uniquement",
+        "documenter_activites_exclues"
+      ],
+      
+      "impact": {
+        "ajustement_calcul_plafond": true,
+        "possible_reduction_depassement": true,
+        "evite_penalisation_injustifiee": true
+      }
+    }
+  ],
+  
+  "alertes": {
+    "rouge": [
+      {
+        "code": "CER_A01",
+        "libelle": "Âge insuffisant",
+        "niveau": "ROUGE",
+        "declencheur": "age < age_legal AND demande_CER_TOTAL",
+        "message": "Âge inférieur à l'âge légal : CER TOTAL impossible",
+        "action": "bloquer_CER_TOTAL_proposer_CER_PLAFONNE",
+        "urgence": "immediate"
+      },
+      {
+        "code": "CER_A02",
+        "libelle": "Subsidiarité non respectée",
+        "niveau": "ROUGE",
+        "declencheur": "retraite_obligatoire_non_liquidee",
+        "message": "Retraite(s) obligatoire(s) non liquidée(s) : subsidiarité requise",
+        "action": "lister_regimes_manquants_bloquer_CER_TOTAL",
+        "urgence": "immediate"
+      },
+      {
+        "code": "CER_A03",
+        "libelle": "Délai 6 mois non respecté",
+        "niveau": "ROUGE",
+        "declencheur": "reprise_dernier_employeur < 6_mois",
+        "message": "Reprise chez dernier employeur avant 6 mois : SUSPENSION obligatoire",
+        "action": "calculer_periode_suspension_suspendre_paiement",
+        "urgence": "immediate",
+        "sanction_automatique": true
+      },
+      {
+        "code": "CER_A04",
+        "libelle": "Fraude détectée",
+        "niveau": "ROUGE",
+        "declencheur": "fausse_declaration OR dissimulation_revenus",
+        "message": "Fraude suspectée : fausse déclaration ou dissimulation de revenus",
+        "action": "signaler_contentieux_recuperation_integrale_sanctions_penales",
+        "urgence": "immediate",
+        "consequences_penales": true
+      }
+    ],
+    
+    "orange": [
+      {
+        "code": "CER_A05",
+        "libelle": "Taux plein non atteint",
+        "niveau": "ORANGE",
+        "declencheur": "age >= age_legal AND duree < taux_plein AND age < 67",
+        "message": "Conditions CER TOTAL non remplies : CER PLAFONNÉ obligatoire",
+        "action": "basculer_mode_plafonne_calculer_plafond_informer",
+        "urgence": "normale"
+      },
+      {
+        "code": "CER_A06",
+        "libelle": "Déclaration hors délai",
+        "niveau": "ORANGE",
+        "declencheur": "declaration > (date_evenement + 1_mois)",
+        "message": "Déclaration tardive : récupération indu RÉTROACTIVE",
+        "action": "calculer_indu_appliquer_retroactif_plan_recuperation",
+        "urgence": "elevee",
+        "impact_financier": "retroactif"
+      },
+      {
+        "code": "CER_A07",
+        "libelle": "Période référence à clarifier",
+        "niveau": "ORANGE",
+        "declencheur": "periode_reference_incertain OR documents_manquants",
+        "message": "Période référence incohérente ou incomplète : justificatifs requis",
+        "action": "demander_bulletins_rechercher_derniere_activite_documenter",
+        "urgence": "normale"
+      },
+      {
+        "code": "CER_A08",
+        "libelle": "Documents manquants",
+        "niveau": "ORANGE",
+        "declencheur": "dossier_incomplet",
+        "message": "Pièces justificatives incomplètes pour calcul plafond",
+        "action": "lister_documents_requis_relancer_suspendre_si_delai",
+        "urgence": "normale"
+      },
+      {
+        "code": "CER_A09",
+        "libelle": "Changement situation non déclaré",
+        "niveau": "ORANGE",
+        "declencheur": "detection_modification_non_declaree",
+        "message": "Modification de situation détectée mais non déclarée",
+        "action": "contacter_regulariser_sanctions_si_necessaire",
+        "urgence": "elevee"
+      }
+    ],
+    
+    "jaune": [
+      {
+        "code": "CER_A10",
+        "libelle": "Dépassement plafond",
+        "niveau": "JAUNE",
+        "declencheur": "(revenus + pensions) > plafond",
+        "message": "Plafond dépassé : écrêtement à appliquer",
+        "action": "calculer_reduction_notifier_proposer_ajustement",
+        "urgence": "normale"
+      },
+      {
+        "code": "CER_A11",
+        "libelle": "Activités multiples",
+        "niveau": "JAUNE",
+        "declencheur": "COUNT(activites) > 1",
+        "message": "Activités multiples : bien distinguer régimes concernés par plafond",
+        "action": "lister_par_regime_filtrer_documenter",
+        "urgence": "faible"
+      },
+      {
+        "code": "CER_A12",
+        "libelle": "Revalorisation plafond due",
+        "niveau": "JAUNE",
+        "declencheur": "changement_annee OR revalorisation_pensions",
+        "message": "Revalorisation annuelle du plafond à appliquer",
+        "action": "recalculer_plafond_verifier_maintien_ajuster",
+        "urgence": "faible",
+        "periodicite": "annuelle"
+      },
+      {
+        "code": "CER_A13",
+        "libelle": "Proche du plafond",
+        "niveau": "JAUNE",
+        "declencheur": "(revenus + pensions) > (plafond * 0.95)",
+        "message": "Cumul proche du plafond (>95%) : risque dépassement si augmentation",
+        "action": "alerter_prevoir_controle_anticiper",
+        "urgence": "faible",
+        "preventif": true
+      },
+      {
+        "code": "CER_A14",
+        "libelle": "Changement revenus à venir",
+        "niveau": "JAUNE",
+        "declencheur": "declaration_modification_future",
+        "message": "Modification revenus annoncée : surveillance renforcée requise",
+        "action": "planifier_controle_recalculer_preparer_ajustement",
+        "urgence": "faible"
+      },
+      {
+        "code": "CER_A15",
+        "libelle": "Approche 67 ans (CER TOTAL)",
+        "niveau": "JAUNE",
+        "declencheur": "age >= 66.5 AND mode_actuel == CER_PLAFONNE",
+        "message": "Assuré proche de 67 ans : basculement automatique vers CER TOTAL à prévoir",
+        "action": "preparer_transition_informer_lever_restrictions",
+        "urgence": "faible",
+        "anticipation": true
+      }
+    ]
+  },
+  
+  "valeurs_reglementaires_2025": {
+    "ages": {
+      "age_legal_generation_1955_plus": 62,
+      "age_taux_plein_auto_generation_1955_plus": 67,
+      "note": "Pour générations antérieures, consulter tableaux spécifiques"
+    },
+    
+    "durees_assurance_taux_plein": {
+      "1958_1960": 167,
+      "1961_janvier_aout": 168,
+      "1961_sept_dec_et_1962": 169,
+      "1963": 170,
+      "1964": 171,
+      "1965_et_apres": 172,
+      "note": "Trimestres requis pour taux plein 50%"
+    },
+    
+    "smic_2025": {
+      "smic_horaire_brut": 11.88,
+      "base_heures_annuelles": 1820,
+      "coefficient_CER": 1.6,
+      "calcul": "11.88 × 1.6 × (1820 / 12)",
+      "plafond_mensuel_brut": 2873.76,
+      "date_reference": "2025-01-01"
+    },
+    
+    "delais_reglementaires": {
+      "declaration_reprise_jours": 30,
+      "declaration_reprise_unite": "mois_suivant",
+      "delai_dernier_employeur_mois": 6,
+      "periode_reference_mois": 3
+    },
+    
+    "periodicite_controles": {
+      "rappel_obligation_declaration": "annuel",
+      "revalorisation_plafond": "annuel_au_01_janvier"
+    }
+  },
+  
+  "exemples_calcul": [
+    {
+      "numero": 1,
+      "titre": "CER TOTAL réussi",
+      "type": "CER_TOTAL",
+      "situation": {
+        "date_naissance": "1955-08-15",
+        "date_effet_retraite": "2017-09-01",
+        "age_depart": 62,
+        "duree_assurance": 167,
+        "retraites_liquidees": ["RG", "ARRCO"],
+        "autres_regimes": false
+      },
+      "analyse": {
+        "age_legal": "OK (62 ans)",
+        "taux_plein": "OK (167 trimestres pour génération 1955)",
+        "subsidiarite": "OK (toutes retraites liquidées)"
+      },
+      "resultat": "CER_TOTAL_autorise",
+      "reprise": "immediate_sans_restriction"
+    },
+    
+    {
+      "numero": 2,
+      "titre": "CER TOTAL avec exception subsidiarité",
+      "type": "CER_TOTAL",
+      "situation": {
+        "date_naissance": "1955-08-15",
+        "affiliations": ["RG", "ARRCO", "Regime_B"],
+        "age_ouverture_regime_B": 65,
+        "date_effet_RG_ARRCO": "2017-09-01",
+        "duree_assurance": 167,
+        "regime_B_liquide": false
+      },
+      "analyse": {
+        "age_legal": "OK (62 ans)",
+        "taux_plein": "OK",
+        "subsidiarite": "DÉROGATION accordée jusqu'à 65 ans"
+      },
+      "resultat": "CER_TOTAL_autorise_temporairement",
+      "periode_autorisee": "2017-09-01 à 65 ans",
+      "condition_fin": "liquidation_regime_B_obligatoire_a_65_ans"
+    },
+    
+    {
+      "numero": 3,
+      "titre": "CER PLAFONNÉ - Respect plafond",
+      "type": "CER_PLAFONNE",
+      "situation": {
+        "pension_RG": 900,
+        "pension_SNCF": 200,
+        "pensions_complementaires": 600,
+        "revenus_activite": 500,
+        "total": 2200,
+        "periode_reference_salaires": [2100, 2100, 2100]
+      },
+      "calcul_plafond": {
+        "methode_A_moyenne_3_mois": 2100,
+        "methode_B_smic_1_6": 2873.76,
+        "plafond_retenu": 2873.76,
+        "raison": "maximum_des_deux"
+      },
+      "comparaison": {
+        "total_revenus_pensions": 2200,
+        "plafond": 2873.76,
+        "depassement": 0,
+        "statut": "sous_plafond"
+      },
+      "resultat": "cumul_integral_autorise_sans_reduction"
+    },
+    
+    {
+      "numero": 4,
+      "titre": "CER PLAFONNÉ - Écrêtement",
+      "type": "CER_PLAFONNE",
+      "situation": {
+        "pension_RG": 900,
+        "pension_SNCF": 200,
+        "pensions_complementaires": 600,
+        "revenus_activite": 1200,
+        "total": 2900
+      },
+      "calcul_plafond": {
+        "methode_A": 2150,
+        "methode_B": 2873.76,
+        "plafond_retenu": 2873.76
+      },
+      "depassement": {
+        "montant": 26.24,
+        "calcul": "2900 - 2873.76"
+      },
+      "application_ecretement": {
+        "pension_RG": {
+          "initial": 900,
+          "reduction": 26.24,
+          "verse": 873.76,
+          "statut": "reduite"
+        },
+        "pension_SNCF": {
+          "initial": 200,
+          "reduction": 26.24,
+          "verse": 173.76,
+          "statut": "reduite"
+        }
+      },
+      "resultat": "ecretement_applique_26_24_sur_chaque_pension"
+    },
+    
+    {
+      "numero": 5,
+      "titre": "CER PLAFONNÉ - Suspension totale pension",
+      "type": "CER_PLAFONNE",
+      "situation": {
+        "pension_RG": 900,
+        "pension_SNCF": 200,
+        "pensions_complementaires": 600,
+        "revenus_activite": 1800,
+        "total": 3500
+      },
+      "calcul_plafond": {
+        "plafond_retenu": 2873.76
+      },
+      "depassement": {
+        "montant": 626.24,
+        "calcul": "3500 - 2873.76"
+      },
+      "application_ecretement": {
+        "pension_RG": {
+          "initial": 900,
+          "reduction": 626.24,
+          "verse": 273.76,
+          "statut": "reduite"
+        },
+        "pension_SNCF": {
+          "initial": 200,
+          "reduction": 626.24,
+          "verse": 0,
+          "statut": "SUSPENDUE",
+          "note": "Réduction supérieure au montant"
+        }
+      },
+      "resultat": "pension_SNCF_suspendue_totalement"
+    },
+    
+    {
+      "numero": 6,
+      "titre": "Suspension délai 6 mois",
+      "type": "SUSPENSION_DELAI",
+      "situation": {
+        "date_fin_contrat_employeur_A": "2024-04-30",
+        "date_effet_retraite": "2024-07-01",
+        "date_reprise_employeur_A": "2024-07-01"
+      },
+      "analyse": {
+        "employeur_A_dernier_employeur": true,
+        "reprise_avant_6_mois": true,
+        "delai_respecte": false
+      },
+      "consequence": {
+        "type": "SUSPENSION_OBLIGATOIRE",
+        "date_debut": "2024-07-01",
+        "date_fin": "2024-11-30",
+        "duree_mois": 6,
+        "note": "Même si plafond respecté"
+      },
+      "resultat": "suspension_totale_6_mois"
+    },
+    
+    {
+      "numero": 7,
+      "titre": "Déclaration hors délai - Rétroactivité",
+      "type": "DECLARATION_TARDIVE",
+      "situation": {
+        "date_reprise": "2024-04-01",
+        "depassement_mensuel": 200,
+        "date_declaration": "2024-05-15",
+        "delai_reglementaire": "2024-05-01"
+      },
+      "analyse": {
+        "retard_jours": 14,
+        "declaration_dans_delai": false
+      },
+      "consequence": {
+        "application": "retroactive",
+        "date_debut_reduction": "2024-04-01",
+        "periode_indu": ["2024-04", "2024-05"],
+        "montant_indu": 400,
+        "calcul": "2 mois × 200€"
+      },
+      "comparaison_si_delai_respecte": {
+        "application": "prospective",
+        "debut_reduction": "mois_suivant_notification",
+        "indu": 0
+      },
+      "impact_financier": "perte_400_due_retard"
+    }
+  ],
+  
+  "sources": [
+    {
+      "type": "circulaire",
+      "reference": "CNAV n°2017-41",
+      "date": "2017-12-12",
+      "titre": "La reprise d'activité : mise en œuvre des règles de cumul emploi retraite",
+      "pages": 12,
+      "statut": "reference_principale"
+    },
+    {
+      "type": "loi",
+      "reference": "Article L.161-22 CSS",
+      "modification": "Loi n°2014-040 du 20/01/2014",
+      "objet": "Cumul emploi retraite - écrêtement"
+    },
+    {
+      "type": "loi",
+      "reference": "Article L.161-22-1-A CSS",
+      "objet": "Pas de nouveaux droits si 1ère pension >= 01/01/2015"
+    },
+    {
+      "type": "loi",
+      "reference": "Article L.351-1 CSS",
+      "objet": "Âge légal ouverture droits"
+    },
+    {
+      "type": "loi",
+      "reference": "Article L.351-8 CSS",
+      "objet": "Âge taux plein automatique"
+    },
+    {
+      "type": "loi",
+      "reference": "Article L.711-1 CSS",
+      "objet": "Régimes spéciaux"
+    },
+    {
+      "type": "decret",
+      "reference": "Décret n°2017-416",
+      "date": "2017-03-27",
+      "objet": "Plafonnement cumul activité rémunérée et retraite"
+    },
+    {
+      "type": "decret",
+      "reference": "Articles D.161-2-5 à D.161-2-18 CSS",
+      "objet": "Modalités application CER plafonné"
+    },
+    {
+      "type": "circulaire",
+      "reference": "DSS/3A/2014/347",
+      "date": "2014-12-29",
+      "objet": "Circulaire ministérielle application"
+    },
+    {
+      "type": "circulaire",
+      "reference": "DSS/SD3/2004/512",
+      "date": "2004-10-27",
+      "points": "132-133",
+      "objet": "Précisions techniques"
+    }
+  ],
+  
+  "notes_techniques": {
+    "date_entree_vigueur": "2017-04-01",
+    "innovation": "Remplacement suspension totale par écrêtement proportionnel",
+    "particularite_LURA": "Régime liquidateur applique ses propres règles",
+    "periodicite_revalorisation": "Annuelle au 1er janvier",
+    "base_calcul_CSG": "Tous montants soumis à CSG",
+    "pensions_exclues": "Majoration tierce personne",
+    "activites_exclues": "Activités dérogatoires cessation et autres régimes"
+  }
+}

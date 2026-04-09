@@ -1,0 +1,585 @@
+{
+  "skill_info": {
+    "nom": "RACL - Retraite Anticipée Carrière Longue",
+    "version": "2.0",
+    "date": "2025-11-10",
+    "base_reglementaire": "Circulaire CNAV 2023-14 du 10/07/2023",
+    "token_estimate_md": 4200,
+    "token_estimate_json": 2400,
+    "token_estimate_total": 6600
+  },
+  
+  "declencheurs": [
+    "carriere longue",
+    "RACL",
+    "retraite anticipee",
+    "partir avant",
+    "depart precoce",
+    "commence jeune",
+    "avant 20 ans",
+    "debut activite"
+  ],
+  
+  "condition_debut_activite": {
+    "principe": "Justifier d'une durée minimale d'assurance en début de carrière",
+    "ages_debut": {
+      "avant_16_ans": {
+        "trimestres_requis": 5,
+        "trimestres_requis_4eme_trimestre": 4,
+        "exception_4eme_trim": "Si né oct-nov-déc"
+      },
+      "avant_18_ans": {
+        "trimestres_requis": 5,
+        "trimestres_requis_4eme_trimestre": 4,
+        "exception_4eme_trim": "Si né oct-nov-déc"
+      },
+      "avant_20_ans": {
+        "trimestres_requis": 5,
+        "trimestres_requis_4eme_trimestre": 4,
+        "exception_4eme_trim": "Si né oct-nov-déc"
+      },
+      "avant_21_ans": {
+        "trimestres_requis": 5,
+        "trimestres_requis_4eme_trimestre": 4,
+        "exception_4eme_trim": "Si né oct-nov-déc"
+      }
+    },
+    "exception_regime_agricole": {
+      "applicable": true,
+      "trimestres_requis": 4,
+      "description": "Régime non-salariés agricoles : 4 trimestres requis au lieu de 5"
+    },
+    "periodes_prises_en_compte": [
+      "Cotisations assurance vieillesse obligatoire",
+      "Assurance volontaire",
+      "Rachats et versements pour la retraite",
+      "Périodes assimilées validées"
+    ]
+  },
+  
+  "condition_duree_cotisee": {
+    "principe": "Durée d'assurance cotisée = durée requise pour le taux plein selon année de naissance",
+    "durees_par_generation": {
+      "1961_sept_dec": 169,
+      "1962": 169,
+      "1963_jan_aout": 170,
+      "1963_sept_dec": 170,
+      "1964": 171,
+      "1965_et_suivantes": 172
+    },
+    "clause_sauvegarde": {
+      "applicable": "Générations 1961-1963",
+      "condition": "168 trimestres acquis avant 01/09/2023",
+      "avantage": "Permet départ plus tôt"
+    }
+  },
+  
+  "ages_depart": {
+    "avant_16_ans": {
+      "age_minimum_mois": 696,
+      "description": "58 ans"
+    },
+    "avant_18_ans": {
+      "age_minimum_mois": 720,
+      "description": "60 ans"
+    },
+    "avant_20_ans": {
+      "description": "60 à 62 ans selon génération",
+      "ages_par_generation": {
+        "1962": 720,
+        "1963_sept_dec": 723,
+        "1964": 726,
+        "1965": 729,
+        "1966": 732,
+        "1967": 735,
+        "1968": 738,
+        "1969": 741,
+        "1970_et_suivantes": 744
+      }
+    },
+    "avant_21_ans": {
+      "age_minimum_mois": 756,
+      "description": "63 ans"
+    }
+  },
+  
+  "trimestres_strictement_cotises": [
+    "Cotisations assurance vieillesse obligatoire",
+    "Assurance volontaire vieillesse",
+    "Validation de carrière (lois 1964 et 1985)",
+    "Congé de formation",
+    "Stage de formation professionnelle",
+    "Cotisations arriérées",
+    "Périodes validées par présomption",
+    "VPLR apprentissage (contrat 01/07/1972 - 31/12/2013)"
+  ],
+  
+  "rachats": {
+    "avant_2011": {
+      "toujours_comptabilises": [
+        "Activité hors de France",
+        "Affiliation tardive",
+        "Travail pénal",
+        "Tierce personne",
+        "Indemnité soins tuberculeux",
+        "Activité organisations internationales"
+      ]
+    },
+    "apres_2011": {
+      "toujours_comptabilises": [
+        "Tierce personne",
+        "Indemnité tuberculeux"
+      ],
+      "condition": "Autres rachats : UNIQUEMENT si option 'taux + durée'"
+    }
+  },
+  
+  "trimestres_reputes_cotises": {
+    "service_national": {
+      "limite": 4,
+      "description": "Maximum 4 trimestres sur l'ensemble de la carrière",
+      "validation": "De date à date par périodes de 90 jours",
+      "placement": "Solution la plus favorable"
+    },
+    "maladie_at": {
+      "limite": 4,
+      "description": "Maximum 4 trimestres (maladie + AT cumulés)",
+      "validation": "Chaque trimestre civil avec 60ème jour d'indemnisation",
+      "exclusion": "Rentes AT pour incapacité permanente ≥66%"
+    },
+    "maternite_adoption": {
+      "limite": null,
+      "description": "AUCUNE limite - Tous les trimestres comptent",
+      "validation": "1 trimestre par période de 90 jours d'IJ (minimum 1)"
+    },
+    "invalidite": {
+      "limite": 2,
+      "description": "Maximum 2 trimestres sur l'ensemble de la carrière",
+      "validation": "Chaque trimestre civil avec 3 mensualités de pension"
+    },
+    "chomage": {
+      "limite": 4,
+      "description": "Maximum 4 trimestres sur l'ensemble de la carrière",
+      "periodes_concernees": [
+        "Chômage involontaire avant 01/01/1980",
+        "Chômage indemnisé à compter du 01/01/1980",
+        "Différés d'indemnisation",
+        "Indemnité d'activité partielle",
+        "Allocation des travailleurs indépendants"
+      ],
+      "exception_avant_1980": {
+        "applicable": true,
+        "description": "Chômage présomption avant 1980 : pas de limite (considérés comme cotisés)"
+      }
+    },
+    "avpf_ava": {
+      "limite": 4,
+      "description": "Maximum 4 trimestres sur l'ensemble de la carrière",
+      "nouveaute_2023": true,
+      "avpf": "Assurance vieillesse des parents au foyer",
+      "ava": "Assurance vieillesse des aidants"
+    },
+    "c2p": {
+      "limite": null,
+      "description": "AUCUNE limite - Tous les trimestres acquis au titre du C2P"
+    }
+  },
+  
+  "periodes_exclues": [
+    "Périodes assimilées (sauf réputées cotisées)",
+    "Périodes reconnues équivalentes",
+    "Majorations de durée d'assurance (sauf C2P)",
+    "Périodes volontariat associatif",
+    "VPLR études supérieures/formation initiale/assistant maternel (post 13/10/2008)"
+  ],
+  
+  "regles_cumul": {
+    "maximum_par_an": {
+      "limite": 4,
+      "description": "Maximum 4 trimestres cotisés ou réputés cotisés par année civile, tous régimes confondus"
+    },
+    "priorite_affectation": {
+      "principe": "Retenir l'affectation la plus favorable",
+      "objectif": "Nombre de trimestres réputés cotisés le plus élevé sur l'ensemble de la carrière"
+    }
+  },
+  
+  "periodes_etranger": {
+    "applicable": true,
+    "principe": "Périodes attestées par l'autre État retenues telles qu'indiquées",
+    "conditions": "Subordonnées aux mêmes conditions que les périodes françaises"
+  },
+  
+  "conditions_par_generation": {
+    "1963_sept_dec": {
+      "debut_16_ans": {
+        "age_depart_mois": 708,
+        "age_depart_description": "59 ans",
+        "duree_cotisee": 170
+      },
+      "debut_18_ans": {
+        "age_depart_mois": 720,
+        "age_depart_description": "60 ans",
+        "duree_cotisee": 170
+      },
+      "debut_20_ans": {
+        "age_depart_mois": 723,
+        "age_depart_description": "60 ans 3 mois",
+        "duree_cotisee": 170
+      },
+      "clause_sauvegarde": true
+    },
+    "1964": {
+      "debut_16_ans": {
+        "age_depart_mois": 696,
+        "age_depart_description": "58 ans",
+        "duree_cotisee": 171
+      },
+      "debut_18_ans": {
+        "age_depart_mois": 720,
+        "age_depart_description": "60 ans",
+        "duree_cotisee": 171
+      },
+      "debut_20_ans": {
+        "age_depart_mois": 726,
+        "age_depart_description": "60 ans 6 mois",
+        "duree_cotisee": 171
+      }
+    },
+    "1965": {
+      "debut_16_ans": {
+        "age_depart_mois": 696,
+        "age_depart_description": "58 ans",
+        "duree_cotisee": 172
+      },
+      "debut_18_ans": {
+        "age_depart_mois": 720,
+        "age_depart_description": "60 ans",
+        "duree_cotisee": 172
+      },
+      "debut_20_ans": {
+        "age_depart_mois": 729,
+        "age_depart_description": "60 ans 9 mois",
+        "duree_cotisee": 172
+      },
+      "debut_21_ans": {
+        "age_depart_mois": 756,
+        "age_depart_description": "63 ans",
+        "duree_cotisee": 172
+      }
+    },
+    "1966": {
+      "debut_16_ans": {
+        "age_depart_mois": 696,
+        "age_depart_description": "58 ans",
+        "duree_cotisee": 172
+      },
+      "debut_18_ans": {
+        "age_depart_mois": 720,
+        "age_depart_description": "60 ans",
+        "duree_cotisee": 172
+      },
+      "debut_20_ans": {
+        "age_depart_mois": 732,
+        "age_depart_description": "61 ans",
+        "duree_cotisee": 172
+      },
+      "debut_21_ans": {
+        "age_depart_mois": 756,
+        "age_depart_description": "63 ans",
+        "duree_cotisee": 172
+      }
+    },
+    "1967": {
+      "debut_16_ans": {
+        "age_depart_mois": 696,
+        "age_depart_description": "58 ans",
+        "duree_cotisee": 172
+      },
+      "debut_18_ans": {
+        "age_depart_mois": 720,
+        "age_depart_description": "60 ans",
+        "duree_cotisee": 172
+      },
+      "debut_20_ans": {
+        "age_depart_mois": 735,
+        "age_depart_description": "61 ans 3 mois",
+        "duree_cotisee": 172
+      },
+      "debut_21_ans": {
+        "age_depart_mois": 756,
+        "age_depart_description": "63 ans",
+        "duree_cotisee": 172
+      }
+    },
+    "1968": {
+      "debut_16_ans": {
+        "age_depart_mois": 696,
+        "age_depart_description": "58 ans",
+        "duree_cotisee": 172
+      },
+      "debut_18_ans": {
+        "age_depart_mois": 720,
+        "age_depart_description": "60 ans",
+        "duree_cotisee": 172
+      },
+      "debut_20_ans": {
+        "age_depart_mois": 738,
+        "age_depart_description": "61 ans 6 mois",
+        "duree_cotisee": 172
+      },
+      "debut_21_ans": {
+        "age_depart_mois": 756,
+        "age_depart_description": "63 ans",
+        "duree_cotisee": 172
+      }
+    },
+    "1969": {
+      "debut_16_ans": {
+        "age_depart_mois": 696,
+        "age_depart_description": "58 ans",
+        "duree_cotisee": 172
+      },
+      "debut_18_ans": {
+        "age_depart_mois": 720,
+        "age_depart_description": "60 ans",
+        "duree_cotisee": 172
+      },
+      "debut_20_ans": {
+        "age_depart_mois": 741,
+        "age_depart_description": "61 ans 9 mois",
+        "duree_cotisee": 172
+      },
+      "debut_21_ans": {
+        "age_depart_mois": 756,
+        "age_depart_description": "63 ans",
+        "duree_cotisee": 172
+      }
+    },
+    "1970_et_suivantes": {
+      "debut_16_ans": {
+        "age_depart_mois": 696,
+        "age_depart_description": "58 ans",
+        "duree_cotisee": 172
+      },
+      "debut_18_ans": {
+        "age_depart_mois": 720,
+        "age_depart_description": "60 ans",
+        "duree_cotisee": 172
+      },
+      "debut_20_ans": {
+        "age_depart_mois": 744,
+        "age_depart_description": "62 ans",
+        "duree_cotisee": 172
+      },
+      "debut_21_ans": {
+        "age_depart_mois": 756,
+        "age_depart_description": "63 ans",
+        "duree_cotisee": 172
+      }
+    }
+  },
+  
+  "controles_coherence": [
+    {
+      "id": "RAC_C01",
+      "nom": "Trimestres début activité insuffisants",
+      "condition": "trimestres_debut_activite < trimestres_requis",
+      "type": "ERREUR_CRITIQUE",
+      "message": "Condition de début d'activité non remplie. {trimestres_debut_activite} trimestres validés, {trimestres_requis} requis avant fin année des {age_limite} ans"
+    },
+    {
+      "id": "RAC_C02",
+      "nom": "Trimestres cotisés insuffisants",
+      "condition": "trimestres_cotises < duree_requise_taux_plein",
+      "type": "ERREUR_CRITIQUE",
+      "message": "Durée cotisée insuffisante. {trimestres_cotises} trimestres cotisés, {duree_requise_taux_plein} requis pour génération {annee_naissance}"
+    },
+    {
+      "id": "RAC_C03",
+      "nom": "Dépassement limite trimestres réputés cotisés",
+      "condition": "trimestres_reputes_type > limite_type",
+      "type": "AVERTISSEMENT",
+      "message": "Dépassement limite {type_periode}. {trimestres_comptabilises} trimestres comptabilisés, maximum {limite} autorisés"
+    },
+    {
+      "id": "RAC_C04",
+      "nom": "Cumul >4 trimestres/an",
+      "condition": "sum(trimestres_annee) > 4",
+      "type": "ERREUR",
+      "message": "Dépassement règle maximum 4 trimestres/an. Année {annee} : {total_trimestres} trimestres"
+    },
+    {
+      "id": "RAC_C05",
+      "nom": "Âge départ incohérent avec génération",
+      "condition": "age_depart_calcule != age_depart_reglementaire",
+      "type": "ERREUR",
+      "message": "Âge de départ incohérent. Calculé : {age_depart_calcule}, Réglementaire : {age_depart_reglementaire}"
+    },
+    {
+      "id": "RAC_C06",
+      "nom": "Clause de sauvegarde non vérifiée",
+      "condition": "generation IN [1961, 1962, 1963] AND NOT clause_sauvegarde_verifiee",
+      "type": "AVERTISSEMENT",
+      "message": "Clause de sauvegarde applicable (168 trimestres avant 01/09/2023). Vérifier si client peut en bénéficier"
+    },
+    {
+      "id": "RAC_C07",
+      "nom": "Rachat VPLR post-2011 compté à tort",
+      "condition": "rachat_post_2011 AND option != 'taux_et_duree'",
+      "type": "ERREUR",
+      "message": "Rachat VPLR post-2011 ne compte que si option 'taux + durée'. Option actuelle : {option}"
+    }
+  ],
+  
+  "alertes": {
+    "rouge": [
+      {
+        "condition": "trimestres_debut_activite < trimestres_requis",
+        "message": "Condition de début d'activité non remplie - RACL impossible"
+      },
+      {
+        "condition": "trimestres_cotises < duree_requise_taux_plein",
+        "message": "Durée cotisée insuffisante - RACL impossible"
+      },
+      {
+        "condition": "confusion_valides_cotises",
+        "message": "Confusion entre trimestres validés et cotisés détectée"
+      },
+      {
+        "condition": "depassement_limites_non_detecte",
+        "message": "Dépassement limite trimestres réputés cotisés non pris en compte"
+      }
+    ],
+    "orange": [
+      {
+        "condition": "trimestres_manquants <= 2",
+        "message": "Proche de l'éligibilité ({trimestres_manquants} trimestres manquants) - Envisager rachat VPLR"
+      },
+      {
+        "condition": "rachats_vplr_eligibles",
+        "message": "Rachats VPLR potentiellement éligibles pour compléter la durée cotisée"
+      },
+      {
+        "condition": "periodes_etranger_non_incluses",
+        "message": "Périodes à l'étranger non prises en compte - Vérifier formulaires E205"
+      },
+      {
+        "condition": "clause_sauvegarde_applicable",
+        "message": "Clause de sauvegarde applicable (générations 1961-1963) - Peut permettre départ plus tôt"
+      }
+    ],
+    "jaune": [
+      {
+        "condition": "releve_carriere_incomplet",
+        "message": "Relevé de carrière possiblement incomplet - Vérifier périodes manquantes"
+      },
+      {
+        "condition": "ne_4eme_trimestre",
+        "message": "Né 4ème trimestre - 4 trimestres requis au lieu de 5 pour début activité"
+      },
+      {
+        "condition": "affectation_non_optimisee",
+        "message": "Affectation trimestres réputés cotisés non optimisée - Vérifier solutions alternatives"
+      },
+      {
+        "condition": "chomage_avant_1980",
+        "message": "Chômage présomption avant 1980 détecté - Pas de limite (avantage)"
+      }
+    ]
+  },
+  
+  "sources_reglementaires": {
+    "code_securite_sociale": [
+      "L.351-1-1 - Retraite anticipée carrière longue"
+    ],
+    "lois": [
+      {
+        "numero": "2003-775",
+        "date": "2003-08-21",
+        "contenu": "Création du dispositif RACL"
+      },
+      {
+        "numero": "2023-270",
+        "date": "2023-04-14",
+        "contenu": "Réforme retraites 2023 (LFRSS)"
+      }
+    ],
+    "decrets": [
+      {
+        "numero": "2023-436",
+        "date": "2023-06-03",
+        "contenu": "Décret d'application réforme 2023"
+      }
+    ],
+    "circulaires_cnav": [
+      {
+        "numero": "2023-14",
+        "date": "2023-07-10",
+        "url": "https://legislation.lassuranceretraite.fr/Pdf/circulaire_cnav_2023_14_10072023.pdf",
+        "contenu": "Modalités d'application RACL réforme 2023"
+      }
+    ],
+    "formulaires": [
+      {
+        "nom": "Cerfa N13362*05",
+        "contenu": "Demande retraite anticipée carrière longue"
+      },
+      {
+        "nom": "Formulaire E205",
+        "contenu": "Périodes à l'étranger (UE)"
+      }
+    ]
+  },
+  
+  "conseils_strategiques": {
+    "optimisation_trimestres": {
+      "affectation_strategique": {
+        "principe": "Utiliser l'affectation la plus favorable",
+        "objectif": "Maximiser trimestres réputés cotisés"
+      },
+      "rachats_vplr": {
+        "avant_2011": "Comptent automatiquement",
+        "apres_2011": "UNIQUEMENT si option 'taux + durée'",
+        "apprentissage": "Comptent si contrat 01/07/1972 - 31/12/2013"
+      }
+    },
+    "cas_particuliers": {
+      "generation_1961_1963": {
+        "action": "Vérifier clause de sauvegarde (168 trimestres avant 01/09/2023)",
+        "avantage": "Peut permettre départ plus tôt"
+      },
+      "chomage_avant_1980": {
+        "action": "Présomption chômage indemnisé",
+        "avantage": "AUCUNE limite trimestres réputés cotisés"
+      },
+      "maternite": {
+        "action": "Aucune limite de trimestres",
+        "avantage": "Tous comptent comme réputés cotisés"
+      }
+    },
+    "arbitrage_rachat_vs_attente": {
+      "si_1_2_trimestres_manquants": {
+        "option_1": "Continuer à cotiser (6-12 mois)",
+        "option_2": "Racheter trimestres VPLR (attention : coût élevé)",
+        "option_3": "Vérifier anomalies relevé (périodes non reportées)"
+      },
+      "calcul_rentabilite": {
+        "formule": "Gain anticipation = Pension annuelle × Années gagnées",
+        "cout": "Coût rachat = Prix VPLR par trimestre × Nombre trimestres",
+        "rentabilite": "Si Gain > Coût (sur espérance de vie)"
+      }
+    }
+  },
+  
+  "pieges_frequents": [
+    "Confondre trimestres validés et trimestres cotisés",
+    "Négliger les limites de trimestres réputés cotisés (4-4-2-4)",
+    "Oublier la règle du maximum 4 trimestres/an",
+    "Compter les rachats post-2011 sans vérifier l'option choisie",
+    "Ne pas vérifier la clause de sauvegarde (générations 1961-1963)",
+    "Mal placer les trimestres réputés cotisés (ne pas optimiser)",
+    "Ignorer l'exception chômage avant 1980 (pas de limite)",
+    "Compter les périodes équivalentes comme cotisées (faux)"
+  ]
+}

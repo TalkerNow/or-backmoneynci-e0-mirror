@@ -1,0 +1,119 @@
+{
+  "skill_info": {
+    "skill_id": "SKILL_NORMALISATION_QUESTION_v1",
+    "nom": "Normalisation de Question",
+    "version": "1.0",
+    "date": "2026-04-06",
+    "position": "pre-processing",
+    "utilisateurs_cibles": "experts-comptables, utilisateurs non-experts retraite"
+  },
+
+  "seuils_score": {
+    "reformulation": 70,
+    "clarification": 40,
+    "orientation": 0
+  },
+
+  "domaines": [
+    {
+      "id": "racl",
+      "skill_cible": "skill_racl",
+      "mots_cles": ["carrière longue", "départ anticipé", "partir avant", "commencé jeune", "avant 60 ans", "avant 62 ans", "avant l'âge légal", "RACL", "carrière longue"],
+      "donnees_frozen_requises": ["date_naissance", "trimestres_avant_18_ans", "trimestres_cotises"]
+    },
+    {
+      "id": "pension_estimation",
+      "skill_cible": ["skill_cnav", "skill_complementaires"],
+      "mots_cles": ["combien il va toucher", "montant pension", "calcul retraite", "estimation", "pension mensuelle", "combien touchera", "quel montant", "revenu retraite"],
+      "donnees_frozen_requises": ["date_naissance", "trimestres_valides", "sam"]
+    },
+    {
+      "id": "rachat_trimestres",
+      "skill_cible": "skill_vplr",
+      "mots_cles": ["racheter", "trimestres manquants", "coût rachat", "VPLR", "versement pour la retraite", "compléter sa retraite"],
+      "donnees_frozen_requises": ["trimestres_manquants", "age_actuel"]
+    },
+    {
+      "id": "trimestres_etranger",
+      "skill_cible": "skill_trimestres_etranger",
+      "mots_cles": ["étranger", "expatrié", "hors France", "a travaillé à", "période internationale", "détachement", "convention bilatérale", "UE"],
+      "donnees_frozen_requises": ["periodes_etrangeres", "trimestres_francais"]
+    },
+    {
+      "id": "retraite_progressive",
+      "skill_cible": "skill_retraite_progressive",
+      "mots_cles": ["temps partiel", "retraite progressive", "réduire son activité", "mi-temps", "80%", "travailler moins"],
+      "donnees_frozen_requises": ["age_actuel", "trimestres_valides"]
+    },
+    {
+      "id": "cumul_emploi_retraite",
+      "skill_cible": "skill_cumul_emploi_retraite",
+      "mots_cles": ["continuer à travailler", "cumuler", "après la retraite", "reprise activité", "CER", "travailler après"],
+      "donnees_frozen_requises": ["date_naissance", "trimestres_valides"]
+    },
+    {
+      "id": "analyse_carriere",
+      "skill_cible": "skill_analyse_releve",
+      "mots_cles": ["relevé de carrière", "analyse de situation", "trous", "lacunes", "trimestres validés", "RIS", "situation retraite"],
+      "donnees_frozen_requises": ["releve_disponible"]
+    },
+    {
+      "id": "date_depart",
+      "skill_cible": "skill_cnav",
+      "mots_cles": ["quand partir", "quel âge", "date optimale", "à partir de quand", "date de départ", "meilleur moment"],
+      "donnees_frozen_requises": ["date_naissance", "trimestres_valides"]
+    },
+    {
+      "id": "reversion",
+      "skill_cible": "skill_reversion",
+      "mots_cles": ["réversion", "conjoint survivant", "veuf", "veuve", "après son décès", "pension de veuf", "pension de veuve", "si mon mari décède", "si ma femme décède", "décès du conjoint"],
+      "donnees_frozen_requises": ["date_naissance_beneficiaire", "lien_juridique", "pension_defunt"]
+    }
+  ],
+
+  "glossaire": {
+    "retraite de base": "pension CNAV (régime général)",
+    "complémentaire": "AGIRC-ARRCO ou IRCANTEC ou RCI selon statut professionnel",
+    "avoir le plein": "atteindre le taux plein (50%)",
+    "trimestres qui manquent": "trimestres manquants pour obtenir le taux plein",
+    "points retraite": "points AGIRC-ARRCO ou IRCANTEC (préciser selon régime)",
+    "départ à 62 ans": "départ à l'âge légal (pour générations nées avant 1968)",
+    "la réforme": "réforme retraites 2023 — Loi n°2023-270 du 14/04/2023",
+    "racheter des trimestres": "rachat VPLR (Versement Pour la Retraite)",
+    "travailler à mi-temps": "retraite progressive (si conditions âge et trimestres remplies)",
+    "continuer à travailler après": "cumul emploi-retraite (CER)",
+    "invalidité": "pension d'invalidité — régime distinct de la retraite",
+    "pension de réversion": "hors périmètre outil — orienter vers EOR",
+    "retraite du conjoint": "hors périmètre outil sauf si dossier conjoint chargé"
+  },
+
+  "score_calcul": {
+    "domaine_identifie": 30,
+    "donnees_frozen_suffisantes": 30,
+    "termes_reconnus": 20,
+    "coherence_grammaticale": 10,
+    "personne_non_ambigue": 10
+  },
+
+  "hors_perimetre": [
+    {
+      "pattern": ["fiscalité", "impôt", "IR", "ISF", "succession"],
+      "message": "Cette question concerne la fiscalité, pas la retraite. Pour les aspects fiscaux, consultez votre direction fiscale."
+    },
+    {
+      "pattern": ["fonctionnaire", "régime spécial", "SNCF", "RATP", "EDF", "militaire"],
+      "message": "Ce régime spécial n'est pas couvert par cet outil. Contactez EOR pour une consultation spécialisée."
+    },
+    {
+      "pattern": ["invalidité", "AAH", "incapacité de travail"],
+      "message": "La pension d'invalidité est un régime distinct de la retraite. Cet outil couvre uniquement les droits retraite."
+    }
+  ],
+
+  "questions_clarification_types": {
+    "personne_ambigue": "Cette question concerne le client lui-même ou son conjoint ?",
+    "domaine_ambigu": "Vous souhaitez une estimation du montant de pension, ou savoir à quel âge il peut partir ?",
+    "statut_professionnel_manquant": "Votre client est salarié du privé, indépendant (artisan/commerçant), ou contractuel de la fonction publique ?",
+    "donnees_manquantes": "Pour répondre, j'ai besoin du relevé de carrière. Est-il disponible dans le dossier ?"
+  }
+}

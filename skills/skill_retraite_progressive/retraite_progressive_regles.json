@@ -1,0 +1,521 @@
+{
+  "skill_info": {
+    "nom": "Retraite Progressive (RP)",
+    "version": "1.0",
+    "date": "2025-11-10",
+    "description": "Dispositif d'aménagement de fin de carrière permettant de cumuler activité à temps partiel et fraction de pension provisoire",
+    "source_reglementaire": "CSS L.351-15, L.351-16 | Décret 2017-1645 | Circulaire CNAV 2018-31"
+  },
+  
+  "declencheurs": [
+    "retraite progressive",
+    "RP",
+    "temps partiel retraite",
+    "mi-temps fin carrière",
+    "réduire activité",
+    "travailler à 80% et toucher pension",
+    "cumul temps partiel pension",
+    "transition progressive",
+    "retraite partielle"
+  ],
+  
+  "conditions_eligibilite": {
+    "condition_1_age": {
+      "description": "Âge minimum : âge légal - 2 ans, sans être inférieur à 60 ans",
+      "formule": "age_rp = max(age_legal - 2, 60)",
+      "controle_id": "RP_C01",
+      "exemples": {
+        "generation_1962": {
+          "age_legal": "62 ans 6 mois",
+          "age_rp": "60 ans 6 mois"
+        },
+        "generation_1965": {
+          "age_legal": "63 ans",
+          "age_rp": "61 ans"
+        },
+        "generation_1972": {
+          "age_legal": "64 ans",
+          "age_rp": "62 ans"
+        }
+      }
+    },
+    
+    "condition_2_duree": {
+      "description": "Durée d'assurance minimale tous régimes confondus",
+      "trimestres_requis": 150,
+      "regimes_comptabilises": [
+        "CNAV (régime général)",
+        "MSA salariés",
+        "MSA non-salariés",
+        "RSI/SSI (artisans, commerçants)",
+        "CIPAV et professions libérales",
+        "Régimes spéciaux (depuis 2015)"
+      ],
+      "periodes_comptabilisees": [
+        "Trimestres cotisés",
+        "Trimestres assimilés",
+        "Périodes reconnues équivalentes (PRE)",
+        "Périodes étrangères (UE, conventions bilatérales)"
+      ],
+      "controle_id": "RP_C02"
+    },
+    
+    "condition_3_temps_partiel": {
+      "description": "Activité salariée à temps partiel entre 40% et 80%",
+      "quotite_min": 40,
+      "quotite_max": 80,
+      "formule": "quotite = (heures_temps_partiel / heures_temps_complet) × 100",
+      "multi_employeurs_autorise": true,
+      "depuis": "2018-01-01",
+      "controle_id": "RP_C03",
+      
+      "exclusions": {
+        "description": "Salariés dont la durée n'est pas exprimée en heures",
+        "liste": [
+          "VRP (sauf horaire précis)",
+          "Mandataires sociaux / dirigeants",
+          "Forfait jours sur l'année",
+          "Artisans-taxis affiliés assurance volontaire"
+        ]
+      },
+      
+      "cas_particuliers": {
+        "particuliers_employeurs": {
+          "duree_conventionnelle": 40,
+          "unite": "heures/semaine",
+          "reference": "CCN 24/11/1999 art. 15-a"
+        },
+        "assistantes_maternelles": {
+          "duree_conventionnelle": 45,
+          "unite": "heures/semaine",
+          "calcul": "Nombre moyen d'heures d'accueil par contrat",
+          "reference": "CCN 01/07/2004 art. 6"
+        }
+      }
+    }
+  },
+  
+  "calcul_fraction_pension": {
+    "etape_1_montant_entier": {
+      "description": "Calcul provisoire de la pension entière",
+      "formule": "pension_entiere = SAM × taux × (trimestres_rg / trimestres_requis)",
+      "date_arret_compte": "Dernier jour du trimestre civil précédant la date d'effet",
+      "decote_plafonnee": {
+        "description": "Coefficient de minoration plafonné à 25% (au lieu de 37,5%)",
+        "loi": "Loi 2014-40 du 20/01/2014",
+        "formule": "abattement_max = min(trimestres_manquants × 0.625%, 25%)"
+      },
+      "avantages_applicables": [
+        "Majoration pour enfants (10%)",
+        "Surcote (si applicable)",
+        "Majoration handicapé lourd",
+        "Minimum contributif"
+      ],
+      "avantages_non_applicables": [
+        "ASPA (allocation solidarité personnes âgées)"
+      ],
+      "controles": ["RP_C04", "RP_C05", "RP_C06"]
+    },
+    
+    "etape_2_pourcentage_fractionnement": {
+      "description": "Calcul de la fraction de pension versée",
+      "formule": "fraction_pension = 100 - quotite_travaillee",
+      "exemples": {
+        "quotite_40": { "travail": 40, "pension": 60 },
+        "quotite_50": { "travail": 50, "pension": 50 },
+        "quotite_60": { "travail": 60, "pension": 40 },
+        "quotite_70": { "travail": 70, "pension": 30 },
+        "quotite_80": { "travail": 80, "pension": 20 }
+      },
+      "controle_id": "RP_C07"
+    },
+    
+    "etape_3_montant_verse": {
+      "description": "Montant mensuel de la retraite progressive",
+      "formule": "montant_rp = pension_entiere × (fraction_pension / 100)"
+    }
+  },
+  
+  "service_et_modification": {
+    "periode_annuelle": {
+      "description": "Fraction figée pendant 1 an minimum",
+      "duree": 12,
+      "unite": "mois",
+      "date_debut": "Date d'effet de la RP",
+      "date_fin": "Même jour l'année suivante"
+    },
+    
+    "modification_quotite": {
+      "description": "Nouvelle fraction applicable à la période annuelle suivante",
+      "exception": "Si changement le jour anniversaire, application immédiate",
+      "controle_id": "RP_C08"
+    },
+    
+    "suspension": {
+      "description": "Arrêt provisoire du paiement",
+      "cas": [
+        {
+          "libelle": "Cessation totale activité avant âge légal",
+          "date_effet": "1er jour du mois suivant la cessation",
+          "reprise_possible": true
+        },
+        {
+          "libelle": "Cessation totale activité à/après âge légal",
+          "date_effet": "1er jour du mois suivant",
+          "recommandation": "Demander retraite définitive"
+        },
+        {
+          "libelle": "Non-réponse au questionnaire de contrôle",
+          "date_effet": "1er jour du mois suivant l'échéance",
+          "retablissement_possible": true
+        }
+      ],
+      "controle_id": "RP_C09"
+    },
+    
+    "suppression": {
+      "description": "Arrêt définitif (fin de tout droit ultérieur à une RP)",
+      "cas": [
+        {
+          "libelle": "Reprise activité temps complet",
+          "date_effet": "1er jour du mois suivant"
+        },
+        {
+          "libelle": "Quotité hors limites (<40% ou >80%)",
+          "date_effet": "1er jour du mois suivant"
+        },
+        {
+          "libelle": "Demande de retraite définitive",
+          "date_effet": "1er jour du mois suivant la cessation"
+        }
+      ],
+      "controle_id": "RP_C10"
+    }
+  },
+  
+  "liquidation_definitive": {
+    "description": "Recalcul complet à la cessation totale d'activité",
+    "nouveaux_elements": [
+      "Salaires perçus à temps partiel pendant la RP",
+      "Trimestres validés pendant la RP",
+      "Nouveau SAM (25 meilleures années)",
+      "Nouveau taux (si taux plein atteint)",
+      "Surcote (si dépassement durée requise après âge légal)"
+    ],
+    
+    "regle_montant_minimal": {
+      "description": "Garantie du montant provisoire revalorisé",
+      "formule": "pension_definitive = max(pension_recalculee, pension_entiere_provisoire_revalorisee)",
+      "controle_id": "RP_C11"
+    },
+    
+    "date_effet": {
+      "description": "Selon règles de droit commun (Art. R.351-37 CSS)",
+      "principe": "1er jour du mois suivant la demande ou date choisie",
+      "depart_anticipe_possible": [
+        "Carrière longue (si conditions remplies)",
+        "Handicap (si conditions remplies)"
+      ],
+      "controle_id": "RP_C12"
+    },
+    
+    "cumul_emploi_retraite": {
+      "description": "Règles de cumul applicables après liquidation définitive",
+      "cumul_total_si": [
+        "Âge légal atteint + taux plein",
+        "Ou 67 ans"
+      ],
+      "sinon": "Cumul plafonné"
+    }
+  },
+  
+  "controles_coherence": [
+    {
+      "id": "RP_C01",
+      "condition": "age_assure >= age_rp_minimal",
+      "type": "ERREUR_CRITIQUE",
+      "categorie": "ROUGE",
+      "message": "Âge insuffisant. Âge minimum pour la RP : {age_rp} ans.",
+      "action": "Bloquer la demande"
+    },
+    {
+      "id": "RP_C02",
+      "condition": "trimestres_tous_regimes >= 150",
+      "type": "ERREUR_CRITIQUE",
+      "categorie": "ROUGE",
+      "message": "Durée d'assurance insuffisante. Il manque {x} trimestres pour atteindre 150.",
+      "action": "Bloquer la demande"
+    },
+    {
+      "id": "RP_C03",
+      "condition": "40 <= quotite_travaillee <= 80",
+      "type": "ERREUR_CRITIQUE",
+      "categorie": "ROUGE",
+      "message": "Quotité de travail hors limites ({quotite}%). Doit être entre 40 et 80%.",
+      "action": "Bloquer la demande"
+    },
+    {
+      "id": "RP_C04",
+      "condition": "sam > 0",
+      "type": "ERREUR_CRITIQUE",
+      "categorie": "ROUGE",
+      "message": "Salaire annuel moyen nul ou négatif. Vérifier la carrière.",
+      "action": "Vérifier relevé de carrière"
+    },
+    {
+      "id": "RP_C05",
+      "condition": "37.5 <= taux <= 50",
+      "type": "ERREUR_CRITIQUE",
+      "categorie": "ROUGE",
+      "message": "Taux hors limites ({taux}%). Vérifier calcul décote.",
+      "action": "Recalculer le taux"
+    },
+    {
+      "id": "RP_C06",
+      "condition": "trimestres_rg > 0",
+      "type": "ERREUR_CRITIQUE",
+      "categorie": "ROUGE",
+      "message": "Aucun trimestre au régime général.",
+      "action": "Vérifier affiliation"
+    },
+    {
+      "id": "RP_C07",
+      "condition": "20 <= fraction_pension <= 60",
+      "type": "ERREUR_CRITIQUE",
+      "categorie": "ROUGE",
+      "message": "Fraction pension hors limites ({fraction}%). Vérifier calcul quotité.",
+      "action": "Recalculer la fraction"
+    },
+    {
+      "id": "RP_C08",
+      "condition": "modification_respecte_periode_annuelle",
+      "type": "AVERTISSEMENT",
+      "categorie": "ORANGE",
+      "message": "Modification trop fréquente. Attendre la période annuelle suivante.",
+      "action": "Informer sur règle de modification"
+    },
+    {
+      "id": "RP_C09",
+      "condition": "questionnaire_renvoye",
+      "type": "AVERTISSEMENT",
+      "categorie": "ORANGE",
+      "message": "Questionnaire de contrôle non renvoyé. Risque de suspension.",
+      "action": "Relancer l'assuré"
+    },
+    {
+      "id": "RP_C10",
+      "condition": "activite_conforme_limites",
+      "type": "AVERTISSEMENT",
+      "categorie": "ORANGE",
+      "message": "Activité hors limites. Risque de suppression de la RP.",
+      "action": "Alerter l'assuré"
+    },
+    {
+      "id": "RP_C11",
+      "condition": "pension_definitive >= pension_provisoire_revalorisee",
+      "type": "VERIFICATION",
+      "categorie": "VERT",
+      "message": "Règle du montant minimal respectée.",
+      "action": "Validation OK"
+    },
+    {
+      "id": "RP_C12",
+      "condition": "conditions_cumul_verifiees",
+      "type": "INFORMATION",
+      "categorie": "BLEU",
+      "message": "Cumul emploi-retraite possible après liquidation définitive.",
+      "action": "Informer l'assuré"
+    }
+  ],
+  
+  "alertes_metier": [
+    {
+      "type": "ORANGE",
+      "declencheur": "age proche âge légal",
+      "condition": "mois_avant_age_legal <= 12",
+      "message": "Vous aurez {age_legal} ans dans {mois} mois. Comparer RP vs retraite complète.",
+      "action_recommandee": "Simulation comparative RP / Retraite complète"
+    },
+    {
+      "type": "ORANGE",
+      "declencheur": "taux plein proche",
+      "condition": "trimestres_manquants <= 8",
+      "message": "Il manque {x} trimestres pour le taux plein. Attendre {date} pourrait être plus avantageux.",
+      "action_recommandee": "Arbitrage décote/attente"
+    },
+    {
+      "type": "JAUNE",
+      "declencheur": "quotité limite",
+      "condition": "quotite_travaillee <= 45 OR quotite_travaillee >= 75",
+      "message": "Quotité travaillée proche de la limite {limite}%. Attention aux modifications de contrat.",
+      "action_recommandee": "Vigilance sur les évolutions contractuelles"
+    },
+    {
+      "type": "JAUNE",
+      "declencheur": "multi-employeurs",
+      "condition": "nombre_employeurs > 1",
+      "message": "Plusieurs employeurs détectés. Vérifier la totalisation des quotités.",
+      "action_recommandee": "Contrôle cumul heures multi-employeurs"
+    },
+    {
+      "type": "ORANGE",
+      "declencheur": "pension provisoire faible",
+      "condition": "montant_rp_mensuel < 300",
+      "message": "Pension provisoire faible ({montant}€/mois). Envisager un report ?",
+      "action_recommandee": "Simulation avec report de départ"
+    },
+    {
+      "type": "ROUGE",
+      "declencheur": "pension invalidité",
+      "condition": "pension_invalidite_en_cours",
+      "message": "Attribution de la RP entraîne la suspension de votre pension d'invalidité.",
+      "action_recommandee": "Informer l'assuré des conséquences"
+    }
+  ],
+  
+  "cas_particuliers": {
+    "pension_invalidite": {
+      "description": "Titulaire d'une pension d'invalidité",
+      "regle": "Attribution RP = suspension pension invalidité",
+      "conservation": "Qualité d'ex-invalide conservée",
+      "avantages_retraite_definitive": [
+        "Taux plein dès l'âge légal",
+        "Possibilité MTP (majoration tierce personne)",
+        "Possibilité ASPA"
+      ],
+      "alerte_id": "RP_INVALIDE"
+    },
+    
+    "proche_eligibilite": {
+      "description": "Manque quelques trimestres pour atteindre 150",
+      "options": [
+        {
+          "option": "Continuer à cotiser",
+          "exemple": "3 trimestres manquants = 9 mois de travail"
+        },
+        {
+          "option": "Racheter des trimestres VPLR",
+          "conditions": "Selon barème en vigueur"
+        },
+        {
+          "option": "Vérifier anomalies du relevé",
+          "exemple": "Périodes non reportées, employeurs manquants"
+        }
+      ]
+    },
+    
+    "multi_employeurs_complexe": {
+      "description": "Salarié de 3+ employeurs avec calculs différents",
+      "methode": "Additionner toutes les quotités calculées séparément",
+      "attention": "Vérifier dépassement du plafond 80%"
+    }
+  },
+  
+  "documents_necessaires": {
+    "demande_initiale": [
+      "Formulaire de demande de retraite progressive",
+      "Contrat(s) de travail à temps partiel en cours",
+      "Déclaration sur l'honneur (pas d'autre activité professionnelle)",
+      "Attestation(s) employeur(s) (durée temps complet applicable)",
+      "Bulletins de salaire des 12 derniers mois civils"
+    ],
+    "delai_depot": "4 mois avant la date d'effet souhaitée",
+    
+    "modification_annuelle": [
+      "Nouveau contrat de travail (si modification)",
+      "Attestation employeur mise à jour",
+      "Bulletins de salaire de la période écoulée"
+    ],
+    
+    "liquidation_definitive": [
+      "Demande de retraite définitive (formulaire standard)",
+      "Justificatif cessation d'activité (certificat de travail)",
+      "Relevé de carrière à jour",
+      "Bulletins de salaire de la période RP"
+    ]
+  },
+  
+  "comparaisons": {
+    "rp_vs_retraite_complete": {
+      "criteres": [
+        {
+          "critere": "Âge de début",
+          "rp": "60 ans (ou âge légal -2)",
+          "retraite_complete": "Âge légal (62-64 ans)"
+        },
+        {
+          "critere": "Revenus",
+          "rp": "Salaire TP + fraction pension",
+          "retraite_complete": "Pension complète uniquement"
+        },
+        {
+          "critere": "Acquisition droits",
+          "rp": "✅ Nouveaux trimestres/points",
+          "retraite_complete": "❌ Aucun nouveau droit"
+        },
+        {
+          "critere": "Pension définitive",
+          "rp": "✅ Améliorée",
+          "retraite_complete": "Figée"
+        },
+        {
+          "critere": "Activité",
+          "rp": "Obligatoire (40-80%)",
+          "retraite_complete": "Cessation totale (ou cumul)"
+        }
+      ],
+      "recommandation": "RP avantageuse si taux plein non atteint ou souhait de transition progressive"
+    },
+    
+    "rp_vs_cumul_emploi_retraite": {
+      "criteres": [
+        {
+          "critere": "Âge de début",
+          "rp": "60 ans (ou âge légal -2)",
+          "cumul": "Âge légal minimum"
+        },
+        {
+          "critere": "Acquisition droits",
+          "rp": "✅ OUI",
+          "cumul": "❌ NON (sauf exceptions)"
+        },
+        {
+          "critere": "Pension",
+          "rp": "Fraction provisoire",
+          "cumul": "Pension définitive complète"
+        },
+        {
+          "critere": "Revenus",
+          "rp": "Salaire TP + fraction",
+          "cumul": "Salaire (libre) + pension"
+        },
+        {
+          "critere": "Plafond revenus",
+          "rp": "Aucun",
+          "cumul": "Oui (si cumul plafonné)"
+        }
+      ],
+      "recommandation": "RP préférable si taux plein non atteint ; Cumul si taux plein atteint et souhait revenus élevés"
+    }
+  },
+  
+  "evolutions_futures": {
+    "phase_2": [
+      "Calcul précis régimes complémentaires (AGIRC-ARRCO, IRCANTEC)",
+      "Simulation impact cotisations sur temps plein (L.241-3-1)",
+      "Intégration LURA (liquidation unique régimes alignés)"
+    ],
+    "phase_3": [
+      "Agents non-titulaires fonction publique",
+      "Assistantes maternelles (règles détaillées mensualisation/annualisation)",
+      "Retraite progressive des non-salariés (artisans, commerçants, professions libérales)"
+    ]
+  },
+  
+  "limites_phase_1": [
+    "Retraite progressive des non-salariés (hors scope)",
+    "Fonctionnaires titulaires (régime spécial)",
+    "Calcul détaillé AGIRC-ARRCO pendant RP",
+    "Calcul IRCANTEC pendant RP"
+  ]
+}
