@@ -140,7 +140,12 @@ Route::
                 // call-reports
                 Route::apiResource('call-reports', 'Api\CallReportController');
                 Route::get('call-reports/client/{clientId}', 'Api\CallReportController@getByClient');
-                
+
+                // skills catalog (IA architecture)
+                // ATTENTION : skills/id/{skillId} DOIT être avant skills/{code}
+                Route::get('skills', 'Api\SkillsCatalogController@index');
+                Route::get('skills/id/{skillId}', 'Api\SkillsCatalogController@showBySkillId');
+                Route::get('skills/{code}', 'Api\SkillsCatalogController@showByCode');
             });
 
 
