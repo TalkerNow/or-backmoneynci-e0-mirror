@@ -1,0 +1,463 @@
+{
+  "skill_info": {
+    "nom": "VPLR - Versement Pour La Retraite",
+    "version": "2.0",
+    "date": "2025-11-10",
+    "base_reglementaire": "Circulaire CNAV 2025-01 du 13/01/2025",
+    "token_estimate_md": 5800,
+    "token_estimate_json": 3200,
+    "token_estimate_total": 9000
+  },
+  
+  "declencheurs": [
+    "VPLR",
+    "rachat trimestres",
+    "racheter",
+    "versement retraite",
+    "etudes superieures",
+    "annees incompletes",
+    "cout rachat",
+    "rentabilite rachat"
+  ],
+  
+  "conditions_eligibilite": {
+    "age_minimum": 20,
+    "age_maximum": 66,
+    "age_maximum_exclus": 67,
+    "maximum_trimestres_rachetables": 12,
+    "periodes_rachetables": [
+      "Années d'études supérieures (diplôme requis)",
+      "Années civiles incomplètes (< 4 trimestres validés)"
+    ]
+  },
+  
+  "periodes_rachetables": {
+    "etudes_superieures": {
+      "conditions": [
+        "Études dans établissement enseignement supérieur",
+        "Validation par DIPLÔME obtenu (obligatoire)",
+        "Périodes non cotisées à l'assurance vieillesse",
+        "Études en France ou équivalence reconnue"
+      ],
+      "maximum_trimestres": 12,
+      "important": "Le diplôme est OBLIGATOIRE pour valider le rachat"
+    },
+    "annees_incompletes": {
+      "conditions": [
+        "Années civiles validées par < 4 trimestres",
+        "Périodes d'activité professionnelle insuffisante",
+        "Pas de périodes assimilées complétant l'année"
+      ],
+      "maximum_trimestres": 12,
+      "cumul": "Maximum 12 trimestres cumulé avec études supérieures"
+    }
+  },
+  
+  "pass_2025": 49308,
+  
+  "tranches_revenus_2025": {
+    "tranche_1": {
+      "description": "< 75% du PASS",
+      "seuil_max": 36981,
+      "calcul": "Montant fixe selon barème"
+    },
+    "tranche_2": {
+      "description": "75% à 100% du PASS",
+      "seuil_min": 36981,
+      "seuil_max": 49308,
+      "calcul": "Pourcentage du revenu moyen annuel"
+    },
+    "tranche_3": {
+      "description": "> 100% du PASS",
+      "seuil_min": 49308,
+      "calcul": "Montant fixe selon barème"
+    }
+  },
+  
+  "options_rachat": {
+    "option_taux_seul": {
+      "nom": "Taux seul",
+      "impact": [
+        "Augmente le taux de liquidation uniquement",
+        "Réduit ou supprime la décote",
+        "N'augmente PAS la durée d'assurance"
+      ],
+      "cout_relatif": "~60% du coût 'taux + durée'",
+      "quand_choisir": [
+        "Client a déjà la durée requise pour taux plein",
+        "Objectif : Éviter décote si départ avant âge taux plein automatique",
+        "Budget limité"
+      ]
+    },
+    "option_taux_et_duree": {
+      "nom": "Taux + durée d'assurance",
+      "impact": [
+        "Augmente le taux de liquidation ET",
+        "Augmente la durée d'assurance",
+        "Effet MAXIMAL sur la pension"
+      ],
+      "cout_relatif": "100% (coût complet)",
+      "quand_choisir": [
+        "Client n'a pas la durée requise pour taux plein",
+        "Objectif : Augmenter montant pension (via durée)",
+        "Rentabilité démontrée"
+      ]
+    }
+  },
+  
+  "bareme_2025": {
+    "age_20": {
+      "taux_seul": {"tranche_1": 1055, "tranche_2_pourcent": 3.80, "tranche_3": 1407},
+      "taux_et_duree": {"tranche_1": 1564, "tranche_2_pourcent": 5.63, "tranche_3": 2085}
+    },
+    "age_25": {
+      "taux_seul": {"tranche_1": 1219, "tranche_2_pourcent": 4.39, "tranche_3": 1625},
+      "taux_et_duree": {"tranche_1": 1806, "tranche_2_pourcent": 6.50, "tranche_3": 2408}
+    },
+    "age_30": {
+      "taux_seul": {"tranche_1": 1487, "tranche_2_pourcent": 5.35, "tranche_3": 1983},
+      "taux_et_duree": {"tranche_1": 2204, "tranche_2_pourcent": 7.93, "tranche_3": 2938}
+    },
+    "age_35": {
+      "taux_seul": {"tranche_1": 1771, "tranche_2_pourcent": 6.38, "tranche_3": 2361},
+      "taux_et_duree": {"tranche_1": 2624, "tranche_2_pourcent": 9.45, "tranche_3": 3499}
+    },
+    "age_40": {
+      "taux_seul": {"tranche_1": 2065, "tranche_2_pourcent": 7.43, "tranche_3": 2753},
+      "taux_et_duree": {"tranche_1": 3060, "tranche_2_pourcent": 11.02, "tranche_3": 4080}
+    },
+    "age_45": {
+      "taux_seul": {"tranche_1": 2366, "tranche_2_pourcent": 8.52, "tranche_3": 3154},
+      "taux_et_duree": {"tranche_1": 3506, "tranche_2_pourcent": 12.62, "tranche_3": 4674}
+    },
+    "age_50": {
+      "taux_seul": {"tranche_1": 2672, "tranche_2_pourcent": 9.62, "tranche_3": 3563},
+      "taux_et_duree": {"tranche_1": 3960, "tranche_2_pourcent": 14.26, "tranche_3": 5279}
+    },
+    "age_55": {
+      "taux_seul": {"tranche_1": 2980, "tranche_2_pourcent": 10.73, "tranche_3": 3973},
+      "taux_et_duree": {"tranche_1": 4416, "tranche_2_pourcent": 15.90, "tranche_3": 5888}
+    },
+    "age_60": {
+      "taux_seul": {"tranche_1": 3275, "tranche_2_pourcent": 11.79, "tranche_3": 4367},
+      "taux_et_duree": {"tranche_1": 4854, "tranche_2_pourcent": 17.48, "tranche_3": 6472}
+    },
+    "age_62": {
+      "taux_seul": {"tranche_1": 3383, "tranche_2_pourcent": 12.18, "tranche_3": 4510},
+      "taux_et_duree": {"tranche_1": 5013, "tranche_2_pourcent": 18.05, "tranche_3": 6684}
+    },
+    "age_63": {
+      "taux_seul": {"tranche_1": 3298, "tranche_2_pourcent": 11.87, "tranche_3": 4397},
+      "taux_et_duree": {"tranche_1": 4888, "tranche_2_pourcent": 17.60, "tranche_3": 6517}
+    },
+    "age_64": {
+      "taux_seul": {"tranche_1": 3214, "tranche_2_pourcent": 11.57, "tranche_3": 4285},
+      "taux_et_duree": {"tranche_1": 4762, "tranche_2_pourcent": 17.15, "tranche_3": 6350}
+    },
+    "age_65": {
+      "taux_seul": {"tranche_1": 3129, "tranche_2_pourcent": 11.27, "tranche_3": 4172},
+      "taux_et_duree": {"tranche_1": 4637, "tranche_2_pourcent": 16.70, "tranche_3": 6183}
+    },
+    "age_66": {
+      "taux_seul": {"tranche_1": 3044, "tranche_2_pourcent": 10.96, "tranche_3": 4059},
+      "taux_et_duree": {"tranche_1": 4512, "tranche_2_pourcent": 16.24, "tranche_3": 6015}
+    }
+  },
+  
+  "reduction_apres_62_ans": {
+    "principe": "Coût diminue après 62 ans (barème dégressif)",
+    "age_63": {"reduction_vs_62": "-2.5%"},
+    "age_64": {"reduction_vs_62": "-5%"},
+    "age_65": {"reduction_vs_62": "-7.5%"},
+    "age_66": {"reduction_vs_62": "-10%"},
+    "logique": "Inciter à racheter tôt plutôt que tard"
+  },
+  
+  "rentabilite": {
+    "formule": "Durée récupération = Coût total / Gain annuel pension",
+    "seuils_indicatifs": {
+      "age_30_40": {
+        "duree_recuperation_typique": "8-12 ans",
+        "jugement": "Très rentable"
+      },
+      "age_40_50": {
+        "duree_recuperation_typique": "10-15 ans",
+        "jugement": "Rentable"
+      },
+      "age_50_55": {
+        "duree_recuperation_typique": "12-18 ans",
+        "jugement": "À étudier"
+      },
+      "age_55_60": {
+        "duree_recuperation_typique": "15-20 ans",
+        "jugement": "Limite"
+      },
+      "age_60_66": {
+        "duree_recuperation_typique": "18-25 ans",
+        "jugement": "Peu rentable"
+      }
+    },
+    "esperance_vie_62_ans": {
+      "hommes": 22,
+      "femmes": 26,
+      "unite": "années"
+    },
+    "facteurs_favorables": [
+      "Âge jeune au rachat (coût plus faible)",
+      "Pension élevée (gain annuel important)",
+      "Espérance de vie longue",
+      "Trimestres manquants pour taux plein (double gain)",
+      "Déduction fiscale (coût net réduit de 30-45%)"
+    ],
+    "facteurs_defavorables": [
+      "Âge avancé au rachat (coût élevé)",
+      "Pension faible (gain annuel limité)",
+      "Déjà taux plein atteint (gain marginal)",
+      "Revenu élevé (tranche 3, coût maximal)",
+      "Santé fragile (espérance de vie réduite)"
+    ]
+  },
+  
+  "deduction_fiscale": {
+    "principe": "Rachat déductible du revenu imposable",
+    "formule": "Économie fiscale = Coût rachat × TMI",
+    "impact": "Réduit la durée de récupération de 30-45%",
+    "exemple": {
+      "cout_rachat": 10000,
+      "tmi": 30,
+      "economie_fiscale": 3000,
+      "cout_net": 7000
+    }
+  },
+  
+  "procedure": {
+    "etapes": [
+      "Demande de simulation (formulaire en ligne)",
+      "Réception devis (caisse retraite sous 3 mois)",
+      "Acceptation (1 an pour accepter le devis)",
+      "Paiement (unique ou échelonné 1-3 ans)",
+      "Validation (trimestres crédités immédiatement)"
+    ],
+    "documents_requis": {
+      "etudes_superieures": [
+        "Copie diplôme(s)",
+        "Attestation établissement",
+        "Justificatif inscription années concernées"
+      ],
+      "annees_incompletes": [
+        "Relevé de carrière",
+        "Justificatifs revenus années concernées",
+        "Bulletins de salaire"
+      ]
+    },
+    "delais": {
+      "demande_vers_devis": "3 mois",
+      "validite_devis": "1 an",
+      "paiement_echelonne_max": "3 ans",
+      "creditation_trimestres": "Immédiate après paiement"
+    }
+  },
+  
+  "controles_coherence": [
+    {
+      "id": "VPL_C01",
+      "nom": "Âge hors limites",
+      "condition": "age < 20 OR age >= 67",
+      "type": "BLOQUANT",
+      "message": "Âge hors limites pour VPLR. Âge actuel : {age} ans. Limites : 20 à 66 ans inclus"
+    },
+    {
+      "id": "VPL_C02",
+      "nom": "Dépassement 12 trimestres",
+      "condition": "trimestres_rachetes > 12",
+      "type": "ERREUR",
+      "message": "Dépassement limite réglementaire. {trimestres_rachetes} trimestres demandés, maximum 12 autorisés"
+    },
+    {
+      "id": "VPL_C03",
+      "nom": "Absence diplôme études supérieures",
+      "condition": "rachat_etudes AND NOT diplome_obtenu",
+      "type": "BLOQUANT",
+      "message": "Rachat études supérieures impossible sans diplôme. Diplôme OBLIGATOIRE pour valider le rachat"
+    },
+    {
+      "id": "VPL_C04",
+      "nom": "Année déjà complète",
+      "condition": "annee_incomplete AND trimestres_valides >= 4",
+      "type": "IMPOSSIBLE",
+      "message": "Rachat impossible. Année {annee} déjà validée à {trimestres_valides} trimestres (4 maximum)"
+    },
+    {
+      "id": "VPL_C05",
+      "nom": "Rentabilité négative",
+      "condition": "duree_recuperation > 25",
+      "type": "AVERTISSEMENT",
+      "message": "Rentabilité très faible. Durée récupération : {duree_recuperation} ans (> 25 ans). Espérance vie à 62 ans : ~22-26 ans"
+    },
+    {
+      "id": "VPL_C06",
+      "nom": "Option sous-optimale",
+      "condition": "option = 'taux_seul' AND trimestres_manquants_taux_plein > 0",
+      "type": "SOUS-OPTIMAL",
+      "message": "Option 'taux seul' alors que durée manquante pour taux plein. Option 'taux + durée' recommandée (impact maximal)"
+    },
+    {
+      "id": "VPL_C07",
+      "nom": "Rachat tardif sans analyse",
+      "condition": "age > 60 AND NOT analyse_rentabilite",
+      "type": "AVERTISSEMENT",
+      "message": "Rachat après 60 ans détecté. Analyse rentabilité IMPÉRATIVE (coût élevé, espérance vie réduite)"
+    }
+  ],
+  
+  "alertes": {
+    "rouge": [
+      {
+        "condition": "age < 20 OR age >= 67",
+        "message": "Âge hors limites - VPLR impossible"
+      },
+      {
+        "condition": "rachat_etudes AND NOT diplome",
+        "message": "Absence diplôme - Rachat études supérieures impossible"
+      },
+      {
+        "condition": "trimestres_rachetes > 12",
+        "message": "Dépassement maximum 12 trimestres - BLOQUANT"
+      },
+      {
+        "condition": "annee_complete",
+        "message": "Année déjà validée à 4 trimestres - Rachat impossible"
+      }
+    ],
+    "orange": [
+      {
+        "condition": "duree_recuperation > 18",
+        "message": "Rentabilité limite (durée récupération > 18 ans) - Calcul précis requis"
+      },
+      {
+        "condition": "age > 58",
+        "message": "Âge > 58 ans - Coût élevé, rentabilité faible. Vérifier pertinence"
+      },
+      {
+        "condition": "sante_fragile",
+        "message": "Santé fragile signalée - Impact sur espérance de vie et rentabilité"
+      },
+      {
+        "condition": "option_taux_seul AND duree_manquante",
+        "message": "Option 'taux seul' sous-optimale - Durée manquante pour taux plein détectée"
+      }
+    ],
+    "jaune": [
+      {
+        "condition": "deja_taux_plein",
+        "message": "Client déjà taux plein - Rachat peu rentable (gain marginal)"
+      },
+      {
+        "condition": "tranche_3_revenus",
+        "message": "Tranche 3 revenus (> PASS) - Coût maximal du rachat"
+      },
+      {
+        "condition": "NOT deduction_fiscale_integree",
+        "message": "Déduction fiscale non intégrée - Peut améliorer significativement rentabilité"
+      },
+      {
+        "condition": "etudes_sans_diplome",
+        "message": "Études supérieures sans diplôme - Rachat IMPOSSIBLE"
+      }
+    ]
+  },
+  
+  "sources_reglementaires": {
+    "code_securite_sociale": [
+      "L.351-14-1 - Versement pour la retraite (VPLR)",
+      "D.351-8 - Barème des versements",
+      "R.351-37-5 - Modalités de calcul"
+    ],
+    "circulaires_cnav": [
+      {
+        "numero": "2025-01",
+        "date": "2025-01-13",
+        "url": "https://legislation.lassuranceretraite.fr/Pdf/circulaire_cnav_2025_01_13012025.pdf",
+        "contenu": "Barème 2025 VPLR et rachats alignés"
+      }
+    ],
+    "formulaires": [
+      {
+        "nom": "Cerfa N15675*01",
+        "contenu": "Demande de rachat trimestres VPLR"
+      },
+      {
+        "nom": "Simulation en ligne",
+        "url": "https://www.lassuranceretraite.fr",
+        "contenu": "Formulaire simulation coût rachat"
+      }
+    ]
+  },
+  
+  "conseils_strategiques": {
+    "arbitrage_options": {
+      "choisir_taux_seul": [
+        "Client a déjà durée requise pour taux plein",
+        "Objectif uniquement éviter décote",
+        "Budget limité (coût ~40% inférieur)"
+      ],
+      "choisir_taux_et_duree": [
+        "Client n'a PAS durée requise pour taux plein",
+        "Objectif augmenter montant pension",
+        "Rentabilité démontrée (durée récup < 15 ans)"
+      ]
+    },
+    "timing_optimal": {
+      "racheter_tot_30_45": {
+        "avantages": ["Coût faible", "Rentabilité élevée", "Horizon long"],
+        "recommandation": "Optimal"
+      },
+      "racheter_moyen_45_55": {
+        "avantages": ["Coût modéré"],
+        "precautions": ["Rentabilité à calculer précisément", "Intégrer déduction fiscale"],
+        "recommandation": "À étudier"
+      },
+      "racheter_tard_55_66": {
+        "inconvenients": ["Coût élevé", "Rentabilité faible"],
+        "exception": "SAUF si trimestres manquants pour taux plein (forte décote évitée)",
+        "recommandation": "Déconseillé sauf exception"
+      }
+    },
+    "optimisation_fiscale": {
+      "etalement": {
+        "principe": "Étaler rachat sur plusieurs années",
+        "avantages": [
+          "Maintien TMI élevée (max déduction fiscale)",
+          "Éviter sortie de tranche fiscale",
+          "Paiement échelonné 1-3 ans sans intérêts"
+        ]
+      }
+    },
+    "cas_particuliers": {
+      "carriere_longue": {
+        "attention": "Rachats post-2011 : Comptent UNIQUEMENT si option 'taux + durée'",
+        "action": "Vérifier si rachat utile pour RACL"
+      },
+      "proche_retraite": {
+        "condition": "< 2 ans avant départ",
+        "action": "Racheter uniquement si évite décote forte",
+        "alternative": "Prolonger activité 6-12 mois (coût nul)"
+      },
+      "polypentionne": {
+        "information": "Rachat CNAV impacte uniquement pension CNAV",
+        "precision": "Pas d'effet sur complémentaires (AGIRC-ARRCO)"
+      }
+    }
+  },
+  
+  "pieges_frequents": [
+    "Racheter sans calcul de rentabilité (perte financière possible)",
+    "Confondre 'taux seul' et 'taux + durée' (impact différent)",
+    "Racheter après 60 ans sans justification (coût élevé, faible rentabilité)",
+    "Oublier la déduction fiscale (change la rentabilité)",
+    "Racheter des études sans avoir le diplôme (rachat refusé)",
+    "Dépasser 12 trimestres (limite réglementaire)",
+    "Ne pas vérifier les années incomplètes (périodes assimilées peuvent compléter)",
+    "Racheter alors que déjà taux plein (gain marginal, peu rentable)"
+  ]
+}
