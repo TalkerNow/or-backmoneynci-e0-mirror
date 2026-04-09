@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             EorSystemPromptSeeder::class,
             RisPromptSeeder::class,
+            SkillsCatalogSeeder::class,
         ]);
     }
 }

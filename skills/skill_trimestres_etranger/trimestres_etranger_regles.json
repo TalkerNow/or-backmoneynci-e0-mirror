@@ -1,0 +1,293 @@
+{
+  "metadata": {
+    "nom_module": "Trimestres Étranger",
+    "version": "1.0",
+    "date_creation": "2025-11-10",
+    "auteur": "EOR - Expertise Optimisation des Retraites",
+    "description": "Règles de contrôle pour l'analyse des périodes à l'étranger et leur impact sur la retraite française",
+    "legislation_reference": [
+      "Règlements européens 883/2004 et 987/2009",
+      "Conventions bilatérales de sécurité sociale",
+      "CLEISS (Centre des Liaisons Européennes et Internationales de Sécurité Sociale)"
+    ],
+    "script_associe": "calcul_trimestres_etranger.py",
+    "skill_associe": "SKILL_trimestres_etranger.md"
+  },
+  
+  "categories_pays": {
+    "UE_EEE_SUISSE": {
+      "description": "Union Européenne + EEE + Suisse",
+      "nombre_pays": 32,
+      "totalisation": "automatique",
+      "base_legale": "Règlements européens 883/2004 et 987/2009"
+    },
+    "CONVENTION_BILATERALE": {
+      "description": "Pays avec convention bilatérale vieillesse",
+      "nombre_pays": 41,
+      "totalisation": "sous conditions convention",
+      "base_legale": "Conventions bilatérales France-Pays"
+    },
+    "SANS_ACCORD": {
+      "description": "Pays sans accord de sécurité sociale",
+      "totalisation": "impossible",
+      "impact": "Trimestres NON comptabilisés pour retraite française"
+    }
+  },
+  
+  "controles": [
+    {
+      "id": "TRE_C01",
+      "libelle": "Pays identifié dans les listes officielles",
+      "niveau": "ROUGE",
+      "type": "BLOQUANT",
+      "description": "Vérifie que le pays mentionné existe dans les listes officielles (UE/EEE/Suisse, Convention bilatérale, ou Pays tiers)",
+      "condition": "pays IN (PAYS_UE_EEE_SUISSE OR PAYS_CONVENTION_BILATERALE OR autres)",
+      "action_correctrice": "Vérifier l'orthographe du nom du pays. Consulter www.cleiss.fr pour la liste officielle des accords.",
+      "message_erreur": "⛔ ERREUR CRITIQUE : Pays '{pays}' non identifié dans les listes officielles.",
+      "message_validation": "✅ Pays '{pays}' correctement identifié",
+      "token_impact": 200,
+      "references": [
+        "www.cleiss.fr",
+        "Règlement CE 883/2004",
+        "Liste conventions bilatérales France"
+      ]
+    },
+    
+    {
+      "id": "TRE_C02",
+      "libelle": "Cohérence période avec relevé de carrière",
+      "niveau": "ORANGE",
+      "type": "AVERTISSEMENT",
+      "description": "Vérifie que la période à l'étranger ne chevauche pas de périodes françaises déclarées dans le relevé de carrière",
+      "condition": "date_debut_etranger > date_fin_france_precedente AND date_fin_etranger < date_debut_france_suivante",
+      "action_correctrice": "Comparer avec le relevé de carrière CNAV. Vérifier s'il y a eu cumul d'activités France/Étranger. Si cumul : appliquer règle max 4 trimestres/an.",
+      "message_erreur": "⚠️ ATTENTION : Possible chevauchement avec périodes françaises ({details})",
+      "message_validation": "✅ Période cohérente avec relevé de carrière français",
+      "token_impact": 300,
+      "references": [
+        "Relevé de carrière CNAV",
+        "Règle max 4 trimestres/an"
+      ]
+    },
+    
+    {
+      "id": "TRE_C03",
+      "libelle": "Totalisation possible selon statut pays",
+      "niveau": "ROUGE",
+      "type": "BLOQUANT",
+      "description": "Vérifie que le pays permet la totalisation des trimestres (UE/EEE/Suisse ou Convention bilatérale)",
+      "condition": "statut_pays IN ('UE_EEE_SUISSE', 'CONVENTION_BILATERALE')",
+      "action_correctrice": "Si pays sans accord : expliquer au client que ces trimestres ne comptent PAS pour la retraite française. Recommander de se renseigner sur les droits à pension dans le pays concerné.",
+      "message_erreur": "⛔ TOTALISATION IMPOSSIBLE : Le pays '{pays}' n'a pas d'accord de sécurité sociale avec la France. Les trimestres ne seront PAS comptabilisés.",
+      "message_validation": "✅ Totalisation possible - Accord en vigueur avec '{pays}'",
+      "token_impact": 400,
+      "implications_client": "Les trimestres dans ce pays ne donneront droit qu'à une pension versée par ce pays (si éligible), pas par la France.",
+      "references": [
+        "www.cleiss.fr/accords",
+        "Convention bilatérale spécifique"
+      ]
+    },
+    
+    {
+      "id": "TRE_C04",
+      "libelle": "Dates valides et cohérentes",
+      "niveau": "ORANGE",
+      "type": "AVERTISSEMENT",
+      "description": "Vérifie le format des dates (JJ/MM/AAAA) et la cohérence chronologique (date_fin > date_debut)",
+      "condition": "format_date(date_debut) = 'JJ/MM/AAAA' AND format_date(date_fin) = 'JJ/MM/AAAA' AND date_fin > date_debut",
+      "action_correctrice": "Corriger le format des dates. Vérifier l'ordre chronologique. Demander au client de confirmer les dates exactes.",
+      "message_erreur": "⚠️ DATES INVALIDES : Format incorrect ou date de fin antérieure à date de début",
+      "message_validation": "✅ Dates valides et cohérentes",
+      "token_impact": 100,
+      "format_attendu": "JJ/MM/AAAA (ex: 15/03/2005)",
+      "references": [
+        "Standard date française"
+      ]
+    },
+    
+    {
+      "id": "TRE_C05",
+      "libelle": "Absence de doublon de trimestres",
+      "niveau": "ROUGE",
+      "type": "BLOQUANT",
+      "description": "Vérifie qu'il n'y a pas de double comptabilisation de trimestres (périodes comptées à la fois en France ET à l'étranger)",
+      "condition": "trimestres_periode_etranger NOT IN trimestres_releve_francais",
+      "action_correctrice": "Analyser le relevé de carrière pour identifier si certains trimestres sont déjà comptabilisés côté français. Appliquer règle de coordination des régimes. Maximum 4 trimestres validés par année civile.",
+      "message_erreur": "⛔ DOUBLON DÉTECTÉ : Risque de double comptabilisation pour la période {periode}",
+      "message_validation": "✅ Aucun doublon détecté",
+      "token_impact": 350,
+      "regle_coordination": "Un trimestre ne peut être validé qu'une seule fois, même si cotisations dans plusieurs pays la même année. Application de la règle des 4 trimestres maximum par an.",
+      "references": [
+        "Règlement CE 987/2009 - Coordination",
+        "Circulaire CNAV totalisation"
+      ]
+    },
+    
+    {
+      "id": "TRE_C06",
+      "libelle": "Respect limite 4 trimestres par année civile",
+      "niveau": "ORANGE",
+      "type": "AVERTISSEMENT",
+      "description": "Vérifie que le calcul ne dépasse pas 4 trimestres pour une même année civile (règle française)",
+      "condition": "COUNT(trimestres) BY annee <= 4",
+      "action_correctrice": "Recalculer en plafonnant à 4 trimestres maximum par année civile. Si activité partielle : convertir en trimestres selon règle 90 jours = 1 trimestre.",
+      "message_erreur": "⚠️ DÉPASSEMENT : Année {annee} calcule {nb_trimestres} trimestres (max 4)",
+      "message_validation": "✅ Limite 4 trimestres/an respectée pour toutes les années",
+      "token_impact": 250,
+      "regle_conversion": "90 jours calendaires = 1 trimestre. Maximum 4 trimestres validables par année civile.",
+      "references": [
+        "Code Sécurité Sociale art L351-1",
+        "Règle 90 jours CNAV"
+      ]
+    },
+    
+    {
+      "id": "TRE_C07",
+      "libelle": "Documentation complète pour validation CNAV",
+      "niveau": "JAUNE",
+      "type": "RECOMMANDATION",
+      "description": "Vérifie que tous les documents nécessaires à la validation par la CNAV sont mentionnés",
+      "condition": "documentation_mentionnee = TRUE",
+      "action_correctrice": "Rappeler au client la liste des documents nécessaires : attestation employeur étranger, bulletins de salaire, certificat E205/E207 (UE), formulaire liaison (Convention), justificatifs cotisations.",
+      "message_erreur": "💡 RECOMMANDATION : Prévoir documents pour validation CNAV : {liste_documents}",
+      "message_validation": "✅ Documentation complète mentionnée dans le rapport",
+      "token_impact": 200,
+      "documents_requis": {
+        "UE_EEE_SUISSE": [
+          "Formulaire E205 (certificat périodes d'assurance)",
+          "Formulaire E207 (certificat périodes de résidence)",
+          "Attestation employeur étranger"
+        ],
+        "CONVENTION_BILATERALE": [
+          "Formulaire de liaison spécifique à la convention",
+          "Attestation organisme étranger",
+          "Bulletins de salaire",
+          "Justificatifs cotisations"
+        ],
+        "SANS_ACCORD": [
+          "Aucun document requis (périodes non comptabilisées)"
+        ]
+      },
+      "references": [
+        "www.cleiss.fr/formulaires",
+        "Guide CNAV demande retraite internationale"
+      ]
+    }
+  ],
+  
+  "workflow_validation": {
+    "etape_1": {
+      "titre": "Identification pays",
+      "controles": ["TRE_C01", "TRE_C03"],
+      "bloquant_si_echec": true
+    },
+    "etape_2": {
+      "titre": "Validation dates et période",
+      "controles": ["TRE_C04", "TRE_C02"],
+      "bloquant_si_echec": false
+    },
+    "etape_3": {
+      "titre": "Calcul trimestres",
+      "controles": ["TRE_C05", "TRE_C06"],
+      "bloquant_si_echec": false
+    },
+    "etape_4": {
+      "titre": "Documentation et recommandations",
+      "controles": ["TRE_C07"],
+      "bloquant_si_echec": false
+    }
+  },
+  
+  "niveaux_alerte": {
+    "ROUGE": {
+      "priorite": 1,
+      "type": "BLOQUANT",
+      "description": "Erreur critique empêchant le calcul ou rendant le résultat inexploitable",
+      "action_requise": "Correction OBLIGATOIRE avant de poursuivre",
+      "impact_consultation": "Impossible de conclure sans correction"
+    },
+    "ORANGE": {
+      "priorite": 2,
+      "type": "AVERTISSEMENT",
+      "description": "Incohérence ou donnée manquante nécessitant vérification",
+      "action_requise": "Vérification recommandée avec le client",
+      "impact_consultation": "Conclusion avec réserves"
+    },
+    "JAUNE": {
+      "priorite": 3,
+      "type": "RECOMMANDATION",
+      "description": "Point d'attention ou amélioration suggérée",
+      "action_requise": "Information à communiquer au client",
+      "impact_consultation": "Aucun impact sur la validité du calcul"
+    },
+    "VERT": {
+      "priorite": 4,
+      "type": "VALIDATION",
+      "description": "Contrôle passé avec succès",
+      "action_requise": "Aucune action",
+      "impact_consultation": "Validé"
+    }
+  },
+  
+  "token_estimates": {
+    "cas_simple": {
+      "description": "Pays UE, 1 période, dates valides, pas de doublon",
+      "tokens_min": 1000,
+      "tokens_max": 1500,
+      "controles_actifs": ["TRE_C01", "TRE_C03", "TRE_C04", "TRE_C06"]
+    },
+    "cas_moyen": {
+      "description": "Pays convention, vérification cohérence relevé",
+      "tokens_min": 1500,
+      "tokens_max": 2500,
+      "controles_actifs": ["TRE_C01", "TRE_C02", "TRE_C03", "TRE_C04", "TRE_C05", "TRE_C06", "TRE_C07"]
+    },
+    "cas_complexe": {
+      "description": "Pays sans accord OU multiples périodes OU doublons détectés",
+      "tokens_min": 2500,
+      "tokens_max": 3500,
+      "controles_actifs": ["TRE_C01", "TRE_C02", "TRE_C03", "TRE_C04", "TRE_C05", "TRE_C06", "TRE_C07"],
+      "explications_supplementaires": "Nécessite explications détaillées client + recommandations"
+    }
+  },
+  
+  "explications_client": {
+    "principe_totalisation": "La France et certains pays ont signé des accords permettant d'additionner (totaliser) les périodes d'assurance pour déterminer le droit à pension. Cependant, chaque pays verse SA PROPRE pension calculée uniquement sur les périodes cotisées dans ce pays.",
+    "deux_pensions": "Vous recevrez DEUX pensions distinctes : une de la France (calculée sur vos trimestres français) ET une du pays étranger (calculée sur vos trimestres étrangers).",
+    "prorata_francais": "La pension française sera calculée au prorata de vos trimestres français par rapport à la durée totale requise.",
+    "pays_sans_accord": "Pour les pays sans accord, les périodes ne comptent PAS pour votre retraite française. Vous devrez vous renseigner directement auprès de l'organisme de retraite du pays concerné pour connaître vos droits éventuels.",
+    "demarches": "Pour faire valider vos périodes étrangères, vous devrez fournir des documents officiels lors de votre demande de retraite (certificats, formulaires de liaison, attestations employeur)."
+  },
+  
+  "references_utiles": {
+    "cleiss": {
+      "nom": "CLEISS - Centre des Liaisons Européennes et Internationales de Sécurité Sociale",
+      "url": "www.cleiss.fr",
+      "role": "Organisme de référence pour les accords internationaux de sécurité sociale"
+    },
+    "cnav": {
+      "nom": "CNAV - Caisse Nationale d'Assurance Vieillesse",
+      "url": "www.lassuranceretraite.fr",
+      "role": "Caisse de retraite française pour les salariés du privé"
+    },
+    "formulaires_ue": {
+      "nom": "Formulaires européens de coordination",
+      "url": "www.cleiss.fr/formulaires",
+      "documents": ["E205", "E207", "E104", "E121"]
+    }
+  },
+  
+  "historique_versions": [
+    {
+      "version": "1.0",
+      "date": "2025-11-10",
+      "modifications": [
+        "Création initiale",
+        "7 contrôles définis (TRE_C01 à TRE_C07)",
+        "Niveaux d'alerte standardisés",
+        "Token estimates par cas",
+        "Explications client intégrées"
+      ]
+    }
+  ]
+}

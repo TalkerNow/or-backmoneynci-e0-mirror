@@ -1,0 +1,454 @@
+{
+  "skill_info": {
+    "nom": "Calcul Pension CNAV",
+    "code": "CNAV",
+    "version": "1.0",
+    "date_creation": "2025-01-10",
+    "type": "skill_calcul_regime",
+    "description": "Calcul pension BRUTE régime général - Sans scénarios fin de carrière"
+  },
+  
+  "formule_officielle": {
+    "source": "Article L.351-1 CSS",
+    "formule": "Pension = SAM × Taux × (Trimestres RG / Trimestres requis)",
+    "composants": {
+      "sam": "Salaire Annuel Moyen (25 meilleures années)",
+      "taux": "Taux de liquidation (37,5% à 75%)",
+      "prorata": "Coefficient de proratisation (max 100%)"
+    }
+  },
+  
+  "valeurs_reglementaires_2025": {
+    "ages": {
+      "age_legal": 62,
+      "age_taux_plein_auto": 67,
+      "note": "Pour générations 1955 et suivantes"
+    },
+    "plafonds": {
+      "plafond_ss_annuel": 47100,
+      "plafond_ss_mensuel": 3925,
+      "smic_horaire": 11.88,
+      "smic_mensuel": 1801.84
+    },
+    "taux_liquidation": {
+      "taux_plein": 50.0,
+      "taux_minimal": 37.5,
+      "decote_par_trimestre": 1.25,
+      "surcote_par_trimestre": 1.25,
+      "decote_maximale": 12.5,
+      "trimestres_decote_max": 20
+    },
+    "prelevements_sociaux": {
+      "csg": 8.3,
+      "crds": 0.5,
+      "casa": 0.3,
+      "maladie": 0.1,
+      "total": 9.2
+    },
+    "durees_assurance": {
+      "1958_1960": 167,
+      "1961_janv_aout": 168,
+      "1961_sept_dec_1962": 169,
+      "1963": 170,
+      "1964": 171,
+      "1965_et_apres": 172
+    }
+  },
+  
+  "regles_calcul": {
+    "sam": {
+      "description": "Salaire Annuel Moyen",
+      "source": "Article R.351-29 CSS",
+      "base_calcul": "Moyenne 25 meilleures années revalorisées",
+      "plafonnement": "Limité au plafond SS de l'année",
+      "fourni_par": "Relevé carrière ou calcul amont",
+      "controle": "SAM <= Plafond_SS_annuel"
+    },
+    
+    "taux_liquidation": {
+      "description": "Taux de liquidation appliqué",
+      "taux_plein": {
+        "valeur": 50.0,
+        "conditions": [
+          "Durée assurance tous régimes >= Durée requise",
+          "OU Âge >= 67 ans (taux plein auto)"
+        ]
+      },
+      "decote": {
+        "formule": "Taux = 50% - (Trimestres_manquants × 1,25%)",
+        "trimestres_manquants": "MAX(0, Durée_requise - Trimestres_validés)",
+        "limite": "Maximum 20 trimestres (12,5% décote)",
+        "taux_minimal": 37.5
+      },
+      "surcote": {
+        "formule": "Taux = 50% + (Trimestres_excedentaires × 1,25%)",
+        "trimestres_excedentaires": "MAX(0, Trimestres_validés - Durée_requise)",
+        "condition": "Activité après âge légal ET taux plein",
+        "pas_de_limite": true
+      }
+    },
+    
+    "prorata": {
+      "description": "Coefficient de proratisation",
+      "formule": "Trimestres_cotisés_RG / Durée_requise_generation",
+      "plafonnement": "MAX = 1,00 (100%)",
+      "note": "Reflète la durée de cotisation au RG par rapport à la durée totale requise"
+    }
+  },
+  
+  "controles_coherence": [
+    {
+      "id": "CNAV_C01",
+      "libelle": "SAM supérieur au plafond",
+      "type": "ALERTE",
+      "couleur": "ORANGE",
+      "priorite": 2,
+      "condition": {
+        "expression": "sam > plafond_ss_annuel",
+        "variables": {
+          "sam": "float",
+          "plafond_ss_annuel": 47100
+        }
+      },
+      "regle_reglementaire": "Le SAM ne peut pas dépasser le plafond SS de l'année",
+      "message": "SAM fourni ({sam}€) supérieur au plafond SS 2025 (47 100€). Vérifier ou plafonner.",
+      "actions_correctives": [
+        "verifier_sam_fourni",
+        "appliquer_plafonnement_si_necessaire",
+        "sam_plafonne = MIN(sam, 47100)"
+      ],
+      "impact": {
+        "blocage": false,
+        "correction_auto": true
+      }
+    },
+    
+    {
+      "id": "CNAV_C02",
+      "libelle": "Prorata supérieur à 100%",
+      "type": "ALERTE",
+      "couleur": "ORANGE",
+      "priorite": 2,
+      "condition": {
+        "expression": "(trimestres_rg / duree_requise) > 1.00"
+      },
+      "regle_reglementaire": "Le coefficient de proratisation est plafonné à 100%",
+      "message": "Prorata calculé : {prorata}% > 100%. Application plafonnement à 100%.",
+      "actions_correctives": [
+        "plafonner_prorata",
+        "prorata = MIN(calcule, 1.00)"
+      ],
+      "impact": {
+        "blocage": false,
+        "correction_auto": true
+      }
+    },
+    
+    {
+      "id": "CNAV_C03",
+      "libelle": "Trimestres RG > Trimestres totaux",
+      "type": "ERREUR_CRITIQUE",
+      "couleur": "ROUGE",
+      "priorite": 1,
+      "condition": {
+        "expression": "trimestres_rg > trimestres_valides_tous_regimes"
+      },
+      "regle_reglementaire": "Incohérence logique : trimestres régime <= trimestres totaux",
+      "message": "Incohérence : Trimestres RG ({rg}) > Trimestres totaux ({total}). Vérifier données.",
+      "actions_correctives": [
+        "bloquer_calcul",
+        "demander_verification_donnees",
+        "verifier_releve_carriere"
+      ],
+      "impact": {
+        "blocage": true
+      }
+    },
+    
+    {
+      "id": "CNAV_C04",
+      "libelle": "Taux hors limites réglementaires",
+      "type": "ERREUR_CRITIQUE",
+      "couleur": "ROUGE",
+      "priorite": 1,
+      "condition": {
+        "expression": "taux < 37.5 OR taux > 75"
+      },
+      "regle_reglementaire": "Taux de liquidation entre 37,5% (décote max) et 75%",
+      "message": "Taux calculé ({taux}%) hors limites [37,5% - 75%]. Vérifier paramètres.",
+      "actions_correctives": [
+        "bloquer_calcul",
+        "verifier_parametres_calcul",
+        "verifier_duree_requise",
+        "verifier_trimestres_valides"
+      ],
+      "impact": {
+        "blocage": true
+      }
+    },
+    
+    {
+      "id": "CNAV_C05",
+      "libelle": "SAM inférieur au SMIC annuel",
+      "type": "VIGILANCE",
+      "couleur": "JAUNE",
+      "priorite": 3,
+      "condition": {
+        "expression": "sam < (smic_mensuel * 12)"
+      },
+      "regle_reglementaire": "SAM < SMIC annuel inhabituel, peut indiquer carrière incomplète",
+      "message": "SAM ({sam}€) < SMIC annuel ({smic_annuel}€). Vérifier carrière.",
+      "actions_correctives": [
+        "alerter_consultant",
+        "verifier_carriere_complete",
+        "verifier_eligibilite_mico"
+      ],
+      "impact": {
+        "blocage": false,
+        "attention_particuliere": true
+      }
+    },
+    
+    {
+      "id": "CNAV_C06",
+      "libelle": "Génération hors périmètre",
+      "type": "ERREUR_CRITIQUE",
+      "couleur": "ROUGE",
+      "priorite": 1,
+      "condition": {
+        "expression": "annee_naissance < 1958 OR annee_naissance > 2030"
+      },
+      "regle_reglementaire": "Durées d'assurance définies pour générations 1958-2030",
+      "message": "Génération {annee} hors périmètre [1958-2030]. Impossible déterminer durée requise.",
+      "actions_correctives": [
+        "bloquer_calcul",
+        "etendre_baremes_si_necessaire",
+        "consulter_cas_particulier"
+      ],
+      "impact": {
+        "blocage": true
+      }
+    }
+  ],
+  
+  "alertes": {
+    "rouge": [
+      {
+        "code": "CNAV_A01",
+        "libelle": "Données incohérentes",
+        "niveau": "ROUGE",
+        "declencheur": "trimestres_rg > trimestres_totaux",
+        "message": "Données incohérentes : vérification requise",
+        "action": "bloquer_calcul_demander_verification",
+        "urgence": "immediate"
+      },
+      {
+        "code": "CNAV_A02",
+        "libelle": "Taux hors limites",
+        "niveau": "ROUGE",
+        "declencheur": "taux < 37.5 OR taux > 75",
+        "message": "Taux calculé hors limites réglementaires",
+        "action": "bloquer_calcul_verifier_parametres",
+        "urgence": "immediate"
+      },
+      {
+        "code": "CNAV_A03",
+        "libelle": "Génération non supportée",
+        "niveau": "ROUGE",
+        "declencheur": "annee < 1958 OR annee > 2030",
+        "message": "Génération hors périmètre",
+        "action": "bloquer_calcul_etendre_baremes",
+        "urgence": "immediate"
+      }
+    ],
+    
+    "orange": [
+      {
+        "code": "CNAV_A04",
+        "libelle": "SAM plafonné",
+        "niveau": "ORANGE",
+        "declencheur": "sam > plafond_ss",
+        "message": "SAM plafonné au plafond SS 2025",
+        "action": "appliquer_plafonnement_informer",
+        "urgence": "normale"
+      },
+      {
+        "code": "CNAV_A05",
+        "libelle": "Prorata plafonné",
+        "niveau": "ORANGE",
+        "declencheur": "prorata > 1.00",
+        "message": "Prorata plafonné à 100%",
+        "action": "appliquer_plafonnement_informer",
+        "urgence": "normale"
+      }
+    ],
+    
+    "jaune": [
+      {
+        "code": "CNAV_A06",
+        "libelle": "SAM faible",
+        "niveau": "JAUNE",
+        "declencheur": "sam < smic_annuel",
+        "message": "SAM inférieur au SMIC : vérifier carrière",
+        "action": "alerter_consultant_verifier_mico",
+        "urgence": "faible"
+      },
+      {
+        "code": "CNAV_A07",
+        "libelle": "Prorata faible",
+        "niveau": "JAUNE",
+        "declencheur": "prorata < 0.50",
+        "message": "Prorata faible : carrière courte au RG",
+        "action": "verifier_poly_pensionne",
+        "urgence": "faible"
+      },
+      {
+        "code": "CNAV_A08",
+        "libelle": "Pension faible",
+        "niveau": "JAUNE",
+        "declencheur": "pension_mensuelle < 500",
+        "message": "Pension CNAV faible : éligibilité MICO à vérifier",
+        "action": "orienter_vers_calcul_mico",
+        "urgence": "faible"
+      }
+    ]
+  },
+  
+  "exemples_calcul": [
+    {
+      "numero": 1,
+      "titre": "Cas standard taux plein",
+      "type": "TAUX_PLEIN",
+      "donnees": {
+        "date_naissance": "20/04/1965",
+        "sam": 42000.0,
+        "trimestres_valides": 173,
+        "trimestres_rg": 165,
+        "age_depart": 63
+      },
+      "calculs": {
+        "duree_requise": 172,
+        "taux": 50.0,
+        "prorata": 0.9593
+      },
+      "resultat": {
+        "pension_annuelle": 20145.30,
+        "pension_mensuelle": 1678.78,
+        "formule": "42000 × 0.50 × 0.9593"
+      }
+    },
+    
+    {
+      "numero": 2,
+      "titre": "Cas avec décote",
+      "type": "DECOTE",
+      "donnees": {
+        "date_naissance": "15/03/1965",
+        "sam": 38000.0,
+        "trimestres_valides": 164,
+        "trimestres_rg": 160,
+        "age_depart": 62
+      },
+      "calculs": {
+        "duree_requise": 172,
+        "trimestres_manquants": 8,
+        "decote": 10.0,
+        "taux": 40.0,
+        "prorata": 0.9302
+      },
+      "resultat": {
+        "pension_annuelle": 14139.04,
+        "pension_mensuelle": 1178.25,
+        "formule": "38000 × 0.40 × 0.9302"
+      }
+    },
+    
+    {
+      "numero": 3,
+      "titre": "Cas avec surcote",
+      "type": "SURCOTE",
+      "donnees": {
+        "date_naissance": "10/06/1963",
+        "sam": 45000.0,
+        "trimestres_valides": 178,
+        "trimestres_rg": 170,
+        "age_depart": 64
+      },
+      "calculs": {
+        "duree_requise": 170,
+        "trimestres_excedentaires": 8,
+        "surcote": 10.0,
+        "taux": 60.0,
+        "prorata": 1.00
+      },
+      "resultat": {
+        "pension_annuelle": 27000.00,
+        "pension_mensuelle": 2250.00,
+        "formule": "45000 × 0.60 × 1.00"
+      }
+    }
+  ],
+  
+  "integration": {
+    "excel_associe": "CNAV_baremes_calculs.xlsx",
+    "python_script": "calcul_cnav.py",
+    "api_handler": "api_handler(params)",
+    "workflow_n8n": {
+      "bouton": "Calculer CNAV",
+      "etapes": [
+        "Charge Excel",
+        "Vérifie alertes MAJ",
+        "Appelle api_handler",
+        "Python lit barèmes Excel",
+        "Python remplit calculateur Excel",
+        "Excel recalcule",
+        "Python lit résultat",
+        "Retourne JSON"
+      ]
+    }
+  },
+  
+  "sources": [
+    {
+      "type": "loi",
+      "reference": "Article L.351-1 CSS",
+      "objet": "Formule calcul pension"
+    },
+    {
+      "type": "loi",
+      "reference": "Article L.351-1-3 CSS",
+      "objet": "Durée assurance requise"
+    },
+    {
+      "type": "loi",
+      "reference": "Article L.351-8 CSS",
+      "objet": "Âge taux plein automatique"
+    },
+    {
+      "type": "loi",
+      "reference": "Article R.351-29 CSS",
+      "objet": "Salaire annuel moyen"
+    },
+    {
+      "type": "circulaire",
+      "reference": "CNAV 2024-25",
+      "date": "2024-08-01",
+      "objet": "Âges légaux et durées assurance"
+    },
+    {
+      "type": "circulaire",
+      "reference": "CNAV 2024-39",
+      "date": "2024-12-23",
+      "objet": "Revalorisation salaires"
+    }
+  ],
+  
+  "notes_techniques": {
+    "type_skill": "Calcul régime - BRUT uniquement",
+    "scenarios_fin_carriere": "Gérés par skills métier (RACL, CER, etc.)",
+    "mico": "Non inclus - skill séparé à créer",
+    "majorations_enfants": "Non inclus - skill séparé à créer",
+    "poly_pensionne": "Calcul isolé par régime",
+    "prelevements_sociaux": "Mentionnés mais non appliqués (montants bruts)"
+  }
+}

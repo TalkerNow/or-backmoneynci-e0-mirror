@@ -1,0 +1,52 @@
+{
+  "skill_info": {
+    "skill_id": "SKILL_VALIDATION_CONTINUITE_v1",
+    "nom": "Validation Continuité de Carrière",
+    "version": "1.0",
+    "date": "2025-11-01",
+    "script_python": "validation_continuite_carriere.py"
+  },
+
+  "classification_annees": {
+    "complete": {"trimestres": 4, "action": "aucune"},
+    "partielle": {"trimestres": "1-3", "action": "trou_partiel"},
+    "vide": {"trimestres": 0, "action": "trou_complet"},
+    "absente": {"trimestres": "non_presente", "action": "trou_complet"}
+  },
+
+  "gravite_trous": {
+    "CRITIQUE": {
+      "critere": "trimestres_manquants >= 8 OU (type == COMPLET ET nb_annees >= 2)",
+      "action": "BLOQUER — interroger client obligatoirement"
+    },
+    "IMPORTANT": {
+      "critere": "trimestres_manquants >= 4 ET < 8",
+      "action": "Signaler — vérification requise"
+    },
+    "MINEUR": {
+      "critere": "trimestres_manquants >= 1 ET < 4",
+      "action": "Mentionner — vérification conseillée"
+    }
+  },
+
+  "regles_absolues": [
+    "Analyser CHAQUE année entre début carrière et date actuelle",
+    "Une année absente du relevé = trou complet (pas une donnée manquante)",
+    "Fusionner les trous consécutifs de même type",
+    "Ne jamais corriger les trimestres sans confirmation client",
+    "Toujours interroger le client sur trous CRITIQUE et IMPORTANT"
+  ],
+
+  "controles": [
+    {
+      "code": "CC_C01",
+      "regle": "Aucun trou CRITIQUE non expliqué avant finalisation du calcul",
+      "gravite": "CRITIQUE"
+    },
+    {
+      "code": "CC_C02",
+      "regle": "Total trimestres manquants cohérent avec trimestres validés déclarés",
+      "gravite": "IMPORTANT"
+    }
+  ]
+}
