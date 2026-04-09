@@ -1,0 +1,77 @@
+{
+  "skill_info": {
+    "skill_id": "SKILL_VALIDATION_AUTOCONTROLE_v1",
+    "nom": "Autocontrôle Zéro Erreur",
+    "version": "1.1",
+    "date": "2026-04-06",
+    "architecture": "Fail-safe by design",
+    "script_python": "validation_autocontrole.py"
+  },
+
+  "donnees_obligatoires_gate1": [
+    "nom", "prenom", "sexe", "date_naissance",
+    "statut_marital", "nombre_enfants", "enfants_nes_avant_2010",
+    "date_debut_carriere", "releve_carriere_disponible", "type_demande"
+  ],
+
+  "controles_gate2": [
+    {
+      "code": "AC_C01",
+      "regle": "Trimestres maternité != 0 uniquement si sexe == F",
+      "gravite": "CRITIQUE"
+    },
+    {
+      "code": "AC_C02",
+      "regle": "Trimestres service national <= 4",
+      "gravite": "CRITIQUE"
+    },
+    {
+      "code": "AC_C03",
+      "regle": "Trimestres chômage <= 4",
+      "gravite": "CRITIQUE"
+    },
+    {
+      "code": "AC_C04",
+      "regle": "Trimestres maladie + AT <= 4 au total",
+      "gravite": "CRITIQUE"
+    },
+    {
+      "code": "AC_C05",
+      "regle": "Trimestres invalidité <= 2",
+      "gravite": "CRITIQUE"
+    },
+    {
+      "code": "AC_C06",
+      "regle": "Total validés >= total cotisés stricts",
+      "gravite": "CRITIQUE"
+    },
+    {
+      "code": "AC_C07",
+      "regle": "Âge début carrière >= 14 ans",
+      "gravite": "CRITIQUE"
+    },
+    {
+      "code": "AC_C08",
+      "regle": "Trimestres totaux <= (âge actuel - âge début) * 4",
+      "gravite": "CRITIQUE"
+    },
+    {
+      "code": "AC_C09",
+      "regle": "Si enfants > 0 ET nés avant 2010 → vérifier majorations CNAV",
+      "gravite": "IMPORTANT"
+    },
+    {
+      "code": "AC_C10",
+      "regle": "Si périodes étrangères → pays identifié avec statut UE/Convention/Sans accord",
+      "gravite": "IMPORTANT"
+    }
+  ],
+
+  "comportement_echec": {
+    "stopper_process": true,
+    "ne_pas_estimer_partiellement": true,
+    "ne_pas_interpoler": true,
+    "retourner_arret_critique": true,
+    "logger_registre_erreurs": true
+  }
+}
