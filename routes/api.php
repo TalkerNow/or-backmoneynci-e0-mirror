@@ -146,6 +146,11 @@ Route::
                 Route::get('skills', 'Api\SkillsCatalogController@index');
                 Route::get('skills/id/{skillId}', 'Api\SkillsCatalogController@showBySkillId');
                 Route::get('skills/{code}', 'Api\SkillsCatalogController@showByCode');
+
+                // analysis-reports
+                Route::get('analysis-reports/client/{clientId}', 'Api\AnalysisReportController@getByClient');
+                Route::post('analysis-reports/{analysisReport}/validate', 'Api\AnalysisReportController@validateReport');
+                Route::apiResource('analysis-reports', 'Api\AnalysisReportController');
             });
 
 
