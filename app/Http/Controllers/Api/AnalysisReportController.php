@@ -10,14 +10,16 @@ class AnalysisReportController extends Controller
 {
     /**
      * GET /api/v1/analysis-reports
-     * Liste avec filtres : user_id, skill_id, statut
+     * Liste avec filtres : client_id (alias user_id), skill_id, statut
      */
     public function index(Request $request)
     {
         $q = AnalysisReport::query()->orderByDesc('id');
 
-        if ($request->filled('user_id')) {
-            $q->where('user_id', (int) $request->query('user_id'));
+        // client_id et user_id sont équivalents
+        $clientId = $request->filled('client_id') ? $request->query('client_id') : $request->query('user_id');
+        if ($clientId) {
+            $q->where('user_id', (int) $clientId);
         }
 
         if ($request->filled('skill_id')) {
@@ -31,6 +33,28 @@ class AnalysisReportController extends Controller
         return response()->json(
             $q->paginate((int) $request->query('per_page', 50))
         );
+    }
+
+    /**
+     * GET /api/v1/analysis-reports/latest/{clientId}/{skillCode}
+     * Dernier rapport d'un client pour un skill donné (utilisé par n8n / Raph)
+     */
+    public function latest(int $clientId, string $skillCode)
+    {
+        $report = AnalysisReport::where('user_id', $clientId)
+            ->where('skill_id', strtolower($skillCode))
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (!$report) {
+            return response()->json([
+                'error'      => 'No report found',
+                'client_id'  => $clientId,
+                'skill_code' => $skillCode,
+            ], 404);
+        }
+
+        return response()->json($report);
     }
 
     /**
