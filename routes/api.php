@@ -148,9 +148,14 @@ Route::
                 Route::get('skills/{code}', 'Api\SkillsCatalogController@showByCode');
 
                 // analysis-reports
+                // ATTENTION : routes statiques avant apiResource pour éviter les conflits
+                Route::get('analysis-reports/latest/{clientId}/{skillCode}', 'Api\AnalysisReportController@latest');
                 Route::get('analysis-reports/client/{clientId}', 'Api\AnalysisReportController@getByClient');
                 Route::post('analysis-reports/{analysisReport}/validate', 'Api\AnalysisReportController@validateReport');
                 Route::apiResource('analysis-reports', 'Api\AnalysisReportController');
+
+                // system-prompt
+                Route::get('system-prompt/latest', 'Api\SystemPromptController@latest');
             });
 
 
