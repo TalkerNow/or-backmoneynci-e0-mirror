@@ -6,6 +6,11 @@ use Illuminate\Support\Facades\Schema;
 
 class CreateSkillsCatalogHistoryTable extends Migration
 {
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
     public function up()
     {
         Schema::create('skills_catalog_history', function (Blueprint $table) {
@@ -16,6 +21,7 @@ class CreateSkillsCatalogHistoryTable extends Migration
             $table->unsignedBigInteger('created_by');
             $table->timestamp('created_at');
 
+            // Foreign keys
             $table->foreign('skills_catalog_id')
                   ->references('id')
                   ->on('skills_catalog')
@@ -26,10 +32,16 @@ class CreateSkillsCatalogHistoryTable extends Migration
                   ->on('users')
                   ->onDelete('cascade');
 
+            // Index pour retrouver rapidement les versions d'un skill
             $table->index(['skills_catalog_id', 'version']);
         });
     }
 
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
     public function down()
     {
         Schema::dropIfExists('skills_catalog_history');
