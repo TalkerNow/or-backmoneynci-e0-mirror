@@ -71,7 +71,7 @@ class SkillsCatalog extends Model
                     'skills_catalog_id' => $skill->id,
                     'version'           => $latestVersion + 1,
                     'skill_md'          => $skill->getOriginal('skill_md'),
-                    'created_by'        => auth()->id() ?? 1,
+                    'created_by'        => auth()->id(),
                 ]);
             }
         });

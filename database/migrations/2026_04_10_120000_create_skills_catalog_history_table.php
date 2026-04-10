@@ -18,7 +18,7 @@ class CreateSkillsCatalogHistoryTable extends Migration
             $table->unsignedBigInteger('skills_catalog_id');
             $table->integer('version');
             $table->longText('skill_md');
-            $table->unsignedBigInteger('created_by');
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamp('created_at');
 
             // Foreign keys
@@ -30,7 +30,7 @@ class CreateSkillsCatalogHistoryTable extends Migration
             $table->foreign('created_by')
                   ->references('id')
                   ->on('users')
-                  ->onDelete('cascade');
+                  ->onDelete('set null');
 
             // Index pour retrouver rapidement les versions d'un skill
             $table->index(['skills_catalog_id', 'version']);
