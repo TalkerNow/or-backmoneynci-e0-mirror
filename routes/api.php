@@ -145,7 +145,11 @@ Route::
                 // ATTENTION : skills/id/{skillId} DOIT être avant skills/{code}
                 Route::get('skills', 'Api\SkillsCatalogController@index');
                 Route::get('skills/id/{skillId}', 'Api\SkillsCatalogController@showBySkillId');
+                Route::get('skills/{id}/history',           'Api\SkillsCatalogController@history');
+                Route::post('skills/{id}/restore/{version}', 'Api\SkillsCatalogController@restore');
                 Route::get('skills/{code}', 'Api\SkillsCatalogController@showByCode');
+                Route::post('skills',                        'Api\SkillsCatalogController@store');
+                Route::put('skills/{id}',                   'Api\SkillsCatalogController@update');
 
                 // analysis-reports
                 // ATTENTION : routes statiques avant apiResource pour éviter les conflits
