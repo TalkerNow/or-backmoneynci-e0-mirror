@@ -32,6 +32,7 @@ class SkillsCatalogHistory extends Model
         'skills_catalog_id',
         'version',
         'skill_md',
+        'regles_json',
         'created_by',
         'created_at',
     ];
@@ -42,7 +43,8 @@ class SkillsCatalogHistory extends Model
      * @var array
      */
     protected $casts = [
-        'created_at' => 'datetime',
+        'created_at'  => 'datetime',
+        'regles_json' => 'array',
     ];
 
     /**

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Controller;
 use App\Models\SkillsCatalog;
 use App\Models\SkillsCatalogHistory;
 use Illuminate\Http\Request;
@@ -105,6 +105,7 @@ class SkillsCatalogController extends Controller
 
         $validator = Validator::make($request->all(), [
             'skill_md'    => 'sometimes|required|string',
+            'regles_json' => 'sometimes|nullable',
             'description' => 'nullable|string',
             'active'      => 'sometimes|boolean',
             'priority'    => 'sometimes|integer|min:0',
@@ -115,7 +116,7 @@ class SkillsCatalogController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $payload = $request->only(['skill_md', 'description', 'active', 'priority', 'tags']);
+        $payload = $request->only(['skill_md', 'regles_json', 'description', 'active', 'priority', 'tags']);
 
         $skill->update($payload);
 

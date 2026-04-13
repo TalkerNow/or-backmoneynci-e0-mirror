@@ -64,13 +64,14 @@ class SkillsCatalog extends Model
         parent::boot();
 
         static::updated(function ($skill) {
-            if ($skill->isDirty('skill_md')) {
+            if ($skill->isDirty('skill_md') || $skill->isDirty('regles_json')) {
                 $latestVersion = $skill->history()->max('version') ?? 0;
 
                 SkillsCatalogHistory::create([
                     'skills_catalog_id' => $skill->id,
                     'version'           => $latestVersion + 1,
                     'skill_md'          => $skill->getOriginal('skill_md'),
+                    'regles_json'       => $skill->getOriginal('regles_json'),
                     'created_by'        => auth()->id(),
                 ]);
             }
