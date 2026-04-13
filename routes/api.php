@@ -72,6 +72,9 @@ Route::
             Route::post('/contracts/send-docusign', 'Api\DocusignController@sendFilledContract')->name('contracts.send-docusign');
             Route::apiResource('/kpis', 'Api\KpiController');
 
+            // ---- RIS PARSE (Analyse PDF RIS via n8n) ----
+            Route::post('/parse-ris', 'Api\RisParseController@parse');
+
             // ---- FROZEN_DATA (Barrière de données carrière) ----
             Route::get('/frozen_data/{user_id}', 'Api\FrozenDataController@show');
             Route::post('/frozen_data', 'Api\FrozenDataController@store');
