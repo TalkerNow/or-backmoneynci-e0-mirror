@@ -72,8 +72,14 @@ class RisParseController extends Controller
                 if (!$annee) {
                     continue;
                 }
-                // Revenus : "revenus_total", "revenus", ou "revenu"
-                $revenus = (int) ($entry['revenus_total'] ?? $entry['revenus'] ?? $entry['revenu'] ?? 0);
+                // Revenus : nom variable selon le modèle → on cherche toute clé contenant "revenu"
+                $revenus = 0;
+                foreach ($entry as $k => $v) {
+                    if (str_contains(strtolower($k), 'revenu') && is_numeric($v)) {
+                        $revenus = (int) $v;
+                        break;
+                    }
+                }
                 // Régimes : strings ou objets {nom, ...} → on normalise en strings
                 $regimes = array_map(
                     fn($r) => is_array($r) ? ($r['nom'] ?? '') : (string) $r,
