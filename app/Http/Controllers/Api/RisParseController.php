@@ -52,6 +52,9 @@ class RisParseController extends Controller
             $risData = $risData[0];
         }
 
+        \Log::info('[RIS] keys=' . json_encode(array_keys($risData ?? [])));
+        \Log::info('[RIS] carriere[0]=' . json_encode(($risData['carriere'] ?? [])[0] ?? null));
+
         // ── 2. Détection du format (nouveau vs ancien) ───────────────────────
         $isNewFormat = isset($risData['profil']) && isset($risData['carriere']);
 
