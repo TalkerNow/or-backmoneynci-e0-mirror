@@ -64,16 +64,24 @@ class RisParseController extends Controller
 
             $carriere = [];
             foreach ($carriereRaw as $entry) {
-                if (!isset($entry['annee'])) {
+                // Année : "annee" (Vision) ou "year" (Flash)
+                $annee = (int) ($entry['annee'] ?? $entry['year'] ?? 0);
+                if (!$annee) {
                     continue;
                 }
-                $revenus = (int) ($entry['revenus_total'] ?? $entry['revenus'] ?? 0);
+                // Revenus : "revenus_total", "revenus", ou "revenu"
+                $revenus = (int) ($entry['revenus_total'] ?? $entry['revenus'] ?? $entry['revenu'] ?? 0);
+                // Régimes : strings ou objets {nom, ...} → on normalise en strings
+                $regimes = array_map(
+                    fn($r) => is_array($r) ? ($r['nom'] ?? '') : (string) $r,
+                    $entry['regimes'] ?? []
+                );
                 $carriere[] = [
-                    'annee'        => (int) $entry['annee'],
+                    'annee'        => $annee,
                     'sal_original' => $revenus,
                     'sal_eur'      => $revenus,
                     'devise'       => '€',
-                    'regimes'      => $entry['regimes'] ?? [],
+                    'regimes'      => array_values(array_filter($regimes)),
                 ];
             }
 
