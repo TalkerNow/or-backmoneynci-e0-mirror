@@ -14,7 +14,7 @@ services:
       - "9008:9000"
     environment:
       PHP_MEMORY_LIMIT: 512M
-      PHP_MAX_EXECUTION_TIME: 120
+      PHP_MAX_EXECUTION_TIME: 300
       DB_CONNECTION: mysql
       DB_HOST: host.docker.internal
       DB_PORT: 3306
