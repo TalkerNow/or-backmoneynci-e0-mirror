@@ -52,71 +52,104 @@ class RisParseController extends Controller
             $risData = $risData[0];
         }
 
-        // ── 2. Validation structure RIS ──────────────────────────────────────
-        if (empty($risData['trimestres']) || !isset($risData['detail_carriere'])) {
-            return response()->json(['message' => 'Ce document ne semble pas être un RIS.'], 422);
-        }
+        // ── 2. Détection du format (nouveau vs ancien) ───────────────────────
+        $isNewFormat = isset($risData['profil']) && isset($risData['carriere']);
 
-        $detailCarriere = $risData['detail_carriere'] ?? [];
-        if (empty($detailCarriere)) {
-            return response()->json(['message' => 'Le RIS ne contient aucune ligne de carrière exploitable.'], 422);
-        }
-
-        // ── 3. Mapping detail_carriere → rows par année ──────────────────────
-        $yearMap = [];
-        foreach ($detailCarriere as $entry) {
-            if (empty($entry['date_debut']) || !isset($entry['revenus'])) {
-                continue;
-            }
-            $parts = explode('/', $entry['date_debut']);
-            $annee = (int) ($parts[2] ?? 0);
-            if (!$annee) {
-                continue;
+        if ($isNewFormat) {
+            // ── Nouveau format : { profil, carriere: [{annee, revenus, regimes}] }
+            $carriereRaw = $risData['carriere'] ?? [];
+            if (empty($carriereRaw)) {
+                return response()->json(['message' => 'Le RIS ne contient aucune ligne de carrière exploitable.'], 422);
             }
 
-            if (!isset($yearMap[$annee])) {
-                $yearMap[$annee] = ['entries' => [], 'devise' => $entry['devise'] ?? '€'];
-            }
-            // Si au moins une entrée de l'année est en EUR, on marque l'année EUR
-            if (($entry['devise'] ?? '') === '€') {
-                $yearMap[$annee]['devise'] = '€';
-            }
-
-            // Dédupliquer par (employeur + revenus) pour éviter le double-comptage inter-régimes
-            $key = ($entry['employeur'] ?? '') . '__' . $entry['revenus'];
-            if (!isset($yearMap[$annee]['entries'][$key])) {
-                $eur = ($entry['devise'] ?? '') === 'FRF'
-                    ? (int) round($entry['revenus'] / self::FRF_TO_EUR)
-                    : (int) $entry['revenus'];
-
-                $yearMap[$annee]['entries'][$key] = [
-                    'original' => (int) $entry['revenus'],
-                    'eur'      => $eur,
+            $carriere = [];
+            foreach ($carriereRaw as $entry) {
+                if (!isset($entry['annee']) || !isset($entry['revenus'])) {
+                    continue;
+                }
+                $carriere[] = [
+                    'annee'        => (int) $entry['annee'],
+                    'sal_original' => (int) $entry['revenus'],
+                    'sal_eur'      => (int) $entry['revenus'],
+                    'devise'       => '€',
+                    'regimes'      => $entry['regimes'] ?? [],
                 ];
             }
+
+            if (empty($carriere)) {
+                return response()->json(['message' => 'Le RIS ne contient aucune ligne de carrière exploitable.'], 422);
+            }
+
+            usort($carriere, fn($a, $b) => $b['annee'] - $a['annee']);
+
+            $meta   = $risData['profil'] ?? null;
+            $totaux = null;
+            $points = null;
+        } else {
+            // ── Ancien format : { trimestres, detail_carriere, personne, points }
+            if (empty($risData['trimestres']) || !isset($risData['detail_carriere'])) {
+                return response()->json(['message' => 'Ce document ne semble pas être un RIS.'], 422);
+            }
+
+            $detailCarriere = $risData['detail_carriere'] ?? [];
+            if (empty($detailCarriere)) {
+                return response()->json(['message' => 'Le RIS ne contient aucune ligne de carrière exploitable.'], 422);
+            }
+
+            // ── 3. Mapping detail_carriere → rows par année ──────────────────
+            $yearMap = [];
+            foreach ($detailCarriere as $entry) {
+                if (empty($entry['date_debut']) || !isset($entry['revenus'])) {
+                    continue;
+                }
+                $parts = explode('/', $entry['date_debut']);
+                $annee = (int) ($parts[2] ?? 0);
+                if (!$annee) {
+                    continue;
+                }
+
+                if (!isset($yearMap[$annee])) {
+                    $yearMap[$annee] = ['entries' => [], 'devise' => $entry['devise'] ?? '€'];
+                }
+                if (($entry['devise'] ?? '') === '€') {
+                    $yearMap[$annee]['devise'] = '€';
+                }
+
+                $key = ($entry['employeur'] ?? '') . '__' . $entry['revenus'];
+                if (!isset($yearMap[$annee]['entries'][$key])) {
+                    $eur = ($entry['devise'] ?? '') === 'FRF'
+                        ? (int) round($entry['revenus'] / self::FRF_TO_EUR)
+                        : (int) $entry['revenus'];
+
+                    $yearMap[$annee]['entries'][$key] = [
+                        'original' => (int) $entry['revenus'],
+                        'eur'      => $eur,
+                    ];
+                }
+            }
+
+            // ── 4. Construire le tableau carrière final ──────────────────────
+            $carriere = [];
+            foreach ($yearMap as $annee => $bucket) {
+                $salOriginal = array_sum(array_column($bucket['entries'], 'original'));
+                $salEur      = array_sum(array_column($bucket['entries'], 'eur'));
+
+                $carriere[] = [
+                    'annee'        => $annee,
+                    'sal_original' => $salOriginal,
+                    'sal_eur'      => $salEur,
+                    'devise'       => $bucket['devise'],
+                ];
+            }
+
+            usort($carriere, fn($a, $b) => $b['annee'] - $a['annee']);
+
+            $meta   = $risData['personne'] ?? null;
+            $totaux = $risData['trimestres'] ?? null;
+            $points = $risData['points'] ?? null;
         }
-
-        // ── 4. Construire le tableau carrière final ──────────────────────────
-        $carriere = [];
-        foreach ($yearMap as $annee => $bucket) {
-            $salOriginal = array_sum(array_column($bucket['entries'], 'original'));
-            $salEur      = array_sum(array_column($bucket['entries'], 'eur'));
-
-            $carriere[] = [
-                'annee'        => $annee,
-                'sal_original' => $salOriginal,
-                'sal_eur'      => $salEur,
-                'devise'       => $bucket['devise'],
-            ];
-        }
-
-        // Tri par année décroissante
-        usort($carriere, fn($a, $b) => $b['annee'] - $a['annee']);
 
         // ── 5. Sauvegarde dans frozen_data ───────────────────────────────────
-        $meta   = $risData['personne'] ?? null;
-        $totaux = $risData['trimestres'] ?? null;
-        $points = $risData['points'] ?? null;
 
         try {
             $this->repository->createOrUpdate($userId, [
