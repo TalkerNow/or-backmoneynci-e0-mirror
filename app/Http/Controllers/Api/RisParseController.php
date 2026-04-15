@@ -2,9 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Exceptions\FrozenDataLockedException;
 use App\Http\Controllers\Controller;
-use App\Repositories\FrozenDataRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -14,15 +12,12 @@ class RisParseController extends Controller
     private const WEBHOOK_URL = 'https://n8n.srv796541.hstgr.cloud/webhook/parse-pdf-salaire';
     private const FRF_TO_EUR  = 6.55957;
 
-    public function __construct(private FrozenDataRepository $repository)
-    {
-    }
-
     /**
      * POST /api/parse-ris
      *
      * Reçoit un PDF RIS, l'envoie au webhook n8n, mappe les données
-     * carrière et les sauvegarde dans frozen_data.
+     * carrière et les retourne au frontend (sans sauvegarde en base).
+     * La sauvegarde n'a lieu que quand le consultant clique "Geler & Calculer".
      *
      * Body : multipart/form-data
      *   - file     : PDF (required)
@@ -167,22 +162,9 @@ class RisParseController extends Controller
             $points = $risData['points'] ?? null;
         }
 
-        // ── 5. Sauvegarde dans frozen_data ───────────────────────────────────
-
-        try {
-            $this->repository->createOrUpdate($userId, [
-                'user_id'  => $userId,
-                'source'   => 'RIS_PARSE_' . now()->format('Y'),
-                'meta'     => $meta,
-                'carriere' => $carriere,
-                'alertes'  => [],
-                'totaux'   => array_merge((array) $totaux, ['points' => $points]),
-            ]);
-        } catch (FrozenDataLockedException $e) {
-            return response()->json(['message' => $e->getMessage()], 423);
-        }
-
-        // ── 6. Réponse au frontend ───────────────────────────────────────────
+        // ── 5. Réponse au frontend ───────────────────────────────────────────
+        // Note : le RIS n'est PAS sauvegardé automatiquement dans frozen_data.
+        // Le consultant doit valider et cliquer "Geler & Calculer" pour persister les données.
         return response()->json([
             'carriere' => $carriere,
             'totaux'   => $totaux,
