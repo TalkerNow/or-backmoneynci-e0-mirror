@@ -39,7 +39,7 @@ class RisParseController extends Controller
         $file   = $request->file('file');
 
         // ── 1. Appel n8n ────────────────────────────────────────────────────
-        $n8nResponse = Http::timeout(120)
+        $n8nResponse = Http::timeout(300)
             ->attach('file0', file_get_contents($file->getPathname()), $file->getClientOriginalName())
             ->post(self::WEBHOOK_URL);
 
