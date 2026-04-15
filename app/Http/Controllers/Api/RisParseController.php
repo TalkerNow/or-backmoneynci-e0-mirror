@@ -52,9 +52,6 @@ class RisParseController extends Controller
             $risData = $risData[0];
         }
 
-        \Log::info('[RisParseController] n8n response keys: ' . json_encode(array_keys($risData ?? [])));
-        \Log::info('[RisParseController] n8n carriere[0]: ' . json_encode(($risData['carriere'] ?? [])[0] ?? null));
-
         // ── 2. Détection du format (nouveau vs ancien) ───────────────────────
         $isNewFormat = isset($risData['profil']) && isset($risData['carriere']);
 
@@ -67,13 +64,14 @@ class RisParseController extends Controller
 
             $carriere = [];
             foreach ($carriereRaw as $entry) {
-                if (!isset($entry['annee']) || !isset($entry['revenus'])) {
+                if (!isset($entry['annee'])) {
                     continue;
                 }
+                $revenus = (int) ($entry['revenus_total'] ?? $entry['revenus'] ?? 0);
                 $carriere[] = [
                     'annee'        => (int) $entry['annee'],
-                    'sal_original' => (int) $entry['revenus'],
-                    'sal_eur'      => (int) $entry['revenus'],
+                    'sal_original' => $revenus,
+                    'sal_eur'      => $revenus,
                     'devise'       => '€',
                     'regimes'      => $entry['regimes'] ?? [],
                 ];
