@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Http;
 
 class CnavCalculateController extends Controller
 {
-    private const WEBHOOK_URL = 'https://n8n.srv796541.hstgr.cloud/webhook/skill-execute-cnav-v2-1-test';
+    private const WEBHOOK_URL = 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-cnav-v2-test';
 
     /**
      * POST /api/cnav/calculate
