@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Http;
 
 class CnavCalculateController extends Controller
 {
-    private const WEBHOOK_URL = 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-cnav-v2-test';
+    private const WEBHOOK_URL = 'https://n8n.srv796541.hstgr.cloud/webhook/f68ecf2b-4ee9-448c-bf61-f7b381148dc3';
 
     /**
      * POST /api/cnav/calculate
@@ -30,16 +30,14 @@ class CnavCalculateController extends Controller
     public function calculate(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'client_id'                      => 'required|integer',
-            'token'                          => 'required|string',
-            'date_naissance'                 => 'nullable|string',
-            'sam'                            => 'nullable|numeric',
-            'trimestres_valides_tous_regimes' => 'nullable|integer',
-            'trimestres_cotises_rg'          => 'nullable|integer',
-            'user_id'                        => 'nullable|integer',
-            'user_context'                   => 'nullable|string',
-            'scenario_params'                => 'nullable|array',
+            'client_id'  => 'required|integer',
+            'token'      => 'required|string',
+            'user_id'    => 'nullable|integer',
+            'user_context' => 'nullable|string',
         ]);
+
+        // v1 workflow requires skill_code in the body
+        $data['skill_code'] = 'CNAV';
 
         $n8nResponse = Http::timeout(120)->post(self::WEBHOOK_URL, $data);
 

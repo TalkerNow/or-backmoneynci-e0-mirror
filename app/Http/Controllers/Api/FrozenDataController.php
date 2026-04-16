@@ -55,6 +55,11 @@ class FrozenDataController extends Controller
         $data['trimestres_valides_tous_regimes'] = $totaux['trimestres_total']   ?? 0;
         $data['trimestres_cotises_rg']           = $totaux['trimestres_cotises'] ?? 0;
 
+        // Also inject sam into totaux so the v1 Validation Gate (totaux.sam) passes
+        if ($data['sam'] > 0) {
+            $data['totaux']['sam'] = $data['sam'];
+        }
+
         return response()->json($data);
     }
 
