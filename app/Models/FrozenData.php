@@ -13,6 +13,7 @@ class FrozenData extends Model
         'source',
         'meta',
         'carriere',
+        'cipav',
         'alertes',
         'totaux',
         'locked_at',
@@ -22,6 +23,7 @@ class FrozenData extends Model
     protected $casts = [
         'meta'      => 'array',
         'carriere'  => 'array',
+        'cipav'     => 'array',
         'alertes'   => 'array',
         'totaux'    => 'array',
         'locked_at' => 'datetime',

@@ -36,6 +36,7 @@ class FrozenDataRepository
             'source'   => $data['source'] ?? null,
             'meta'     => $data['meta'] ?? null,
             'carriere' => $data['carriere'] ?? null,
+            'cipav'    => $data['cipav'] ?? null,
             'alertes'  => $data['alertes'] ?? null,
             'totaux'   => $data['totaux'] ?? null,
         ];
@@ -54,7 +55,7 @@ class FrozenDataRepository
      * Une fois gelées, elles ne peuvent plus être modifiées via createOrUpdate.
      * Pour modifier : appeler unlock() puis createOrUpdate().
      */
-    public function lock(int $userId, int $lockedByUserId): FrozenData
+    public function lock(int $userId, ?int $lockedByUserId): FrozenData
     {
         $frozen = $this->getByUserId($userId);
 

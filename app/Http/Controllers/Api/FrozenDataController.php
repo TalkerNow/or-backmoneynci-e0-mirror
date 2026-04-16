@@ -26,7 +26,36 @@ class FrozenDataController extends Controller
             return response()->json(['message' => 'Aucune donnée carrière trouvée.'], 404);
         }
 
-        return response()->json($frozen);
+        // Append pre-computed Python-ready params at root level so the n8n CNAV workflow
+        // can read them regardless of which field path it uses.
+        $data = $frozen->toArray();
+
+        // date_naissance : meta.date_naissance (YYYY-MM-DD) → DD/MM/YYYY
+        $rawDate = $data['meta']['date_naissance'] ?? null;
+        if ($rawDate) {
+            $parts = explode('-', $rawDate);
+            $data['date_naissance'] = count($parts) === 3
+                ? "{$parts[2]}/{$parts[1]}/{$parts[0]}"
+                : $rawDate;
+        }
+
+        // SAM : average of the best 25 revalorised salaries
+        $carriere = $data['carriere'] ?? [];
+        if (!empty($carriere)) {
+            $revalos = array_column($carriere, 'salaire_revalo');
+            rsort($revalos);
+            $top25  = array_slice($revalos, 0, 25);
+            $data['sam'] = count($top25) ? (int) round(array_sum($top25) / count($top25)) : 0;
+        } else {
+            $data['sam'] = 0;
+        }
+
+        // Trimestres fields expected by the Python script
+        $totaux = $data['totaux'] ?? [];
+        $data['trimestres_valides_tous_regimes'] = $totaux['trimestres_total']   ?? 0;
+        $data['trimestres_cotises_rg']           = $totaux['trimestres_cotises'] ?? 0;
+
+        return response()->json($data);
     }
 
     /**
@@ -50,6 +79,7 @@ class FrozenDataController extends Controller
             'source'   => 'nullable|string|max:100',
             'meta'     => 'nullable|array',
             'carriere' => 'nullable|array',
+            'cipav'    => 'nullable|array',
             'alertes'  => 'nullable|array',
             'totaux'   => 'nullable|array',
         ]);
@@ -69,7 +99,7 @@ class FrozenDataController extends Controller
      */
     public function lock(Request $request, int $userId): JsonResponse
     {
-        $frozen = $this->repository->lock($userId, $request->user()->id);
+        $frozen = $this->repository->lock($userId, $request->user()?->id ?? 0);
         return response()->json($frozen);
     }
 
