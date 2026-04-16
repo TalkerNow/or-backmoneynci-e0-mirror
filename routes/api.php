@@ -78,6 +78,9 @@ Route::
             // ---- CNAV CALCULATE (Proxy n8n webhook — évite CORS) ----
             Route::post('/cnav/calculate', 'Api\CnavCalculateController@calculate');
 
+            // ---- SCRIPT CALCULATE (Proxy multi-régimes — évite CORS) ----
+            Route::post('/script/calculate', 'Api\ScriptCalculateController@calculate');
+
             // ---- FROZEN_DATA (Barrière de données carrière) ----
             Route::get('/frozen_data/{user_id}', 'Api\FrozenDataController@show');
             Route::post('/frozen_data', 'Api\FrozenDataController@store');
