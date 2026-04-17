@@ -52,8 +52,18 @@ class FrozenDataController extends Controller
 
         // Trimestres fields expected by the Python script
         $totaux = $data['totaux'] ?? [];
-        $data['trimestres_valides_tous_regimes'] = $totaux['trimestres_total']   ?? 0;
-        $data['trimestres_cotises_rg']           = $totaux['trimestres_cotises'] ?? 0;
+        $data['trimestres_valides_tous_regimes'] = $totaux['trimestres_tous_regimes']
+            ?? $totaux['trimestres_total']
+            ?? 0;
+
+        // trimestres_cotises_rg : UNIQUEMENT les trimestres CNAV (régime général),
+        // pas tous régimes — pour que le calcul de proratisation CNAV soit exact
+        $parRegime = $totaux['trimestres_par_regime'] ?? [];
+        $data['trimestres_cotises_rg'] = $parRegime['cnav']
+            ?? $totaux['trimestres_cnav']
+            ?? $totaux['trimestres_regime_general']
+            ?? $totaux['trimestres_cotises']  // fallback legacy (imprécis)
+            ?? 0;
 
         // Also inject sam into totaux so the v1 Validation Gate (totaux.sam) passes
         if ($data['sam'] > 0) {
