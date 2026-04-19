@@ -86,6 +86,7 @@ Route::
             Route::post('/frozen_data', 'Api\FrozenDataController@store');
             Route::post('/frozen_data/{user_id}/lock', 'Api\FrozenDataController@lock');
             Route::post('/frozen_data/{user_id}/unlock', 'Api\FrozenDataController@unlock');
+            Route::delete('/frozen_data/{user_id}', 'Api\FrozenDataController@destroy');
 
             // ---- AUDIT_LOG (Traçabilité des exécutions IA) ----
             Route::get('/audit_log', 'Api\AuditLogController@index');
