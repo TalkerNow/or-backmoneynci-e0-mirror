@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Repositories\FrozenDataRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class FrozenDataController extends Controller
 {
@@ -31,12 +32,22 @@ class FrozenDataController extends Controller
         $data = $frozen->toArray();
 
         // date_naissance : meta.date_naissance (YYYY-MM-DD) → DD/MM/YYYY
+        // Fallback : users.birth_date when meta is null/empty
         $rawDate = $data['meta']['date_naissance'] ?? null;
+        if (!$rawDate) {
+            $rawDate = DB::table('personal_informations')
+                ->where('user_id', $userId)
+                ->value('birth_date');
+        }
         if ($rawDate) {
             $parts = explode('-', $rawDate);
             $data['date_naissance'] = count($parts) === 3
                 ? "{$parts[2]}/{$parts[1]}/{$parts[0]}"
                 : $rawDate;
+            // Inject into meta so n8n workflows reading frozen.meta.date_naissance find it
+            if (empty($data['meta']['date_naissance'])) {
+                $data['meta']['date_naissance'] = $rawDate; // YYYY-MM-DD — n8n norm() handles both formats
+            }
         }
 
         // SAM : average of the best 25 revalorised salaries
