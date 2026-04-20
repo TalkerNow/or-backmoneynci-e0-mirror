@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Repositories\FrozenDataRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class FrozenDataController extends Controller
 {
@@ -31,7 +32,13 @@ class FrozenDataController extends Controller
         $data = $frozen->toArray();
 
         // date_naissance : meta.date_naissance (YYYY-MM-DD) → DD/MM/YYYY
+        // Fallback : users.birth_date when meta is null/empty
         $rawDate = $data['meta']['date_naissance'] ?? null;
+        if (!$rawDate) {
+            $rawDate = DB::table('personal_informations')
+                ->where('user_id', $userId)
+                ->value('birth_date');
+        }
         if ($rawDate) {
             $parts = explode('-', $rawDate);
             $data['date_naissance'] = count($parts) === 3
