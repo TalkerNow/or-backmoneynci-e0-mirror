@@ -10,3 +10,6 @@ public/img/
 docker-compose.override.yml
 
 .env
+
+graphify-out/
+CLAUDE.md
