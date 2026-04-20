@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Repositories\FrozenDataRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 class ScriptCalculateController extends Controller
@@ -15,22 +17,17 @@ class ScriptCalculateController extends Controller
         'IRCANTEC'    => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-ircantec-v2-test',
         'RCI'         => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-rci-v2-test',
         'CIPAV'       => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-cipav-v2-test',
+        'RACL'        => 'https://n8n.srv796541.hstgr.cloud/webhook/racl-executor-v1-test',
     ];
+
+    public function __construct(private FrozenDataRepository $frozenRepo) {}
 
     /**
      * POST /api/script/calculate
      *
      * Proxy multi-régimes vers n8n — évite CORS depuis le navigateur.
-     *
-     * Body attendu :
-     * {
-     *   "regime_code":     "CNAV" | "AGIRC_ARRCO" | "IRCANTEC" | "RCI" | "CIPAV",
-     *   "client_id":       42,
-     *   "token":           "...",
-     *   "user_context":    "",
-     *   "scenario_params": {},
-     *   "frozen_data_id":  null
-     * }
+     * Pour RACL : enrichit le payload avec frozen_data depuis la DB locale
+     * afin que le workflow n8n n'ait pas besoin de rappeler le serveur.
      */
     public function calculate(Request $request): JsonResponse
     {
@@ -51,7 +48,29 @@ class ScriptCalculateController extends Controller
 
         $payload = array_merge($data, ['regime_code' => $regimeCode]);
 
-        $n8nResponse = Http::timeout(120)->post(self::WEBHOOKS[$regimeCode], $payload);
+        // RACL : injecter frozen_data dans le payload pour que n8n
+        // n'ait pas besoin de rappeler le serveur (fonctionne en local)
+        if ($regimeCode === 'RACL') {
+            $frozen = $this->frozenRepo->getByUserId($data['client_id']);
+            if ($frozen) {
+                $frozenArray = $frozen->toArray();
+
+                // Garantir date_naissance dans meta (fallback DB si absent)
+                if (empty($frozenArray['meta']['date_naissance'])) {
+                    $rawDate = DB::table('personal_informations')
+                        ->where('user_id', $data['client_id'])
+                        ->value('birth_date');
+                    if ($rawDate) {
+                        $frozenArray['meta']['date_naissance'] = $rawDate;
+                    }
+                }
+
+                $payload['frozen_data'] = $frozenArray;
+            }
+        }
+
+        $timeout = $regimeCode === 'RACL' ? 90 : 120;
+        $n8nResponse = Http::timeout($timeout)->post(self::WEBHOOKS[$regimeCode], $payload);
 
         if (!$n8nResponse->successful()) {
             return response()->json([
