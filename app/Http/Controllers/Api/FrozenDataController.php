@@ -135,4 +135,24 @@ class FrozenDataController extends Controller
         $frozen = $this->repository->unlock($userId);
         return response()->json($frozen);
     }
+
+    /**
+     * DELETE /api/frozen_data/{user_id}
+     * Soft-delete les données carrière — l'historique reste en BDD (deleted_at).
+     * Interdit si les données sont gelées (423 Locked) : unlock requis avant.
+     */
+    public function destroy(Request $request, int $userId): JsonResponse
+    {
+        try {
+            $frozen = $this->repository->softDeleteByUserId($userId, $request->user()?->id);
+
+            if (!$frozen) {
+                return response()->json(['message' => 'Aucune donnée carrière à supprimer.'], 404);
+            }
+
+            return response()->json(['message' => 'Carrière réinitialisée.', 'id' => $frozen->id]);
+        } catch (FrozenDataLockedException $e) {
+            return response()->json(['message' => $e->getMessage()], 423);
+        }
+    }
 }
