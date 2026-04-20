@@ -81,11 +81,15 @@ class RisParseController extends Controller
                     $entry['regimes'] ?? []
                 );
                 $carriere[] = [
-                    'annee'        => $annee,
-                    'sal_original' => $revenus,
-                    'sal_eur'      => $revenus,
-                    'devise'       => '€',
-                    'regimes'      => array_values(array_filter($regimes)),
+                    'annee'               => $annee,
+                    'sal_original'        => $revenus,
+                    'sal_eur'             => $revenus,
+                    'devise'              => '€',
+                    'regimes'             => array_values(array_filter($regimes)),
+                    'trimestres_cotises'  => (int) ($entry['trimestres_cotises'] ?? 0),
+                    'trimestres_ar'       => (int) ($entry['trimestres_ar'] ?? 0),
+                    'trimestres_assimiles'=> (int) ($entry['trimestres_assimiles'] ?? 0),
+                    'total_trimestres'    => (int) ($entry['total_trimestres'] ?? 0),
                 ];
             }
 
