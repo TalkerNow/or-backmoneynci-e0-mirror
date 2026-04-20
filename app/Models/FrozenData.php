@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class FrozenData extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'frozen_data';
 
     protected $fillable = [
@@ -18,6 +21,7 @@ class FrozenData extends Model
         'totaux',
         'locked_at',
         'locked_by',
+        'deleted_by',
     ];
 
     protected $casts = [

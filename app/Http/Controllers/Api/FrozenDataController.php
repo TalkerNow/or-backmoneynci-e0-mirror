@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Repositories\FrozenDataRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class FrozenDataController extends Controller
 {
@@ -31,7 +32,13 @@ class FrozenDataController extends Controller
         $data = $frozen->toArray();
 
         // date_naissance : meta.date_naissance (YYYY-MM-DD) → DD/MM/YYYY
+        // Fallback : users.birth_date when meta is null/empty
         $rawDate = $data['meta']['date_naissance'] ?? null;
+        if (!$rawDate) {
+            $rawDate = DB::table('personal_informations')
+                ->where('user_id', $userId)
+                ->value('birth_date');
+        }
         if ($rawDate) {
             $parts = explode('-', $rawDate);
             $data['date_naissance'] = count($parts) === 3
@@ -52,8 +59,18 @@ class FrozenDataController extends Controller
 
         // Trimestres fields expected by the Python script
         $totaux = $data['totaux'] ?? [];
-        $data['trimestres_valides_tous_regimes'] = $totaux['trimestres_total']   ?? 0;
-        $data['trimestres_cotises_rg']           = $totaux['trimestres_cotises'] ?? 0;
+        $data['trimestres_valides_tous_regimes'] = $totaux['trimestres_tous_regimes']
+            ?? $totaux['trimestres_total']
+            ?? 0;
+
+        // trimestres_cotises_rg : UNIQUEMENT les trimestres CNAV (régime général),
+        // pas tous régimes — pour que le calcul de proratisation CNAV soit exact
+        $parRegime = $totaux['trimestres_par_regime'] ?? [];
+        $data['trimestres_cotises_rg'] = $parRegime['cnav']
+            ?? $totaux['trimestres_cnav']
+            ?? $totaux['trimestres_regime_general']
+            ?? $totaux['trimestres_cotises']  // fallback legacy (imprécis)
+            ?? 0;
 
         // Also inject sam into totaux so the v1 Validation Gate (totaux.sam) passes
         if ($data['sam'] > 0) {
@@ -117,5 +134,25 @@ class FrozenDataController extends Controller
     {
         $frozen = $this->repository->unlock($userId);
         return response()->json($frozen);
+    }
+
+    /**
+     * DELETE /api/frozen_data/{user_id}
+     * Soft-delete les données carrière — l'historique reste en BDD (deleted_at).
+     * Interdit si les données sont gelées (423 Locked) : unlock requis avant.
+     */
+    public function destroy(Request $request, int $userId): JsonResponse
+    {
+        try {
+            $frozen = $this->repository->softDeleteByUserId($userId, $request->user()?->id);
+
+            if (!$frozen) {
+                return response()->json(['message' => 'Aucune donnée carrière à supprimer.'], 404);
+            }
+
+            return response()->json(['message' => 'Carrière réinitialisée.', 'id' => $frozen->id]);
+        } catch (FrozenDataLockedException $e) {
+            return response()->json(['message' => $e->getMessage()], 423);
+        }
     }
 }

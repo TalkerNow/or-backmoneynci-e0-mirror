@@ -71,6 +71,31 @@ class FrozenDataRepository
     }
 
     /**
+     * Soft-delete les données carrière d'un client (conserve l'historique via deleted_at).
+     * INTERDIT si les données sont gelées — il faut unlock d'abord.
+     *
+     * @throws FrozenDataLockedException
+     */
+    public function softDeleteByUserId(int $userId, ?int $deletedByUserId): ?FrozenData
+    {
+        $frozen = $this->getByUserId($userId);
+
+        if (!$frozen) {
+            return null;
+        }
+
+        if ($frozen->isLocked()) {
+            throw new FrozenDataLockedException($userId);
+        }
+
+        $frozen->deleted_by = $deletedByUserId;
+        $frozen->save();
+        $frozen->delete();
+
+        return $frozen;
+    }
+
+    /**
      * Déverrouille les données d'un client pour permettre une correction.
      * Attention : toute modification après unlock force une re-validation consultant.
      */
