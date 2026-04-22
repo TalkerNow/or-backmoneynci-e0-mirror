@@ -18,6 +18,7 @@ class ScriptCalculateController extends Controller
         'RCI'             => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-rci-v2-test',
         'CIPAV'           => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-cipav-v2-test',
         'RACL'            => 'https://n8n.srv796541.hstgr.cloud/webhook/racl-executor-v1-test',
+        'RP'              => 'https://n8n.srv796541.hstgr.cloud/webhook/rp-executor-v1-test',
         'COTISATIONS_MIN' => 'https://n8n.srv796541.hstgr.cloud/webhook/tns-executor-v1-test',
     ];
 
@@ -56,7 +57,7 @@ class ScriptCalculateController extends Controller
 
         // Tous les régimes : injecter frozen_data dans le payload
         // pour que n8n n'ait jamais besoin de rappeler le serveur
-        if (in_array($regimeCode, ['CNAV', 'AGIRC_ARRCO', 'IRCANTEC', 'RCI', 'CIPAV', 'RACL', 'COTISATIONS_MIN'])) {
+        if (in_array($regimeCode, ['CNAV', 'AGIRC_ARRCO', 'IRCANTEC', 'RCI', 'CIPAV', 'RACL', 'RP', 'COTISATIONS_MIN'])) {
             $frozen = $this->frozenRepo->getByUserId($data['client_id']);
             if (!$frozen) {
                 return response()->json([
