@@ -12,13 +12,18 @@ use Illuminate\Support\Facades\Http;
 class ScriptCalculateController extends Controller
 {
     private const WEBHOOKS = [
-        'CNAV'            => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-cnav-v2-test',
-        'AGIRC_ARRCO'     => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-agirc-arrco-v2-test',
-        'IRCANTEC'        => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-ircantec-v2-test',
-        'RCI'             => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-rci-v2-test',
-        'CIPAV'           => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-cipav-v2-test',
-        'RACL'            => 'https://n8n.srv796541.hstgr.cloud/webhook/racl-executor-v1-test',
-        'COTISATIONS_MIN' => 'https://n8n.srv796541.hstgr.cloud/webhook/tns-executor-v1-test',
+        'CNAV'                  => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-cnav-v2-test',
+        'AGIRC_ARRCO'           => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-agirc-arrco-v2-test',
+        'IRCANTEC'              => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-ircantec-v2-test',
+        'RCI'                   => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-rci-v2-test',
+        'CIPAV'                 => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-cipav-v2-test',
+        'RACL'                  => 'https://n8n.srv796541.hstgr.cloud/webhook/racl-executor-v1-test',
+        'COTISATIONS_MIN'       => 'https://n8n.srv796541.hstgr.cloud/webhook/tns-executor-v1-test',
+        'ARRET_ACTIVITE'        => 'https://n8n.srv796541.hstgr.cloud/webhook/arret-activite-v1-test',
+        'CHOMAGE_INDEMNISE'     => 'https://n8n.srv796541.hstgr.cloud/webhook/chomage-indemnise-v1-test',
+        'CHOMAGE_NON_INDEMNISE' => 'https://n8n.srv796541.hstgr.cloud/webhook/chomage-non-indemnise-v1-test',
+        'VPLR_INCOMPLETE'       => 'https://n8n.srv796541.hstgr.cloud/webhook/vplr-annee-incomplete-v1-test',
+        'VPLR_ETUDE'            => 'https://n8n.srv796541.hstgr.cloud/webhook/vplr-annee-etude-v1-test',
     ];
 
     public function __construct(private FrozenDataRepository $frozenRepo) {}
@@ -56,7 +61,7 @@ class ScriptCalculateController extends Controller
 
         // Tous les régimes : injecter frozen_data dans le payload
         // pour que n8n n'ait jamais besoin de rappeler le serveur
-        if (in_array($regimeCode, ['CNAV', 'AGIRC_ARRCO', 'IRCANTEC', 'RCI', 'CIPAV', 'RACL', 'COTISATIONS_MIN'])) {
+        if (in_array($regimeCode, array_keys(self::WEBHOOKS))) {
             $frozen = $this->frozenRepo->getByUserId($data['client_id']);
             if (!$frozen) {
                 return response()->json([
