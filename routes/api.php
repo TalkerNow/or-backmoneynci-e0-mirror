@@ -168,6 +168,9 @@ Route::
                 Route::post('analysis-reports/{analysisReport}/validate', 'Api\AnalysisReportController@validateReport');
                 Route::apiResource('analysis-reports', 'Api\AnalysisReportController');
 
+                // rapports
+                Route::post('rapports/consultation', 'Api\RapportConsultationController@generate');
+
                 // system-prompt
                 Route::get('system-prompt/latest', 'Api\SystemPromptController@latest');
             });
