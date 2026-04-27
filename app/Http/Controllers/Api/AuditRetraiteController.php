@@ -63,7 +63,7 @@ class AuditRetraiteController extends Controller
         }
 
         try {
-            $n8nResponse = Http::timeout(360)->post(self::N8N_WEBHOOK, $payload);
+            $n8nResponse = Http::timeout(900)->post(self::N8N_WEBHOOK, $payload);
 
             return response()->json([
                 'success'    => $n8nResponse->successful(),
