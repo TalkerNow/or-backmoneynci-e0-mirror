@@ -171,6 +171,10 @@ Route::
                 // rapports
                 Route::post('rapports/consultation', 'Api\RapportConsultationController@generate');
 
+                // audit retraite
+                Route::post('audit-retraite/generate', 'Api\AuditRetraiteController@generate');
+                Route::post('audit-retraite-store', 'Api\AuditRetraiteController@store');
+
                 // system-prompt
                 Route::get('system-prompt/latest', 'Api\SystemPromptController@latest');
             });
