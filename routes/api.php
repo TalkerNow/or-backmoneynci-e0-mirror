@@ -175,6 +175,10 @@ Route::
                 Route::post('audit-retraite/generate', 'Api\AuditRetraiteController@generate');
                 Route::post('audit-retraite-store', 'Api\AuditRetraiteController@store');
 
+                // simulation-retraite
+                Route::post('simulation-retraite-store', 'Api\SimulationRetraiteController@store');
+                Route::get('simulation-retraite/{clientId}', 'Api\SimulationRetraiteController@getByClient');
+
                 // system-prompt
                 Route::get('system-prompt/latest', 'Api\SystemPromptController@latest');
             });
