@@ -176,6 +176,7 @@ Route::
                 Route::post('audit-retraite-store', 'Api\AuditRetraiteController@store');
 
                 // simulation-retraite
+                Route::post('simulation-retraite/generate', 'Api\SimulationRetraiteController@generate');
                 Route::post('simulation-retraite-store', 'Api\SimulationRetraiteController@store');
                 Route::get('simulation-retraite/{clientId}', 'Api\SimulationRetraiteController@getByClient');
 
