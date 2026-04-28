@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst baseApi = 'https://api.optionretraite.net/api';\nconst frozen_data = body.frozen_data || {};\n\nreturn [{ json: {\n  client_id: body.client_id || frozen_data.user_id || 0,\n  token: body.token || '',\n  revenu_souhaite: body.revenu_souhaite || 0,\n  scenarios_override: body.scenarios || null,\n  frozen_data: frozen_data,\n  storeUrl: baseApi + '/v1/simulation-retraite-store',\n  startTime: Date.now()\n} }];"
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst frozen_data = body.frozen_data || {};\n\nreturn [{ json: {\n  client_id:          body.client_id || frozen_data.user_id || 0,\n  user_id:            body.client_id || frozen_data.user_id || 0,\n  meta:               frozen_data.meta     || {},\n  totaux:             frozen_data.totaux   || {},\n  carriere:           frozen_data.carriere || {},\n  revenu_souhaite:    body.revenu_souhaite || 0,\n  scenarios_override: body.scenarios || null,\n  frozen_data:        frozen_data,\n  startTime:          Date.now()\n} }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -110,40 +110,6 @@
       ],
       "id": "simret-code-0008-0001-0001-000000000008",
       "name": "CLEAN HTML"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.optionretraite.net/api/v1/simulation-retraite-store",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $('PREP PAYLOAD').first().json.token }}"
-            },
-            {
-              "name": "Accept",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ \"client_id\": $json.client_id, \"html_report\": $json.html_report, \"calcul_json\": $json.calcul_json }) }}",
-        "options": {
-          "timeout": 15000
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        3120,
-        0
-      ],
-      "id": "simret-http-0009-0001-0001-000000000009",
-      "name": "STORE SIMULATION",
-      "continueOnFail": true
     },
     {
       "parameters": {
@@ -436,17 +402,6 @@
       ]
     },
     "CLEAN HTML": {
-      "main": [
-        [
-          {
-            "node": "STORE SIMULATION",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "STORE SIMULATION": {
       "main": [
         [
           {
