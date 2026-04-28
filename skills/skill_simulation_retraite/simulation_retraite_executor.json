@@ -1,0 +1,634 @@
+{
+  "name": "Simulation Retraite",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "simulation-retraite",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        0
+      ],
+      "id": "simret-wh-0001-0001-0001-000000000001",
+      "name": "Webhook",
+      "webhookId": "simulation-retraite"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst baseApi = 'https://api.optionretraite.net/api';\nreturn [{ json: {\n  client_id: body.client_id,\n  token: body.token || '',\n  force_recalculate: body.force_recalculate || false,\n  revenu_souhaite: body.revenu_souhaite || 0,\n  scenarios_override: body.scenarios || null,\n  baseApi,\n  frozenUrl: baseApi + '/frozen_data/' + body.client_id,\n  storeUrl: baseApi + '/v1/simulation-retraite-store',\n  startTime: Date.now()\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ],
+      "id": "simret-code-0002-0001-0001-000000000002",
+      "name": "PREP PAYLOAD"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('PREP PAYLOAD').first().json.frozenUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('PREP PAYLOAD').first().json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        0
+      ],
+      "id": "simret-http-0003-0001-0001-000000000003",
+      "name": "FETCH FROZEN DATA"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "\"\"\"\n========================================\nSKILL : Simulation Retraite Multi-Régimes\n========================================\n\nVersion : 1.0\nDate : 2025-04-28\nType : Skill Calcul - 3 Scénarios (H1/H2/H3)\n\nRégimes couverts :\n- CNAV (Régime Général)\n- AGIRC-ARRCO (retraite complémentaire cadre/non-cadre)\n- IRCANTEC (contractuels de la fonction publique)\n- RCI (régimes spéciaux / complémentaires individuels)\n\nFonctions principales :\n- Calcul des 3 scénarios : H1 (départ légal), H2 (taux plein), H3 (optimal)\n- Projection sur 20 ans avec cumuls nominaux et réels\n- Point d'équilibre (breakeven) H1 vs H3\n- Impact inflation\n- Prise en compte des trimestres étrangers (totalisation UE)\n\nPoint d'entrée N8N : api_handler(params)\nDépendances : python-dateutil uniquement (pas d'openpyxl, pas de pandas)\n\"\"\"\n\nfrom typing import Dict, List, Tuple, Optional\nfrom datetime import date, datetime\nfrom dateutil.relativedelta import relativedelta\nfrom math import ceil\nimport json\n\n# ============================================================================\n# CONSTANTES 2025\n# ============================================================================\n\nTAUX_PLEIN = 0.50\nTAUX_MINIMAL = 0.375\nDECOTE_PAR_TRIM = 0.0125\nVALEUR_POINT_AGIRC_2025 = 1.4384\nVALEUR_POINT_IRCANTEC_2025 = 0.47\nVALEUR_POINT_RCI_2025 = 1.351\nTAUX_PRELEVEMENT_NET = 0.091   # CSG + CRDS + CASA approximation\nAGE_LEGAL_ANS = 64\nAGE_TAUX_PLEIN_AUTO = 67\nDUREES_REQUISES = {\n    1958: 167,\n    1959: 167,\n    1960: 167,\n    1961: 168,\n    1962: 169,\n    1963: 170,\n    1964: 171,\n}\n# 1965+ → 172\n\n# ============================================================================\n# UTILITAIRES DATES\n# ============================================================================\n\ndef parse_date(s: str) -> date:\n    \"\"\"\n    Parse une date depuis une chaîne.\n    Accepte \"YYYY-MM-DD\" ou \"DD/MM/YYYY\".\n\n    Returns:\n        date object\n    \"\"\"\n    s = s.strip()\n    if '-' in s and len(s) == 10 and s[4] == '-':\n        return datetime.strptime(s, '%Y-%m-%d').date()\n    elif '/' in s:\n        return datetime.strptime(s, '%d/%m/%Y').date()\n    else:\n        # Tentative ISO par défaut\n        return datetime.strptime(s, '%Y-%m-%d').date()\n\n\ndef get_duree_requise(annee_naissance: int) -> int:\n    \"\"\"\n    Retourne la durée d'assurance requise (en trimestres) pour une génération.\n\n    Returns:\n        int : nombre de trimestres requis (défaut 172 pour 1965+)\n    \"\"\"\n    return DUREES_REQUISES.get(annee_naissance, 172)\n\n\ndef age_en_annees(date_naissance: date, reference: date) -> float:\n    \"\"\"\n    Calcule l'âge en années fractionnaires à une date de référence.\n    Utilise relativedelta pour la précision mois/jours.\n\n    Returns:\n        float : âge en années (ex: 64.25 pour 64 ans et 3 mois)\n    \"\"\"\n    rd = relativedelta(reference, date_naissance)\n    return rd.years + rd.months / 12.0 + rd.days / 365.25\n\n\ndef trimestres_acquis_at_date(\n    trimestres_actuels: int,\n    date_reference: date,\n    date_cible: date\n) -> int:\n    \"\"\"\n    Projette le nombre de trimestres acquis à une date cible.\n    Ajoute max(0, months_diff // 3) trimestres supplémentaires.\n    Suppose 4 trimestres/an.\n\n    Returns:\n        int : trimestres projetés à date_cible\n    \"\"\"\n    rd = relativedelta(date_cible, date_reference)\n    months_diff = rd.years * 12 + rd.months\n    trimestres_supplementaires = max(0, months_diff // 3)\n    return trimestres_actuels + trimestres_supplementaires\n\n\n# ============================================================================\n# CALCULS CNAV\n# ============================================================================\n\ndef calcul_taux_cnav(\n    trimestres_acquis: int,\n    duree_requise: int,\n    age_depart_ans: float\n) -> float:\n    \"\"\"\n    Calcule le taux de liquidation CNAV.\n\n    - Taux plein (0.50) si trimestres_acquis >= duree_requise OU age >= 67\n    - Sinon : max(0.50 - min(trim_manquants, 20) * 0.0125, 0.375)\n\n    Returns:\n        float : taux de liquidation\n    \"\"\"\n    if trimestres_acquis >= duree_requise or age_depart_ans >= AGE_TAUX_PLEIN_AUTO:\n        return TAUX_PLEIN\n\n    trim_manquants = duree_requise - trimestres_acquis\n    decote = min(trim_manquants, 20) * DECOTE_PAR_TRIM\n    return max(TAUX_PLEIN - decote, TAUX_MINIMAL)\n\n\ndef calcul_pension_cnav(\n    sam_annuel: float,\n    taux: float,\n    trimestres_acquis_rg: int,\n    duree_requise: int\n) -> float:\n    \"\"\"\n    Calcule la pension mensuelle brute CNAV.\n\n    Formule : SAM * taux * min(trim_rg / duree_requise, 1.0) / 12\n\n    Returns:\n        float : pension mensuelle brute CNAV, arrondie à 2 décimales\n    \"\"\"\n    prorata = min(trimestres_acquis_rg / duree_requise, 1.0)\n    pension = sam_annuel * taux * prorata / 12\n    return round(pension, 2)\n\n\ndef calcul_date_taux_plein(\n    date_naissance: date,\n    trimestres_actuels_tous_regimes: int,\n    date_reference: date\n) -> date:\n    \"\"\"\n    Calcule la date à laquelle le client atteindra le taux plein par la durée.\n\n    Returns:\n        date : date d'atteinte du taux plein (peut être dans le passé si déjà atteint)\n    \"\"\"\n    duree_requise = get_duree_requise(date_naissance.year)\n    trim_manquants = max(0, duree_requise - trimestres_actuels_tous_regimes)\n    mois_supplementaires = ceil(trim_manquants * 3)\n    return date_reference + relativedelta(months=mois_supplementaires)\n\n\n# ============================================================================\n# CALCULS AGIRC-ARRCO\n# ============================================================================\n\ndef calcul_coefficient_agirc(\n    date_depart: date,\n    date_taux_plein: date,\n    age_depart_ans: float,\n    is_progressive: bool = False\n) -> Tuple[float, int]:\n    \"\"\"\n    Calcule le coefficient d'abattement AGIRC-ARRCO.\n\n    - Retourne (1.00, 0) si :\n        * age >= 67 ans\n        * retraite progressive\n        * départ >= date_taux_plein + 12 mois (bonus fidélité)\n    - Retourne (0.90, 36) sinon (malus 10% pendant 36 mois)\n\n    Returns:\n        Tuple[float, int] : (coefficient, durée_malus_en_mois)\n    \"\"\"\n    if age_depart_ans >= AGE_TAUX_PLEIN_AUTO:\n        return (1.00, 0)\n\n    if is_progressive:\n        return (1.00, 0)\n\n    # Bonus fidélité : si départ >= date_taux_plein + 12 mois\n    date_bonus = date_taux_plein + relativedelta(months=12)\n    if date_depart >= date_bonus:\n        return (1.00, 0)\n\n    # Malus 10% pendant 36 mois\n    return (0.90, 36)\n\n\n# ============================================================================\n# CALCUL D'UN SCÉNARIO\n# ============================================================================\n\ndef calcul_scenario(\n    code: str,\n    date_depart_str: str,\n    date_naissance: date,\n    date_reference: date,\n    date_taux_plein: date,\n    sam_annuel: float,\n    trimestres_actuels_rg: int,\n    trimestres_actuels_tous_regimes: int,\n    duree_requise: int,\n    agirc_points: float,\n    agirc_valeur_point: float,\n    ircantec_points: float,\n    ircantec_valeur_point: float,\n    rci_points: float,\n    rci_valeur_point: float,\n    is_progressive: bool = False\n) -> Dict:\n    \"\"\"\n    Calcule tous les éléments d'un scénario de départ (H1, H2 ou H3).\n\n    Returns:\n        Dict : résultat complet du scénario\n    \"\"\"\n    date_depart = parse_date(date_depart_str)\n\n    # Projection des trimestres à la date de départ\n    trim_rg_at_depart = trimestres_acquis_at_date(\n        trimestres_actuels_rg, date_reference, date_depart\n    )\n    trim_tous_at_depart = trimestres_acquis_at_date(\n        trimestres_actuels_tous_regimes, date_reference, date_depart\n    )\n\n    # Âge au départ\n    age_depart = age_en_annees(date_naissance, date_depart)\n    rd_age = relativedelta(date_depart, date_naissance)\n    age_depart_annees = rd_age.years\n    age_depart_mois_total = rd_age.years * 12 + rd_age.months\n\n    # Taux CNAV (basé sur trimestres tous régimes pour le taux plein)\n    taux_cnav = calcul_taux_cnav(trim_tous_at_depart, duree_requise, age_depart)\n\n    # Décote en pourcentage\n    decote_trims = max(0, min(duree_requise - trim_tous_at_depart, 20)) if trim_tous_at_depart < duree_requise and age_depart < AGE_TAUX_PLEIN_AUTO else 0\n    decote_pct = round(decote_trims * DECOTE_PAR_TRIM * 100, 2)\n\n    # Pension CNAV (prorata basé sur trimestres RG uniquement)\n    pension_cnav = calcul_pension_cnav(sam_annuel, taux_cnav, trim_rg_at_depart, duree_requise)\n\n    # Coefficient AGIRC\n    coeff_agirc, coeff_duree_mois = calcul_coefficient_agirc(\n        date_depart, date_taux_plein, age_depart, is_progressive\n    )\n\n    # Pensions complémentaires\n    pension_agirc = round(agirc_points * agirc_valeur_point * coeff_agirc / 12, 2)\n    pension_ircantec = round(ircantec_points * ircantec_valeur_point / 12, 2)\n    pension_rci = round(rci_points * rci_valeur_point / 12, 2)\n\n    # Totaux\n    pension_totale_brute = round(pension_cnav + pension_agirc + pension_ircantec + pension_rci, 2)\n    pension_totale_nette = round(pension_totale_brute * (1 - TAUX_PRELEVEMENT_NET), 2)\n\n    return {\n        \"code\": code,\n        \"date_depart\": date_depart_str,\n        \"age_depart_annees\": age_depart_annees,\n        \"age_depart_mois\": age_depart_mois_total,\n        \"trimestres_rg_at_depart\": trim_rg_at_depart,\n        \"trimestres_acquis_tous\": trim_tous_at_depart,\n        \"duree_requise\": duree_requise,\n        \"taux_cnav\": round(taux_cnav * 100, 2),\n        \"decote_pct\": decote_pct,\n        \"pension_cnav_mensuelle\": pension_cnav,\n        \"coefficient_agirc\": coeff_agirc,\n        \"agirc_coeff_duree_mois\": coeff_duree_mois,\n        \"pension_agirc_mensuelle\": pension_agirc,\n        \"pension_ircantec_mensuelle\": pension_ircantec,\n        \"pension_rci_mensuelle\": pension_rci,\n        \"pension_totale_brute\": pension_totale_brute,\n        \"pension_totale_nette\": pension_totale_nette,\n    }\n\n\n# ============================================================================\n# PROJECTION 20 ANS\n# ============================================================================\n\ndef calcul_projection_20ans(\n    scenarios: Dict,\n    date_naissance: date,\n    date_reference: date,\n    agirc_points: float,\n    agirc_valeur_point: float,\n    inflation: float\n) -> List[Dict]:\n    \"\"\"\n    Calcule les cumuls nominaux et réels pour des horizons de 1 à 20 ans.\n\n    Applique le coefficient AGIRC mois par mois (malus pendant coeff_duree_mois,\n    puis coefficient 1.00 ensuite).\n\n    Returns:\n        List[Dict] : liste de dicts par horizon avec cumuls H1/H2/H3\n    \"\"\"\n    horizons = [1, 2, 3, 5, 8, 10, 12, 15, 18, 20]\n\n    # Pension AGIRC au taux plein (sans malus)\n    pension_agirc_plein = round(agirc_points * agirc_valeur_point / 12, 2)\n\n    resultats = []\n\n    for annees in horizons:\n        row = {\n            \"horizon\": annees,\n            \"annee\": date_reference.year + annees,\n        }\n\n        for code in [\"H1\", \"H2\", \"H3\"]:\n            if code not in scenarios:\n                row[f\"{code}_cumul_nominal\"] = None\n                row[f\"{code}_cumul_reel\"] = None\n                continue\n\n            sc = scenarios[code]\n            date_depart = parse_date(sc[\"date_depart\"])\n\n            # Pensions de base (hors AGIRC)\n            pension_cnav = sc[\"pension_cnav_mensuelle\"]\n            pension_ircantec = sc[\"pension_ircantec_mensuelle\"]\n            pension_rci = sc[\"pension_rci_mensuelle\"]\n            coeff_agirc = sc[\"coefficient_agirc\"]\n            coeff_duree_mois = sc[\"agirc_coeff_duree_mois\"]\n\n            # Calcul du cumul mois par mois de date_reference jusqu'à l'horizon\n            date_fin_horizon = date_reference + relativedelta(years=annees)\n\n            cumul_nominal = 0.0\n            mois_depuis_depart = 0  # reset per (horizon, scenario) pair\n\n            # Itération mois par mois depuis date_reference\n            current = date_reference\n\n            while current < date_fin_horizon:\n                # Ne compter que si on est à partir de la date de départ\n                if current >= date_depart:\n                    # Calculer le coefficient AGIRC applicable ce mois\n                    if coeff_duree_mois > 0 and mois_depuis_depart < coeff_duree_mois:\n                        coeff_mois = 0.90\n                    else:\n                        coeff_mois = 1.00\n\n                    pension_agirc_mois = round(pension_agirc_plein * coeff_mois, 2)\n                    pension_brute_mois = pension_cnav + pension_agirc_mois + pension_ircantec + pension_rci\n                    pension_nette_mois = round(pension_brute_mois * (1 - TAUX_PRELEVEMENT_NET), 2)\n\n                    cumul_nominal += pension_nette_mois\n                    mois_depuis_depart += 1\n\n                current = current + relativedelta(months=1)\n\n            cumul_reel = round(cumul_nominal / ((1 + inflation) ** annees), 2)\n\n            row[f\"{code}_cumul_nominal\"] = round(cumul_nominal, 2)\n            row[f\"{code}_cumul_reel\"] = cumul_reel\n\n        resultats.append(row)\n\n    return resultats\n\n\n# ============================================================================\n# POINT D'ÉQUILIBRE (BREAKEVEN)\n# ============================================================================\n\ndef calcul_breakeven(scenarios: Dict, date_reference: date) -> Dict:\n    \"\"\"\n    Calcule le point d'équilibre entre H1 (départ légal) et H3 (optimal).\n\n    Returns:\n        Dict : résultat du breakeven avec mois, date, capital_perdu, gain_mensuel\n    \"\"\"\n    if \"H1\" not in scenarios or \"H3\" not in scenarios:\n        return {\n            \"applicable\": False,\n            \"explication\": \"Scénarios H1 et H3 requis pour le calcul.\"\n        }\n\n    sc_h1 = scenarios[\"H1\"]\n    sc_h3 = scenarios[\"H3\"]\n\n    date_h1 = parse_date(sc_h1[\"date_depart\"])\n    date_h3 = parse_date(sc_h3[\"date_depart\"])\n\n    pension_h1_net = sc_h1[\"pension_totale_nette\"]\n    pension_h3_net = sc_h3[\"pension_totale_nette\"]\n\n    # Cas : H3 démarre avant ou en même temps que H1 et pension supérieure\n    if date_h3 <= date_h1 and pension_h3_net >= pension_h1_net:\n        return {\n            \"applicable\": True,\n            \"immediat\": True,\n            \"mois\": 0,\n            \"date\": sc_h3[\"date_depart\"],\n            \"explication\": (\n                \"H3 offre une pension supérieure à H1 dès le départ : \"\n                \"la stratégie optimale est immédiatement avantageuse.\"\n            )\n        }\n\n    # Capital perdu : mensualités H1 pendant la période où H3 n'est pas encore parti\n    rd_h1_h3 = relativedelta(date_h3, date_h1)\n    mois_entre_h1_h3 = rd_h1_h3.years * 12 + rd_h1_h3.months\n    mois_entre_h1_h3 = max(0, mois_entre_h1_h3)\n\n    capital_perdu = round(pension_h1_net * mois_entre_h1_h3, 2)\n    gain_mensuel = round(pension_h3_net - pension_h1_net, 2)\n\n    if gain_mensuel <= 0:\n        return {\n            \"applicable\": True,\n            \"immediat\": False,\n            \"mois\": None,\n            \"date\": None,\n            \"explication\": \"H3 n'offre pas de gain mensuel supérieur à H1.\",\n            \"capital_perdu\": capital_perdu,\n            \"gain_mensuel\": gain_mensuel,\n        }\n\n    be_mois = ceil(capital_perdu / gain_mensuel)\n    date_h3_obj = parse_date(sc_h3[\"date_depart\"])\n    be_date = date_h3_obj + relativedelta(months=be_mois)\n    be_date_str = be_date.strftime('%Y-%m-%d')\n\n    return {\n        \"applicable\": True,\n        \"immediat\": False,\n        \"mois\": be_mois,\n        \"date\": be_date_str,\n        \"capital_perdu\": capital_perdu,\n        \"gain_mensuel\": gain_mensuel,\n        \"explication\": (\n            f\"H3 récupère l'avance de H1 ({capital_perdu:.2f}€) en {be_mois} mois \"\n            f\"grâce à un gain mensuel de {gain_mensuel:.2f}€.\"\n        )\n    }\n\n\n# ============================================================================\n# IMPACT INFLATION\n# ============================================================================\n\ndef calcul_inflation_impact(pension_nette: float, inflation: float) -> Dict:\n    \"\"\"\n    Calcule la valeur réelle de la pension à 5, 10 et 20 ans.\n\n    Returns:\n        Dict : {valeur_reelle_5ans, valeur_reelle_10ans, valeur_reelle_20ans}\n    \"\"\"\n    return {\n        \"valeur_reelle_5ans\": round(pension_nette / ((1 + inflation) ** 5), 2),\n        \"valeur_reelle_10ans\": round(pension_nette / ((1 + inflation) ** 10), 2),\n        \"valeur_reelle_20ans\": round(pension_nette / ((1 + inflation) ** 20), 2),\n    }\n\n\n# ============================================================================\n# API HANDLER - POINT D'ENTRÉE N8N\n# ============================================================================\n\ndef api_handler(params: Dict) -> Dict:\n    \"\"\"\n    Point d'entrée unifié pour N8N (Code node Python mode).\n\n    Params requis :\n        date_naissance           : str  \"DD/MM/YYYY\" ou \"YYYY-MM-DD\"\n        sam                      : float  Salaire Annuel Moyen\n        trimestres_cotises_rg    : int   Trimestres cotisés Régime Général\n        trimestres_valides_tous_regimes : int  Trimestres tous régimes confondus\n        scenarios                : Dict  {\"H1\": {\"date_depart\": ...}, \"H2\": ..., \"H3\": ...}\n\n    Params optionnels :\n        date_reference           : str  (défaut : aujourd'hui)\n        trimestres_etranger      : int  (défaut : 0)\n        agirc_points             : float (défaut : 0.0)\n        agirc_valeur_point       : float (défaut : VALEUR_POINT_AGIRC_2025)\n        ircantec_points          : float (défaut : 0.0)\n        ircantec_valeur_point    : float (défaut : VALEUR_POINT_IRCANTEC_2025)\n        rci_points               : float (défaut : 0.0)\n        rci_valeur_point         : float (défaut : VALEUR_POINT_RCI_2025)\n        revenu_souhaite          : float (défaut : None)\n        inflation                : float (défaut : 0.02)\n\n    Returns:\n        Dict : résultat complet de la simulation\n    \"\"\"\n    try:\n        # ----------------------------------------------------------------\n        # 1. EXTRACTION ET VALIDATION DES PARAMÈTRES\n        # ----------------------------------------------------------------\n        date_naissance = parse_date(params['date_naissance'])\n        sam_annuel = float(params['sam'])\n        trimestres_cotises_rg = int(params['trimestres_cotises_rg'])\n        trimestres_valides_tous_regimes = int(params['trimestres_valides_tous_regimes'])\n        scenarios_params = params['scenarios']\n\n        # Paramètres optionnels\n        date_reference_str = params.get('date_reference', None)\n        if date_reference_str:\n            date_reference = parse_date(date_reference_str)\n        else:\n            date_reference = date.today()\n\n        trimestres_etranger = int(params.get('trimestres_etranger', 0))\n\n        agirc_points = float(params.get('agirc_points', 0.0))\n        agirc_valeur_point = float(params.get('agirc_valeur_point', VALEUR_POINT_AGIRC_2025))\n        ircantec_points = float(params.get('ircantec_points', 0.0))\n        ircantec_valeur_point = float(params.get('ircantec_valeur_point', VALEUR_POINT_IRCANTEC_2025))\n        rci_points = float(params.get('rci_points', 0.0))\n        rci_valeur_point = float(params.get('rci_valeur_point', VALEUR_POINT_RCI_2025))\n\n        revenu_souhaite = params.get('revenu_souhaite', None)\n        if revenu_souhaite is not None:\n            revenu_souhaite = float(revenu_souhaite)\n\n        inflation = float(params.get('inflation', 0.02))\n\n        # ----------------------------------------------------------------\n        # 2. TOTALISATION : trimestres étrangers comptent pour le taux plein\n        #    mais PAS pour la proratisation CNAV (trim_rg reste séparé)\n        # ----------------------------------------------------------------\n        trim_pour_tp = trimestres_valides_tous_regimes + trimestres_etranger\n        trim_rg = trimestres_cotises_rg  # Proratisation CNAV : RG uniquement\n\n        # ----------------------------------------------------------------\n        # 3. DURÉE REQUISE & DATE TAUX PLEIN\n        # ----------------------------------------------------------------\n        duree_requise = get_duree_requise(date_naissance.year)\n\n        date_taux_plein = calcul_date_taux_plein(\n            date_naissance,\n            trim_pour_tp,\n            date_reference\n        )\n\n        # ----------------------------------------------------------------\n        # 4. CALCUL DES SCÉNARIOS\n        # ----------------------------------------------------------------\n        scenarios_resultats = {}\n\n        for code, sc_params in scenarios_params.items():\n            is_progressive = sc_params.get('is_progressive', False)\n\n            sc_result = calcul_scenario(\n                code=code,\n                date_depart_str=sc_params['date_depart'],\n                date_naissance=date_naissance,\n                date_reference=date_reference,\n                date_taux_plein=date_taux_plein,\n                sam_annuel=sam_annuel,\n                trimestres_actuels_rg=trim_rg,\n                trimestres_actuels_tous_regimes=trim_pour_tp,\n                duree_requise=duree_requise,\n                agirc_points=agirc_points,\n                agirc_valeur_point=agirc_valeur_point,\n                ircantec_points=ircantec_points,\n                ircantec_valeur_point=ircantec_valeur_point,\n                rci_points=rci_points,\n                rci_valeur_point=rci_valeur_point,\n                is_progressive=is_progressive,\n            )\n            scenarios_resultats[code] = sc_result\n\n        # ----------------------------------------------------------------\n        # 5. PROJECTION 20 ANS\n        # ----------------------------------------------------------------\n        projection_20ans = calcul_projection_20ans(\n            scenarios=scenarios_resultats,\n            date_naissance=date_naissance,\n            date_reference=date_reference,\n            agirc_points=agirc_points,\n            agirc_valeur_point=agirc_valeur_point,\n            inflation=inflation,\n        )\n\n        # ----------------------------------------------------------------\n        # 6. BREAKEVEN H1 vs H3\n        # ----------------------------------------------------------------\n        breakeven = calcul_breakeven(scenarios_resultats, date_reference)\n\n        # ----------------------------------------------------------------\n        # 7. COMPARATIF H1 vs H3\n        # ----------------------------------------------------------------\n        comparatif = {}\n        if \"H1\" in scenarios_resultats and \"H3\" in scenarios_resultats:\n            ecart_mensuel = round(\n                scenarios_resultats[\"H3\"][\"pension_totale_nette\"] -\n                scenarios_resultats[\"H1\"][\"pension_totale_nette\"],\n                2\n            )\n            comparatif = {\n                \"ecart_H3_H1_mensuel\": ecart_mensuel,\n                \"ecart_H3_H1_annuel\": round(ecart_mensuel * 12, 2),\n            }\n\n        # ----------------------------------------------------------------\n        # 8. IMPACT INFLATION (sur la pension H3 ou H1 si H3 absent)\n        # ----------------------------------------------------------------\n        pension_ref_inflation = None\n        if \"H3\" in scenarios_resultats:\n            pension_ref_inflation = scenarios_resultats[\"H3\"][\"pension_totale_nette\"]\n        elif \"H1\" in scenarios_resultats:\n            pension_ref_inflation = scenarios_resultats[\"H1\"][\"pension_totale_nette\"]\n\n        inflation_impact = {}\n        if pension_ref_inflation is not None:\n            inflation_impact = calcul_inflation_impact(pension_ref_inflation, inflation)\n\n        # ----------------------------------------------------------------\n        # 9. DÉFICIT PAR RAPPORT AU REVENU SOUHAITÉ\n        # ----------------------------------------------------------------\n        deficit = {}\n        if revenu_souhaite is not None:\n            pension_h3_nette = None\n            if \"H3\" in scenarios_resultats:\n                pension_h3_nette = scenarios_resultats[\"H3\"][\"pension_totale_nette\"]\n            elif \"H1\" in scenarios_resultats:\n                pension_h3_nette = scenarios_resultats[\"H1\"][\"pension_totale_nette\"]\n\n            if pension_h3_nette is not None:\n                deficit_mensuel = round(revenu_souhaite - pension_h3_nette, 2)\n                # Capital nécessaire pour couvrir le déficit pendant 20 ans (valeur actualisée)\n                # Utilise la formule de valeur actuelle d'une rente (annuity PV)\n                if deficit_mensuel > 0:\n                    monthly_rate = inflation / 12\n                    n = 240  # 20 ans * 12 mois\n                    if monthly_rate > 0:\n                        capital_necessaire_20ans = round(\n                            deficit_mensuel * (1 - (1 + monthly_rate) ** -n) / monthly_rate,\n                            2\n                        )\n                    else:\n                        capital_necessaire_20ans = round(deficit_mensuel * n, 2)\n                else:\n                    capital_necessaire_20ans = 0.0\n\n                deficit = {\n                    \"revenu_souhaite\": revenu_souhaite,\n                    \"pension_H3_nette\": pension_h3_nette,\n                    \"deficit_mensuel\": deficit_mensuel,\n                    \"capital_necessaire_20ans\": capital_necessaire_20ans,\n                }\n\n        # ----------------------------------------------------------------\n        # 10. INFORMATION TRIMESTRES ÉTRANGERS\n        # ----------------------------------------------------------------\n        etranger = {\n            \"detected\": trimestres_etranger > 0,\n            \"trimestres_etranger\": trimestres_etranger,\n            \"impact\": (\n                f\"{trimestres_etranger} trimestre(s) étranger(s) pris en compte \"\n                f\"pour le taux plein (totalisation UE/bilatérale). \"\n                f\"Non inclus dans la proratisation CNAV.\"\n            ) if trimestres_etranger > 0 else \"Aucun trimestre étranger déclaré.\"\n        }\n\n        # ----------------------------------------------------------------\n        # 11. CONSTRUCTION DU RÉSULTAT FINAL\n        # ----------------------------------------------------------------\n        return {\n            \"scenarios\": scenarios_resultats,\n            \"date_taux_plein\": date_taux_plein.strftime('%Y-%m-%d'),\n            \"duree_requise\": duree_requise,\n            \"comparatif\": comparatif,\n            \"projection_20ans\": projection_20ans,\n            \"breakeven\": breakeven,\n            \"deficit\": deficit,\n            \"inflation_impact\": inflation_impact,\n            \"etranger\": etranger,\n            \"source_calcul\": \"python-simulation-v1\",\n        }\n\n    except Exception as e:\n        return {\n            \"erreur\": True,\n            \"message\": f\"Erreur lors du calcul : {str(e)}\",\n            \"type\": \"erreur_calcul\",\n        }\n\n\n# === N8N DATA EXTRACTION ===\nimport json as _json\n\nfrozen_raw = _input.all()[0].json if _input.all() else {}\n# In n8n Python mode, access previous nodes via _input or using node references\n# We need to get data from FETCH FROZEN DATA and PREP PAYLOAD\n\n# Since n8n Python Code nodes receive the previous node output via _input,\n# we read frozen_data from the HTTP response\nfrozen_data = frozen_raw if frozen_raw else {}\ntotaux = frozen_data.get('totaux', {})\nmeta = frozen_data.get('meta', {})\n\n# Get prep payload via a workaround: store client_id in the frozen response or use env\n# In n8n, we use $('PREP PAYLOAD') syntax in JS but in Python we use _input\n# The FETCH FROZEN DATA node only passes the frozen_data JSON\n# We need client_id from PREP PAYLOAD — pass it through by merging\n\n# Extract fields from totaux\nparams_calcul = {\n    'date_naissance': meta.get('date_naissance', meta.get('ddn', '01/01/1965')),\n    'date_reference': __import__('datetime').date.today().strftime('%Y-%m-%d'),\n    'sam': float(totaux.get('sam', totaux.get('sam_cnav', 0)) or 0),\n    'trimestres_cotises_rg': int(totaux.get('trimestres_cotises_rg', totaux.get('trimestres_rg', 0)) or 0),\n    'trimestres_valides_tous_regimes': int(totaux.get('trimestres_valides_tous_regimes', totaux.get('trimestres_total', 0)) or 0),\n    'trimestres_etranger': int(totaux.get('trimestres_etranger', 0) or 0),\n    'agirc_points': float(totaux.get('agirc_points', totaux.get('points_agirc', 0)) or 0),\n    'agirc_valeur_point': 1.4384,\n    'ircantec_points': float(totaux.get('ircantec_points', totaux.get('points_ircantec', 0)) or 0),\n    'ircantec_valeur_point': 0.47,\n    'rci_points': float(totaux.get('rci_points', totaux.get('points_rci', 0)) or 0),\n    'rci_valeur_point': 1.351,\n    'revenu_souhaite': float(frozen_data.get('revenu_souhaite', 0) or 0),\n    'inflation': 0.02,\n    'scenarios': frozen_data.get('scenarios_override') or {\n        'H1': {'date_depart': totaux.get('date_depart_legal', '')},\n        'H2': {'date_depart': totaux.get('date_taux_plein', '')},\n        'H3': {'date_depart': totaux.get('date_optimale', totaux.get('date_taux_plein', ''))}\n    }\n}\n\nresult = api_handler(params_calcul)\n\nreturn [{'json': {\n    'calcul': result,\n    'meta': meta,\n    'totaux': totaux,\n    'client_id': frozen_data.get('user_id', frozen_data.get('client_id', 0))\n}}]\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ],
+      "id": "simret-code-0004-0001-0001-000000000004",
+      "name": "PYTHON CALC ENGINE"
+    },
+    {
+      "parameters": {
+        "jsCode": "const calc = $input.first().json.calcul || {};\nconst meta = $input.first().json.meta || {};\nconst totaux = $input.first().json.totaux || {};\nconst client_id = $input.first().json.client_id || $('PREP PAYLOAD').first().json.client_id;\n\nconst sc = calc.scenarios || {};\nconst H1 = sc.H1 || {};\nconst H2 = sc.H2 || {};\nconst H3 = sc.H3 || {};\n\nconst fmt = (v) => v ? Number(v).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '0,00';\n\nconst proj = (calc.projection_20ans || []).map(r =>\n  `<tr><td>${r.horizon}</td><td>${r.annee}</td>` +\n  `<td>${(r.H1_cumul_nominal||0).toLocaleString('fr-FR')} €</td>` +\n  `<td>${(r.H2_cumul_nominal||0).toLocaleString('fr-FR')} €</td>` +\n  `<td style=\"background:#d1fae5;font-weight:700\">${(r.H3_cumul_nominal||0).toLocaleString('fr-FR')} €</td></tr>`\n).join('');\n\nconst be = calc.breakeven || {};\nconst def = calc.deficit || {};\nconst inf = calc.inflation_impact || {};\n\nreturn [{ json: {\n  context: {\n    CLIENT_NOM: meta.nom_complet || meta.nom || 'Client',\n    CLIENT_CIVILITE: meta.civilite || 'Monsieur',\n    DATE_SIM: new Date().toLocaleDateString('fr-FR'),\n    DATE_TAUX_PLEIN: calc.date_taux_plein || '',\n    DUREE_REQUISE: calc.duree_requise || 172,\n    H1_DATE: H1.date_depart || '', H1_AGE: `${H1.age_depart_annees||''} ans`,\n    H1_TRIMESTRES: H1.trimestres_acquis_tous || '', H1_TAUX_CNAV: H1.taux_cnav || '',\n    H1_CNAV: fmt(H1.pension_cnav_mensuelle), H1_AGIRC: fmt(H1.pension_agirc_mensuelle),\n    H1_IRCANTEC: fmt(H1.pension_ircantec_mensuelle), H1_RCI: fmt(H1.pension_rci_mensuelle),\n    H1_TOTAL_BRUT: fmt(H1.pension_totale_brute), H1_TOTAL_NET: fmt(H1.pension_totale_nette),\n    H1_COEFF_AGIRC: H1.coefficient_agirc || 1, H1_COEFF_DUREE: H1.agirc_coeff_duree_mois || 0,\n    H2_DATE: H2.date_depart || '', H2_AGE: `${H2.age_depart_annees||''} ans`,\n    H2_TRIMESTRES: H2.trimestres_acquis_tous || '', H2_TAUX_CNAV: H2.taux_cnav || '',\n    H2_CNAV: fmt(H2.pension_cnav_mensuelle), H2_AGIRC: fmt(H2.pension_agirc_mensuelle),\n    H2_IRCANTEC: fmt(H2.pension_ircantec_mensuelle), H2_RCI: fmt(H2.pension_rci_mensuelle),\n    H2_TOTAL_BRUT: fmt(H2.pension_totale_brute), H2_TOTAL_NET: fmt(H2.pension_totale_nette),\n    H2_COEFF_AGIRC: H2.coefficient_agirc || 1, H2_COEFF_DUREE: H2.agirc_coeff_duree_mois || 0,\n    H3_DATE: H3.date_depart || '', H3_AGE: `${H3.age_depart_annees||''} ans`,\n    H3_TRIMESTRES: H3.trimestres_acquis_tous || '', H3_TAUX_CNAV: H3.taux_cnav || '',\n    H3_CNAV: fmt(H3.pension_cnav_mensuelle), H3_AGIRC: fmt(H3.pension_agirc_mensuelle),\n    H3_IRCANTEC: fmt(H3.pension_ircantec_mensuelle), H3_RCI: fmt(H3.pension_rci_mensuelle),\n    H3_TOTAL_BRUT: fmt(H3.pension_totale_brute), H3_TOTAL_NET: fmt(H3.pension_totale_nette),\n    H3_COEFF_AGIRC: H3.coefficient_agirc || 1, H3_COEFF_DUREE: H3.agirc_coeff_duree_mois || 0,\n    ECART_H3_H1: fmt((calc.comparatif||{}).ecart_H3_H1_mensuel),\n    ECART_H3_H1_AN: fmt((calc.comparatif||{}).ecart_H3_H1_annuel),\n    TABLEAU_PROJECTION: proj,\n    BREAKEVEN_MOIS: be.immediat ? 'Immédiat' : (be.mois || 'N/A'),\n    BREAKEVEN_DATE: be.date || '',\n    BREAKEVEN_EXPLICATION: be.explication || '',\n    DEFICIT_MENSUEL: fmt(def.deficit_mensuel),\n    REVENU_SOUHAITE: fmt(def.revenu_souhaite),\n    CAPITAL_NECESSAIRE: (def.capital_necessaire_20ans||0).toLocaleString('fr-FR'),\n    H3_REEL_5ANS: fmt(inf.valeur_reelle_5ans),\n    H3_REEL_10ANS: fmt(inf.valeur_reelle_10ans),\n    H3_REEL_20ANS: fmt(inf.valeur_reelle_20ans),\n    ETRANGER_IMPACT: (calc.etranger||{}).impact || 'Aucune période étrangère détectée.',\n  },\n  calcul: calc,\n  client_id\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "simret-code-0005-0001-0001-000000000005",
+      "name": "BUILD CONTEXT"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Tu es le consultant expert retraite EOR. Génère un rapport HTML de simulation retraite COMPLET en remplissant tous les [PLACEHOLDERS] avec les vraies valeurs du contexte ci-dessous.\\n\\nNE CHANGE PAS la structure HTML. NE SUPPRIME PAS de sections. Pour les sections sans données, écris \"N/A\" avec une courte explication. Pour les parties narratives ([ANALYSE_*], [CONCLUSION_*]) : rédige 2-3 phrases expertes basées sur les chiffres fournis.\\n\\nVALEURS CALCULÉES :\\n' + JSON.stringify($json.context) + '\\n\\n### TEMPLATE HTML\\n\\n<!DOCTYPE html>\\n<html lang=\"fr\">\\n<head>\\n  <meta charset=\"UTF-8\"/>\\n  <title>Simulation Retraite EOR</title>\\n  <style>\\n    html,body{margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;color:#1a1a2e;}\\n    .page{background:white;max-width:800px;margin:0 auto 2rem;padding:2cm;box-sizing:border-box;}\\n    .cover{background:linear-gradient(135deg,#021b61,#1a4db3);color:white;min-height:520px;display:flex;flex-direction:column;justify-content:center;padding:2cm;}\\n    .section-hdr{background:#021b61;color:white;padding:16px 20px;margin:-2cm -2cm 20px;}\\n    .section-hdr .label{font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:1px;}\\n    .section-hdr h2{margin:4px 0 0;font-size:20px;}\\n    .section-title{font-size:16px;font-weight:700;color:#021b61;border-bottom:2px solid #021b61;padding-bottom:6px;margin:24px 0 14px;}\\n    table{width:100%;border-collapse:collapse;margin:8px 0;}\\n    th{background:#021b61;color:white;padding:9px 10px;text-align:left;font-size:13px;}\\n    td{padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:13px;}\\n    tr:nth-child(even) td{background:#f8fafc;}\\n    .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;}\\n    .badge-green{background:#d1fae5;color:#065f46;}\\n    .scenario-box{border:2px solid #021b61;border-radius:8px;padding:16px;margin-bottom:12px;}\\n    .scenario-optimal{border-color:#059669;background:#ecfdf5;}\\n    .alert-box{background:#fffbeb;border-left:4px solid #d97706;padding:14px;margin:12px 0;font-size:13px;}\\n    .financial-highlight{background:#021b61;color:white;padding:20px;border-radius:8px;text-align:center;margin:18px 0;}\\n    .financial-highlight .amount{font-size:28px;font-weight:700;}\\n    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:18px 0;}\\n    .page-break{page-break-after:always;}\\n    .disclaimer{font-size:10px;color:#94a3b8;margin-top:36px;line-height:1.6;}\\n    p{font-size:13px;line-height:1.7;color:#334155;}\\n  </style>\\n</head>\\n<body>\\n\\n<div class=\"page cover\">\\n  <img src=\"https://www.eor.fr/wp-content/uploads/2024/03/eor-250px.png\" alt=\"EOR\" style=\"width:90px;margin-bottom:36px;\"/>\\n  <h1 style=\"font-size:32px;margin:0 0 8px;\">SIMULATION RETRAITE</h1>\\n  <h2 style=\"font-size:22px;font-weight:400;margin:0 0 20px;\">[CLIENT_CIVILITE] [CLIENT_NOM]</h2>\\n  <p style=\"opacity:.85;font-size:14px;margin:0 0 4px;\">Projection financière sur 20 ans &bull; [DATE_SIM]</p>\\n  <div style=\"margin-top:32px;padding:18px;background:rgba(255,255,255,.12);border-radius:8px;\">\\n    <p style=\"margin:0 0 4px;\"><strong>Scénario optimal H3 :</strong> [H3_TOTAL_NET] €/mois net estimé</p>\\n    <p style=\"margin:0;\"><strong>Gain vs départ légal :</strong> +[ECART_H3_H1] €/mois</p>\\n  </div>\\n</div>\\n<div class=\"page-break\"></div>\\n\\n<div class=\"page\">\\n  <div class=\"section-title\">SOMMAIRE</div>\\n  <table>\\n    <tr><td style=\"font-weight:600;color:#021b61;\">1. Synthèse comparative H1/H2/H3</td><td style=\"text-align:right;color:#94a3b8;\">p.3</td></tr>\\n    <tr><td style=\"font-weight:600;color:#021b61;\">2. Détail CNAV par scénario</td><td style=\"text-align:right;color:#94a3b8;\">p.5</td></tr>\\n    <tr><td style=\"font-weight:600;color:#021b61;\">3. AGIRC-ARRCO — Coefficient de solidarité</td><td style=\"text-align:right;color:#94a3b8;\">p.7</td></tr>\\n    <tr><td style=\"font-weight:600;color:#021b61;\">4. Projection cumulative sur 20 ans</td><td style=\"text-align:right;color:#94a3b8;\">p.9</td></tr>\\n    <tr><td style=\"font-weight:600;color:#021b61;\">5. Analyse break-even</td><td style=\"text-align:right;color:#94a3b8;\">p.11</td></tr>\\n    <tr><td style=\"font-weight:600;color:#021b61;\">6. Déficit &amp; épargne complémentaire</td><td style=\"text-align:right;color:#94a3b8;\">p.13</td></tr>\\n    <tr><td style=\"font-weight:600;color:#021b61;\">7. Impact inflation</td><td style=\"text-align:right;color:#94a3b8;\">p.14</td></tr>\\n    <tr><td style=\"font-weight:600;color:#021b61;\">8. Conclusion &amp; signature</td><td style=\"text-align:right;color:#94a3b8;\">p.15</td></tr>\\n  </table>\\n</div>\\n<div class=\"page-break\"></div>\\n\\n<div class=\"page\">\\n  <div class=\"section-hdr\"><div class=\"label\">Section 1</div><h2>SYNTHÈSE COMPARATIVE DES 3 SCÉNARIOS</h2></div>\\n  <div class=\"grid3\">\\n    <div class=\"scenario-box\">\\n      <div style=\"font-size:10px;font-weight:700;color:#64748b;margin-bottom:6px;\">H1 — Départ légal</div>\\n      <div style=\"font-size:22px;font-weight:700;color:#021b61;margin:6px 0;\">[H1_TOTAL_NET] €/mois</div>\\n      <div style=\"font-size:11px;color:#64748b;\">Départ : [H1_DATE] — [H1_AGE]</div>\\n    </div>\\n    <div class=\"scenario-box\">\\n      <div style=\"font-size:10px;font-weight:700;color:#64748b;margin-bottom:6px;\">H2 — Taux plein</div>\\n      <div style=\"font-size:22px;font-weight:700;color:#021b61;margin:6px 0;\">[H2_TOTAL_NET] €/mois</div>\\n      <div style=\"font-size:11px;color:#64748b;\">Départ : [H2_DATE] — [H2_AGE]</div>\\n    </div>\\n    <div class=\"scenario-box scenario-optimal\">\\n      <div style=\"font-size:10px;font-weight:700;color:#065f46;margin-bottom:6px;\">H3 &#9733; OPTIMAL</div>\\n      <div style=\"font-size:22px;font-weight:700;color:#059669;margin:6px 0;\">[H3_TOTAL_NET] €/mois</div>\\n      <div style=\"font-size:11px;color:#065f46;\">Départ : [H3_DATE] — [H3_AGE]</div>\\n    </div>\\n  </div>\\n  <table>\\n    <tr><th style=\"width:220px;\">Critère</th><th>H1 Légal</th><th>H2 Taux plein</th><th style=\"background:#059669;\">H3 ★ Optimal</th></tr>\\n    <tr><td style=\"font-weight:600;color:#475569;\">Date de départ</td><td>[H1_DATE]</td><td>[H2_DATE]</td><td style=\"background:#ecfdf5;\"><strong>[H3_DATE]</strong></td></tr>\\n    <tr><td style=\"font-weight:600;color:#475569;\">Âge au départ</td><td>[H1_AGE]</td><td>[H2_AGE]</td><td style=\"background:#ecfdf5;\"><strong>[H3_AGE]</strong></td></tr>\\n    <tr><td style=\"font-weight:600;color:#475569;\">Trimestres acquis</td><td>[H1_TRIMESTRES]</td><td>[H2_TRIMESTRES]</td><td style=\"background:#ecfdf5;\">[H3_TRIMESTRES]</td></tr>\\n    <tr><td style=\"font-weight:600;color:#475569;\">Taux CNAV</td><td>[H1_TAUX_CNAV]%</td><td>[H2_TAUX_CNAV]%</td><td style=\"background:#ecfdf5;\">[H3_TAUX_CNAV]%</td></tr>\\n    <tr><td style=\"font-weight:600;color:#475569;\">Pension CNAV</td><td>[H1_CNAV] €</td><td>[H2_CNAV] €</td><td style=\"background:#ecfdf5;\"><strong>[H3_CNAV] €</strong></td></tr>\\n    <tr><td style=\"font-weight:600;color:#475569;\">Pension AGIRC-ARRCO</td><td>[H1_AGIRC] €</td><td>[H2_AGIRC] €</td><td style=\"background:#ecfdf5;\"><strong>[H3_AGIRC] €</strong></td></tr>\\n    <tr><td style=\"font-weight:600;color:#475569;\">Coeff. solidarité AGIRC</td><td>[H1_COEFF_AGIRC]</td><td>[H2_COEFF_AGIRC]</td><td style=\"background:#ecfdf5;\">[H3_COEFF_AGIRC]</td></tr>\\n    <tr><td style=\"font-weight:600;color:#475569;\">Pension IRCANTEC</td><td>[H1_IRCANTEC] €</td><td>[H2_IRCANTEC] €</td><td style=\"background:#ecfdf5;\">[H3_IRCANTEC] €</td></tr>\\n    <tr><td style=\"font-weight:600;color:#475569;\">Pension RCI</td><td>[H1_RCI] €</td><td>[H2_RCI] €</td><td style=\"background:#ecfdf5;\">[H3_RCI] €</td></tr>\\n    <tr style=\"background:#dbeafe;\"><td style=\"font-weight:700;color:#021b61;\">TOTAL BRUT/MOIS</td><td><strong>[H1_TOTAL_BRUT] €</strong></td><td><strong>[H2_TOTAL_BRUT] €</strong></td><td style=\"background:#d1fae5;\"><strong style=\"color:#059669;font-size:15px;\">[H3_TOTAL_BRUT] €</strong></td></tr>\\n    <tr style=\"background:#f0fdf4;\"><td style=\"font-weight:700;color:#021b61;\">TOTAL NET ESTIMÉ</td><td>[H1_TOTAL_NET] €</td><td>[H2_TOTAL_NET] €</td><td style=\"background:#d1fae5;\"><strong style=\"color:#059669;\">[H3_TOTAL_NET] €</strong></td></tr>\\n  </table>\\n  <div style=\"margin-top:18px;padding:14px;background:#eff6ff;border-radius:8px;border:1px solid #bfdbfe;\">\\n    <strong>Écart H3 vs H1 :</strong> <span style=\"font-size:16px;font-weight:700;color:#059669;\">+[ECART_H3_H1] €/mois</span> soit <strong>[ECART_H3_H1_AN] €/an</strong>\\n  </div>\\n  <p>[ANALYSE_COMPARATIVE]</p>\\n</div>\\n<div class=\"page-break\"></div>\\n\\n<div class=\"page\">\\n  <div class=\"section-hdr\"><div class=\"label\">Section 2</div><h2>RÉGIME CNAV — DÉTAIL DU CALCUL</h2></div>\\n  <div class=\"alert-box\"><strong>Formule :</strong> Pension CNAV = SAM × Taux × (Trimestres RG / [DUREE_REQUISE])<br/><em style=\"font-size:12px;\">Durée de référence : [DUREE_REQUISE] trimestres. Date taux plein estimée : [DATE_TAUX_PLEIN].</em></div>\\n  <table>\\n    <tr><th></th><th>H1 Légal</th><th>H2 Taux plein</th><th style=\"background:#059669;color:white;\">H3 Optimal</th></tr>\\n    <tr><td style=\"font-weight:600;color:#475569;\">Date départ</td><td>[H1_DATE]</td><td>[H2_DATE]</td><td style=\"background:#ecfdf5;\">[H3_DATE]</td></tr>\\n    <tr><td style=\"font-weight:600;color:#475569;\">Trimestres RG</td><td>[H1_TRIMESTRES]</td><td>[H2_TRIMESTRES]</td><td style=\"background:#ecfdf5;\">[H3_TRIMESTRES]</td></tr>\\n    <tr><td style=\"font-weight:600;color:#475569;\">Taux liquidation</td><td>[H1_TAUX_CNAV]%</td><td>[H2_TAUX_CNAV]%</td><td style=\"background:#ecfdf5;\"><strong>[H3_TAUX_CNAV]%</strong></td></tr>\\n    <tr style=\"background:#eff6ff;\"><td style=\"font-weight:700;color:#021b61;\">Pension CNAV/mois</td><td><strong>[H1_CNAV] €</strong></td><td><strong>[H2_CNAV] €</strong></td><td style=\"background:#d1fae5;\"><strong style=\"color:#059669;\">[H3_CNAV] €</strong></td></tr>\\n  </table>\\n  <p>[ANALYSE_CNAV]</p>\\n</div>\\n<div class=\"page-break\"></div>\\n\\n<div class=\"page\">\\n  <div class=\"section-hdr\"><div class=\"label\">Section 3</div><h2>AGIRC-ARRCO — COEFFICIENT DE SOLIDARITÉ</h2></div>\\n  <div class=\"alert-box\" style=\"background:#fff7ed;border-color:#ea580c;\">\\n    <strong>Règle 2019 :</strong> Un malus de 10% (coefficient 0,90) est appliqué pendant [H3_COEFF_DUREE] mois si le départ intervient avant d\\'avoir cotisé 4 trimestres supplémentaires après la date de taux plein CNAV ([DATE_TAUX_PLEIN]). Exempt si : âge ≥ 67 ans, retraite progressive, ou départ ≥ date taux plein + 12 mois.\\n  </div>\\n  <table>\\n    <tr><th></th><th>H1</th><th>H2</th><th style=\"background:#059669;color:white;\">H3</th></tr>\\n    <tr><td style=\"font-weight:600;color:#475569;\">Coefficient initial</td><td>[H1_COEFF_AGIRC]</td><td>[H2_COEFF_AGIRC]</td><td style=\"background:#ecfdf5;\">[H3_COEFF_AGIRC]</td></tr>\\n    <tr><td style=\"font-weight:600;color:#475569;\">Durée malus (mois)</td><td>[H1_COEFF_DUREE]</td><td>[H2_COEFF_DUREE]</td><td style=\"background:#ecfdf5;\">[H3_COEFF_DUREE]</td></tr>\\n    <tr style=\"background:#eff6ff;\"><td style=\"font-weight:700;color:#021b61;\">Pension AGIRC/mois</td><td><strong>[H1_AGIRC] €</strong></td><td><strong>[H2_AGIRC] €</strong></td><td style=\"background:#d1fae5;\"><strong style=\"color:#059669;\">[H3_AGIRC] €</strong></td></tr>\\n  </table>\\n  <p>[ANALYSE_AGIRC]</p>\\n</div>\\n<div class=\"page-break\"></div>\\n\\n<div class=\"page\">\\n  <div class=\"section-hdr\"><div class=\"label\">Section 4</div><h2>PROJECTION CUMULATIVE SUR 20 ANS</h2></div>\\n  <p style=\"font-size:12px;color:#64748b;margin-bottom:8px;\">Cumul nominal des revenus retraite perçus depuis aujourd\\'hui. Le coefficient AGIRC est appliqué mois par mois dans le calcul.</p>\\n  <table>\\n    <tr><th>Horizon</th><th>Année</th><th>H1 Cumul</th><th>H2 Cumul</th><th style=\"background:#059669;color:white;\">H3 Cumul ★</th></tr>\\n    [TABLEAU_PROJECTION]\\n  </table>\\n  <p>[ANALYSE_PROJECTION]</p>\\n</div>\\n<div class=\"page-break\"></div>\\n\\n<div class=\"page\">\\n  <div class=\"section-hdr\"><div class=\"label\">Section 5</div><h2>ANALYSE BREAK-EVEN</h2></div>\\n  <div class=\"financial-highlight\">\\n    <div style=\"font-size:12px;opacity:.8;margin-bottom:8px;\">Point de retour sur investissement H3 vs H1</div>\\n    <div class=\"amount\">[BREAKEVEN_MOIS] mois</div>\\n    <div style=\"font-size:13px;margin-top:4px;opacity:.85;\">Atteint en [BREAKEVEN_DATE]</div>\\n  </div>\\n  <p>[BREAKEVEN_EXPLICATION]</p>\\n  <p>[ANALYSE_BREAKEVEN]</p>\\n</div>\\n<div class=\"page-break\"></div>\\n\\n<div class=\"page\">\\n  <div class=\"section-hdr\"><div class=\"label\">Section 6</div><h2>DÉFICIT &amp; ÉPARGNE COMPLÉMENTAIRE</h2></div>\\n  <table>\\n    <tr><td style=\"font-weight:600;color:#475569;\">Revenu souhaité à la retraite</td><td><strong>[REVENU_SOUHAITE] €/mois</strong></td></tr>\\n    <tr><td style=\"font-weight:600;color:#475569;\">Pension totale H3 (nette)</td><td>[H3_TOTAL_NET] €/mois</td></tr>\\n    <tr style=\"background:#fee2e2;\"><td style=\"font-weight:600;color:#991b1b;\">Déficit mensuel estimé</td><td style=\"color:#991b1b;font-weight:700;\">[DEFICIT_MENSUEL] €/mois</td></tr>\\n    <tr><td style=\"font-weight:600;color:#475569;\">Capital nécessaire (valeur actuelle 20 ans, 2%)</td><td>[CAPITAL_NECESSAIRE] €</td></tr>\\n  </table>\\n  <p>[ANALYSE_DEFICIT]</p>\\n</div>\\n<div class=\"page-break\"></div>\\n\\n<div class=\"page\">\\n  <div class=\"section-hdr\"><div class=\"label\">Section 7</div><h2>IMPACT DE L\\'INFLATION (hypothèse 2%/an)</h2></div>\\n  <table>\\n    <tr><th>Horizon</th><th>Inflation cumulée</th><th>H3 valeur réelle estimée</th></tr>\\n    <tr><td>Dans 5 ans</td><td>10,4%</td><td><strong>[H3_REEL_5ANS] €/mois</strong></td></tr>\\n    <tr><td>Dans 10 ans</td><td>21,9%</td><td><strong>[H3_REEL_10ANS] €/mois</strong></td></tr>\\n    <tr><td>Dans 20 ans</td><td>48,6%</td><td><strong>[H3_REEL_20ANS] €/mois</strong></td></tr>\\n  </table>\\n  <p>[ANALYSE_INFLATION]</p>\\n  <div class=\"alert-box\"><strong>Note Périodes Étrangères :</strong> [ETRANGER_IMPACT]</div>\\n</div>\\n<div class=\"page-break\"></div>\\n\\n<div class=\"page\">\\n  <div class=\"section-hdr\"><div class=\"label\">Section 7.5</div><h2>PLAN D'ACTION PERSONNALISÉ</h2></div>\\n  <table>\\n    <tr><th>Priorité</th><th>Action</th><th>Échéance</th><th>Responsable</th></tr>\\n    [TABLEAU_PLAN_ACTION]\\n  </table>\\n</div>\\n<div class=\"page-break\"></div>\\n\\n<div class=\"page\">\\n  <div class=\"section-hdr\"><div class=\"label\">Section 8</div><h2>CONCLUSION</h2></div>\\n  <p>[CONCLUSION_PERSONNALISEE]</p>\\n  <div class=\"financial-highlight\" style=\"margin-top:28px;\">\\n    <div style=\"display:flex;justify-content:space-around;flex-wrap:wrap;gap:14px;\">\\n      <div><div style=\"font-size:11px;opacity:.7;\">Pension nette H3</div><div class=\"amount\">[H3_TOTAL_NET] €</div></div>\\n      <div><div style=\"font-size:11px;opacity:.7;\">Gain vs H1</div><div class=\"amount\" style=\"color:#86efac;\">+[ECART_H3_H1] €/mois</div></div>\\n      <div><div style=\"font-size:11px;opacity:.7;\">Date conseillée</div><div class=\"amount\" style=\"font-size:20px;\">[H3_DATE]</div></div>\\n    </div>\\n  </div>\\n  <div class=\"disclaimer\">\\n    <p>Cette simulation est établie sur la base des données carrière disponibles au [DATE_SIM]. Les projections sont indicatives et non contractuelles.</p>\\n  </div>\\n  <div style=\"margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:20px;\">\\n    <div style=\"text-align:center;padding:24px;border:1px solid #e2e8f0;border-radius:8px;\">\\n      <p style=\"font-weight:600;color:#021b61;\">Le consultant EOR</p>\\n      <div style=\"height:48px;border-bottom:1px solid #94a3b8;margin:0 36px;\"></div>\\n      <p style=\"font-size:11px;color:#64748b;margin-top:8px;\">Date : [DATE_SIM]</p>\\n    </div>\\n    <div style=\"text-align:center;padding:24px;border:1px solid #e2e8f0;border-radius:8px;\">\\n      <p style=\"font-weight:600;color:#021b61;\">Le client</p>\\n      <div style=\"height:48px;border-bottom:1px solid #94a3b8;margin:0 36px;\"></div>\\n      <p style=\"font-size:11px;color:#64748b;margin-top:8px;\">[CLIENT_NOM]<br/>Date : _______________</p>\\n    </div>\\n  </div>\\n  <div style=\"text-align:center;margin-top:32px;\">\\n    <img src=\"https://www.eor.fr/wp-content/uploads/2024/03/eor-250px.png\" alt=\"EOR\" style=\"width:60px;opacity:.5;\"/>\\n    <p style=\"font-size:11px;color:#94a3b8;\">EOR Consultants — Experts en optimisation des droits à la retraite</p>\\n  </div>\\n</div>\\n\\n</body>\\n</html>' }}",
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        2640,
+        0
+      ],
+      "id": "simret-llm-0006-0001-0001-000000000006",
+      "name": "TOHTML SIMULATION"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.2
+        },
+        "modelName": "models/gemini-2.5-flash-preview-04-17"
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2640,
+        200
+      ],
+      "id": "simret-gemini-0007-0001-0001-000000000007",
+      "name": "Gemini 2.5 Flash",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ACnGgBxHiWnYK99k",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "var html = $input.first().json;\nvar raw = '';\nif (html.text) raw = html.text;\nelse if (typeof html.response === 'string') raw = html.response;\nelse raw = JSON.stringify(html);\n\nvar t = raw.trim();\nif (t.charAt(0) === '\"' && t.charAt(t.length-1) === '\"') {\n  try { raw = JSON.parse(t); } catch(e) { raw = t.slice(1,-1); }\n}\nfor (var i=0;i<3;i++) {\n  raw = raw.split('\\\\n').join('\\n').split('\\\\'+'\"').join('\"');\n}\nraw = raw.trim();\nif (raw.startsWith('```html')) raw = raw.slice(7);\nelse if (raw.startsWith('```')) raw = raw.slice(3);\nif (raw.endsWith('```')) raw = raw.slice(0,-3);\nraw = raw.trim();\n\nconst calcul = $('PYTHON CALC ENGINE').first().json.calcul;\nconst client_id = $('PREP PAYLOAD').first().json.client_id;\n\nreturn [{ json: { html_report: raw, calcul_json: calcul, client_id } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2880,
+        0
+      ],
+      "id": "simret-code-0008-0001-0001-000000000008",
+      "name": "CLEAN HTML"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.optionretraite.net/api/v1/simulation-retraite-store",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('PREP PAYLOAD').first().json.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"client_id\": $json.client_id, \"html_report\": $json.html_report, \"calcul_json\": $json.calcul_json }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3120,
+        0
+      ],
+      "id": "simret-http-0009-0001-0001-000000000009",
+      "name": "STORE SIMULATION",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3360,
+        0
+      ],
+      "id": "simret-resp-0010-0001-0001-000000000010",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "a",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "route-analyse"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "a",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "route-plan"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "a",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "route-risques"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": true
+        }
+      },
+      "id": "sim-routing",
+      "name": "ROUTING AGENTS",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tu es un expert retraite EOR. Analyse ces données et rédige l'ANALYSE EXPERTE des 3 scénarios.\n\nDONNÉES DE SIMULATION (chiffres Python exacts — ne pas modifier ni inventer de chiffres) :\n{{ JSON.stringify($('BUILD CONTEXT').first().json.context) }}\n\nRédige en 5 paragraphes distincts :\n1. Analyse comparative H1/H2/H3 — pensions nettes, âges de départ, avantages/inconvénients de chaque scénario\n2. Justification experte du choix H3 comme stratégie optimale, en citant les chiffres exacts\n3. Impact du coefficient de solidarité AGIRC-ARRCO sur chaque scénario — qui est pénalisé et pendant combien de temps\n4. Explication du break-even en langage client — \"Vous récupérez votre manque à gagner en X mois...\"\n5. Points de vigilance spécifiques à ce profil (décote CNAV, coefficient AGIRC, périodes étrangères si détectées)\n\nStyle : expert mais accessible, 3-4 phrases par paragraphe, ton consultant. Pas de markdown, pas de titres, pas de listes à puces. Texte fluide uniquement.\nOutput : texte brut uniquement, 5 paragraphes séparés par des sauts de ligne.",
+        "batching": {}
+      },
+      "id": "sim-agent-analyse",
+      "name": "Agent ANALYSE EXPERTE",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1700,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-preview-04-17",
+        "options": {}
+      },
+      "id": "sim-gemini-analyse",
+      "name": "Google Gemini ANALYSE",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1700,
+        -100
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ACnGgBxHiWnYK99k",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tu es un expert retraite EOR. Génère un PLAN D'ACTION PERSONNALISÉ basé sur ces données.\n\nDONNÉES DE SIMULATION (chiffres exacts) :\n{{ JSON.stringify($('BUILD CONTEXT').first().json.context) }}\n\nGénère exactement 5 actions concrètes au format JSON strict (output JSON uniquement, aucun texte avant ou après) :\n{\"actions\": [{\"priorite\": \"URGENT|IMPORTANT|UTILE\", \"action\": \"Description précise et actionnable\", \"echeance\": \"Date ou délai précis cohérent avec la date de départ H3\", \"responsable\": \"Client|Consultant EOR|Assurance Retraite (3960)|AGIRC-ARRCO\"}]}\n\nRègles :\n- Minimum 1 action URGENT (à faire dans les 3 mois)\n- Les dates doivent être cohérentes avec H3_DATE du contexte\n- Actions concrètes (pas de généralités du type \"se renseigner\")\n- Inclure au moins une action liée aux périodes étrangères si ETRANGER_IMPACT le mentionne\nOutput : JSON valide uniquement.",
+        "batching": {}
+      },
+      "id": "sim-agent-plan",
+      "name": "Agent PLAN ACTION",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1700,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-preview-04-17",
+        "options": {}
+      },
+      "id": "sim-gemini-plan",
+      "name": "Google Gemini PLAN",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1700,
+        200
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ACnGgBxHiWnYK99k",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tu es un expert retraite EOR spécialisé en épargne complémentaire. Analyse les risques et recommande des solutions chiffrées.\n\nDONNÉES DE SIMULATION (chiffres exacts — utilise-les, ne les invente pas) :\n{{ JSON.stringify($('BUILD CONTEXT').first().json.context) }}\n\nRédige en 4 paragraphes :\n1. Risque de longévité : en supposant une espérance de vie à 87 ans, calcule le cumul total reçu avec H3 et compare à H1 sur cette durée\n2. Risque d'inflation : commente les valeurs réelles H3_REEL_5ANS, H3_REEL_10ANS, H3_REEL_20ANS déjà calculées — ce que cela signifie concrètement pour le pouvoir d'achat\n3. Solutions d'épargne pour combler le déficit DEFICIT_MENSUEL€/mois : détaille PER (avantages fiscaux, sortie en rente) et assurance-vie (flexibilité, abattements) avec des montants de versement mensuels concrets pour atteindre le capital CAPITAL_NECESSAIRE€\n4. Conseil de répartition finale : arbitrage PER vs assurance-vie adapté à ce profil spécifique\n\nStyle : précis, chiffré, 3-4 phrases par paragraphe. Pas de markdown. Texte fluide.\nOutput : texte brut uniquement, 4 paragraphes séparés par des sauts de ligne.",
+        "batching": {}
+      },
+      "id": "sim-agent-risques",
+      "name": "Agent RISQUES EPARGNE",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-preview-04-17",
+        "options": {}
+      },
+      "id": "sim-gemini-risques",
+      "name": "Google Gemini RISQUES",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1700,
+        500
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ACnGgBxHiWnYK99k",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "sim-merge",
+      "name": "MERGE AGENTS",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// Extract text from each agent\nconst extractText = (item) => {\n  const j = item.json;\n  return j.text || j.output || (j.response && typeof j.response.text === 'string' ? j.response.text : '') || JSON.stringify(j);\n};\n\nconst texts = items.map(extractText);\n\n// Try to identify which agent produced which output by content\nlet analyseText = '', planText = '', risquesText = '';\nfor (const t of texts) {\n  const lower = t.toLowerCase();\n  if (lower.includes('actions') || lower.includes('priorite') || lower.includes('echeance') || t.trim().startsWith('{')) {\n    planText = t;\n  } else if (lower.includes('longévité') || lower.includes('per') || lower.includes('assurance-vie') || lower.includes('épargne')) {\n    risquesText = t;\n  } else {\n    analyseText = t;\n  }\n}\n\n// Parse plan JSON if possible\nlet planActions = [];\ntry {\n  const cleaned = planText.trim().replace(/```json|```/g, '').trim();\n  const parsed = JSON.parse(cleaned);\n  planActions = parsed.actions || [];\n} catch(e) {\n  planActions = [];\n}\n\n// Build enriched context\nconst baseContext = $('BUILD CONTEXT').first().json.context;\nconst calcul = $('BUILD CONTEXT').first().json.calcul;\nconst client_id = $('BUILD CONTEXT').first().json.client_id;\n\nconst enrichedContext = {\n  ...baseContext,\n  ANALYSE_COMPARATIVE: analyseText,\n  ANALYSE_CNAV: analyseText,\n  ANALYSE_AGIRC: analyseText,\n  ANALYSE_BREAKEVEN: analyseText,\n  ANALYSE_PROJECTION: analyseText,\n  PLAN_ACTIONS: planActions,\n  TABLEAU_PLAN_ACTION: planActions.map(a =>\n    `<tr><td><span class=\"badge badge-${a.priorite === 'URGENT' ? 'red' : a.priorite === 'IMPORTANT' ? 'orange' : 'green'}\">${a.priorite}</span></td><td>${a.action}</td><td>${a.echeance}</td><td>${a.responsable}</td></tr>`\n  ).join(''),\n  ANALYSE_DEFICIT: risquesText,\n  ANALYSE_INFLATION: risquesText,\n  ANALYSE_RISQUES: risquesText,\n  CONCLUSION_PERSONNALISEE: analyseText\n};\n\nreturn [{ json: { context: enrichedContext, calcul, client_id } }];"
+      },
+      "id": "sim-final-context",
+      "name": "BUILD FINAL CONTEXT",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2220,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "PREP PAYLOAD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PREP PAYLOAD": {
+      "main": [
+        [
+          {
+            "node": "FETCH FROZEN DATA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FETCH FROZEN DATA": {
+      "main": [
+        [
+          {
+            "node": "PYTHON CALC ENGINE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PYTHON CALC ENGINE": {
+      "main": [
+        [
+          {
+            "node": "BUILD CONTEXT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini 2.5 Flash": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "TOHTML SIMULATION",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TOHTML SIMULATION": {
+      "main": [
+        [
+          {
+            "node": "CLEAN HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CLEAN HTML": {
+      "main": [
+        [
+          {
+            "node": "STORE SIMULATION",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "STORE SIMULATION": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BUILD CONTEXT": {
+      "main": [
+        [
+          {
+            "node": "ROUTING AGENTS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ROUTING AGENTS": {
+      "main": [
+        [
+          {
+            "node": "Agent ANALYSE EXPERTE",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agent PLAN ACTION",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agent RISQUES EPARGNE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent ANALYSE EXPERTE": {
+      "main": [
+        [
+          {
+            "node": "MERGE AGENTS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent PLAN ACTION": {
+      "main": [
+        [
+          {
+            "node": "MERGE AGENTS",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Agent RISQUES EPARGNE": {
+      "main": [
+        [
+          {
+            "node": "MERGE AGENTS",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Google Gemini ANALYSE": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent ANALYSE EXPERTE",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini PLAN": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent PLAN ACTION",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini RISQUES": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent RISQUES EPARGNE",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MERGE AGENTS": {
+      "main": [
+        [
+          {
+            "node": "BUILD FINAL CONTEXT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BUILD FINAL CONTEXT": {
+      "main": [
+        [
+          {
+            "node": "TOHTML SIMULATION",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "meta": {
+    "description": "Simulation Retraite Multi-Régimes v1.0 — CNAV, AGIRC-ARRCO, IRCANTEC, RCI. Calcul Python 3 scénarios (H1/H2/H3), projection 20 ans, break-even, rapport HTML généré par Gemini 2.5 Flash."
+  },
+  "pinData": {}
+}
