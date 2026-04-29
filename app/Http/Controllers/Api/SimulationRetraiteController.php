@@ -7,6 +7,7 @@ use App\Models\AnalysisReport;
 use App\Models\FrozenData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 class SimulationRetraiteController extends Controller
@@ -38,14 +39,49 @@ class SimulationRetraiteController extends Controller
             ], 404);
         }
 
+        $carriere = $frozenData->carriere ?? [];
+        $totaux   = $frozenData->totaux   ?? [];
+        $meta     = $frozenData->meta     ?? [];
+
+        // SAM : moyenne des 25 meilleurs salaires revalorisés (même logique que FrozenDataController::show)
+        if (!empty($carriere)) {
+            $revalos = array_column($carriere, 'salaire_revalo');
+            rsort($revalos);
+            $top25 = array_slice($revalos, 0, 25);
+            $sam = count($top25) ? (int) round(array_sum($top25) / count($top25)) : 0;
+        } else {
+            $sam = 0;
+        }
+        if ($sam > 0) {
+            $totaux['sam'] = $sam;
+        }
+
+        // trimestres_cotises_rg (CNAV uniquement, pour la proratisation)
+        $parRegime = $totaux['trimestres_par_regime'] ?? [];
+        $totaux['trimestres_cotises_rg'] = $parRegime['cnav']
+            ?? $totaux['trimestres_cnav']
+            ?? $totaux['trimestres_regime_general']
+            ?? $totaux['trimestres_cotises']
+            ?? 0;
+
+        // date_naissance dans meta si absente
+        if (empty($meta['date_naissance'])) {
+            $rawDate = DB::table('personal_informations')
+                ->where('user_id', $clientId)
+                ->value('birth_date');
+            if ($rawDate) {
+                $meta['date_naissance'] = $rawDate;
+            }
+        }
+
         $payload = [
-            'client_id'     => $clientId,
+            'client_id'       => $clientId,
             'revenu_souhaite' => (float) $request->input('revenu_souhaite', 0),
-            'frozen_data'   => [
+            'frozen_data'     => [
                 'user_id'  => $clientId,
-                'meta'     => $frozenData->meta     ?? [],
-                'totaux'   => $frozenData->totaux   ?? [],
-                'carriere' => $frozenData->carriere ?? [],
+                'meta'     => $meta,
+                'totaux'   => $totaux,
+                'carriere' => $carriere,
                 'cipav'    => $frozenData->cipav    ?? [],
                 'alertes'  => $frozenData->alertes  ?? [],
                 'locked'   => $frozenData->isLocked(),
@@ -121,6 +157,23 @@ class SimulationRetraiteController extends Controller
             'report_id' => $report->id,
             'client_id' => $clientId,
         ], 201);
+    }
+
+    /**
+     * DELETE /api/v1/simulation-retraite/{clientId}
+     * Supprime tous les rapports de simulation d'un client.
+     */
+    public function destroy(int $clientId): JsonResponse
+    {
+        $deleted = AnalysisReport::where('user_id', $clientId)
+            ->where('skill_id', self::SKILL_ID)
+            ->delete();
+
+        return response()->json([
+            'success'   => true,
+            'deleted'   => $deleted,
+            'client_id' => $clientId,
+        ]);
     }
 
     /**

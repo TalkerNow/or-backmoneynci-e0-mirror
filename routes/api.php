@@ -179,6 +179,7 @@ Route::
                 Route::post('simulation-retraite/generate', 'Api\SimulationRetraiteController@generate');
                 Route::post('simulation-retraite-store', 'Api\SimulationRetraiteController@store');
                 Route::get('simulation-retraite/{clientId}', 'Api\SimulationRetraiteController@getByClient');
+                Route::delete('simulation-retraite/{clientId}', 'Api\SimulationRetraiteController@destroy');
 
                 // system-prompt
                 Route::get('system-prompt/latest', 'Api\SystemPromptController@latest');
