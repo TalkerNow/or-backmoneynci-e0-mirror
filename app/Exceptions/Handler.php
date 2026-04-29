@@ -56,6 +56,12 @@ class Handler extends ExceptionHandler
             ], 422);
         }
 
-        return parent::render($request, $exception);
+        $response = parent::render($request, $exception);
+
+        $response->headers->set('Access-Control-Allow-Origin', '*');
+        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+        $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+
+        return $response;
     }
 }
