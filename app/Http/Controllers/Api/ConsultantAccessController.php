@@ -5,19 +5,111 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 class ConsultantAccessController extends Controller
 {
-    private const WEBHOOK_URL = ''; // Remplir : N8N_CONSULTANT_ACCESS_WEBHOOK_URL dans .env
+    private const AUTHORIZED_IDS = [4, 1271, 1638];
+
+    private function checkAdminAccess(): ?JsonResponse
+    {
+        $user = auth()->user();
+        if (!in_array((int) $user->id, self::AUTHORIZED_IDS)) {
+            return response()->json(['error' => 'Accès non autorisé.'], 403);
+        }
+        return null;
+    }
+
+    /**
+     * GET /api/v1/consultant-access
+     */
+    public function index(): JsonResponse
+    {
+        if ($err = $this->checkAdminAccess()) return $err;
+
+        $consultants = DB::table('consultants_access')->orderBy('nom')->get();
+        return response()->json($consultants);
+    }
+
+    /**
+     * POST /api/v1/consultant-access
+     */
+    public function store(Request $request): JsonResponse
+    {
+        if ($err = $this->checkAdminAccess()) return $err;
+
+        $request->validate([
+            'nom'                  => 'required|string|max:100',
+            'prenom'               => 'required|string|max:100',
+            'date_de_naissance'    => 'required|date_format:Y-m-d',
+            'access_type'          => 'required|in:unlimited_pass,credits',
+            'pass_expiration_date' => 'nullable|date',
+            'remaining_credits'    => 'required_if:access_type,credits|integer|min:0',
+        ]);
+
+        $id = DB::table('consultants_access')->insertGetId([
+            'nom'                  => $request->input('nom'),
+            'prenom'               => $request->input('prenom'),
+            'date_de_naissance'    => $request->input('date_de_naissance'),
+            'access_type'          => $request->input('access_type'),
+            'pass_expiration_date' => $request->input('pass_expiration_date'),
+            'remaining_credits'    => $request->input('remaining_credits', 0),
+            'created_at'           => now(),
+            'updated_at'           => now(),
+        ]);
+
+        return response()->json(DB::table('consultants_access')->find($id), 201);
+    }
+
+    /**
+     * PUT /api/v1/consultant-access/{id}
+     */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        if ($err = $this->checkAdminAccess()) return $err;
+
+        $consultant = DB::table('consultants_access')->find($id);
+        if (!$consultant) {
+            return response()->json(['error' => 'Consultant introuvable.'], 404);
+        }
+
+        $request->validate([
+            'nom'                  => 'sometimes|string|max:100',
+            'prenom'               => 'sometimes|string|max:100',
+            'date_de_naissance'    => 'sometimes|date_format:Y-m-d',
+            'access_type'          => 'sometimes|in:unlimited_pass,credits',
+            'pass_expiration_date' => 'nullable|date',
+            'remaining_credits'    => 'sometimes|integer|min:0',
+        ]);
+
+        DB::table('consultants_access')->where('id', $id)->update(
+            array_merge($request->only([
+                'nom', 'prenom', 'date_de_naissance',
+                'access_type', 'pass_expiration_date', 'remaining_credits',
+            ]), ['updated_at' => now()])
+        );
+
+        return response()->json(DB::table('consultants_access')->find($id));
+    }
+
+    /**
+     * DELETE /api/v1/consultant-access/{id}
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        if ($err = $this->checkAdminAccess()) return $err;
+
+        $deleted = DB::table('consultants_access')->where('id', $id)->delete();
+        if (!$deleted) {
+            return response()->json(['error' => 'Consultant introuvable.'], 404);
+        }
+
+        return response()->json(null, 204);
+    }
 
     /**
      * POST /api/v1/consultant-access/verify
-     *
-     * Proxy vers le webhook n8n "Pass/Access Consultants".
-     * Retourne 200 {authorized: true} ou 403 {error: ...} selon le résultat n8n.
-     *
-     * Body JSON : last_name, first_name, date_of_birth (YYYY-MM-DD)
      */
     public function verify(Request $request): JsonResponse
     {
@@ -27,7 +119,7 @@ class ConsultantAccessController extends Controller
             'date_of_birth' => 'required|date_format:Y-m-d',
         ]);
 
-        $webhookUrl = config('services.n8n.consultant_access_url', self::WEBHOOK_URL);
+        $webhookUrl = config('services.n8n.consultant_access_url');
 
         if (empty($webhookUrl)) {
             return response()->json(['error' => 'Webhook non configuré.'], 503);

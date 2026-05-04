@@ -169,8 +169,12 @@ Route::
                 Route::post('analysis-reports/{analysisReport}/validate', 'Api\AnalysisReportController@validateReport');
                 Route::apiResource('analysis-reports', 'Api\AnalysisReportController');
 
-                // consultant-access (gatekeeper pass/crédits)
+                // consultant-access (gatekeeper + admin CRUD IDs 4/1271/1638)
                 Route::post('consultant-access/verify', 'Api\ConsultantAccessController@verify');
+                Route::get('consultant-access',          'Api\ConsultantAccessController@index');
+                Route::post('consultant-access',         'Api\ConsultantAccessController@store');
+                Route::put('consultant-access/{id}',     'Api\ConsultantAccessController@update');
+                Route::delete('consultant-access/{id}',  'Api\ConsultantAccessController@destroy');
 
                 // rapports
                 Route::post('rapports/consultation', 'Api\RapportConsultationController@generate');
