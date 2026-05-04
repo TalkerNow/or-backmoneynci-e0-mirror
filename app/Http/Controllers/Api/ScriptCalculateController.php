@@ -24,6 +24,8 @@ class ScriptCalculateController extends Controller
         'CHOMAGE_NON_INDEMNISE' => 'https://n8n.srv796541.hstgr.cloud/webhook/chomage-non-indemnise-v1-test',
         'VPLR_INCOMPLETE'       => 'https://n8n.srv796541.hstgr.cloud/webhook/vplr-annee-incomplete-v1-test',
         'VPLR_ETUDE'            => 'https://n8n.srv796541.hstgr.cloud/webhook/vplr-annee-etude-v1-test',
+        'CER'                   => 'https://n8n.srv796541.hstgr.cloud/webhook/cer-executor-v1-test',
+        'RP'                    => 'https://n8n.srv796541.hstgr.cloud/webhook/rp-executor-v1-test',
     ];
 
     public function __construct(private FrozenDataRepository $frozenRepo) {}
