@@ -14,6 +14,10 @@ return [
     |
     */
 
+    'n8n' => [
+        'consultant_access_url' => env('N8N_CONSULTANT_ACCESS_URL'),
+    ],
+
     'docusign' => [
     'base_path'   => env('DOCUSIGN_BASE_PATH', 'account.docusign.com'),
     'api_path'    => env('DOCUSIGN_API_PATH', 'https://eu.docusign.net/restapi'),
