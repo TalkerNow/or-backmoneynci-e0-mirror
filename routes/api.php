@@ -169,6 +169,9 @@ Route::
                 Route::post('analysis-reports/{analysisReport}/validate', 'Api\AnalysisReportController@validateReport');
                 Route::apiResource('analysis-reports', 'Api\AnalysisReportController');
 
+                // consultant-access (gatekeeper pass/crédits)
+                Route::post('consultant-access/verify', 'Api\ConsultantAccessController@verify');
+
                 // rapports
                 Route::post('rapports/consultation', 'Api\RapportConsultationController@generate');
 
