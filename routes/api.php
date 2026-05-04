@@ -36,6 +36,7 @@ Route::
 
             Route::apiResource('/me', 'Api\MeController');
             Route::apiResource('/users', 'Api\UsersController');
+            Route::get('/users/{id}/consultant-history', 'Api\UsersController@consultantHistory')->name('users.consultantHistory');
             Route::get('/duplicated_email', 'Api\UsersController@duplicated_email')->name('duplicated_email');
             Route::post('/set_user_subscribe_services', 'Api\UsersController@set_user_subscribe_services')->name('set_user_subscribe_services');
 

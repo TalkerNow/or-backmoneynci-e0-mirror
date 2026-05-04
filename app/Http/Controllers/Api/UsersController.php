@@ -9,6 +9,7 @@ use App\Models\OldClients;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Models\Documents;
+use App\Models\ConsultantHistory;
 use DB;
 use Log;
 
@@ -187,6 +188,22 @@ class UsersController extends Controller
                         ->where('user_id', $user->id)
                         ->where('document_state', '!=', 'Termine')
                         ->update(['parent_id' => $request['parent_id']]);
+
+                    if ($user['parent_id']) {
+                        $oldParent = User::find($user['parent_id']);
+                        $oldParentName = $oldParent
+                            ? (($oldParent->first_name || $oldParent->last_name)
+                                ? trim(($oldParent->first_name ?? '') . ' ' . ($oldParent->last_name ?? ''))
+                                : $oldParent->name)
+                            : null;
+                        $request['previous_consultant_id'] = $user['parent_id'];
+                        $request['previous_consultant_name'] = $oldParentName;
+                        ConsultantHistory::create([
+                            'user_id'         => $user->id,
+                            'consultant_id'   => $user['parent_id'],
+                            'consultant_name' => $oldParentName,
+                        ]);
+                    }
                 }
             
                 try {
@@ -292,5 +309,20 @@ class UsersController extends Controller
         }
 
         return response()->json($user, 200);
+    }
+
+    public function consultantHistory(Request $request, $id)
+    {
+        try {
+            $auth = auth()->userOrFail();
+        } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
+            return response()->json(['error' => $e->getMessage()], 401);
+        }
+
+        $history = ConsultantHistory::where('user_id', $id)
+            ->orderBy('changed_at', 'desc')
+            ->get();
+
+        return response()->json($history);
     }
 }

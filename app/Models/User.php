@@ -31,6 +31,8 @@ class User extends Authenticatable implements JWTSubject
         'status_update_date',
         'chatbot_id',
         'diag_id',
+        'previous_consultant_id',
+        'previous_consultant_name',
     ];
 
     /**
