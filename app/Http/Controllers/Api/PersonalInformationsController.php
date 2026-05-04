@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Controller;
+use App\Models\FrozenData;
 use App\Models\PersonalInformations;
 use App\Models\User;
 use Dotenv\Validator;
@@ -70,10 +71,44 @@ class PersonalInformationsController extends Controller
             'secu_social_key' => 'nullable',
         ]);
         $information->update($request->all());
+
+        // Synchronise le bloc meta du dernier frozen_data pour ce user (sans toucher carriere/totaux/cipav).
+        // Évite les divergences silencieuses entre la fiche client et le snapshot utilisé par le simulateur.
+        $this->syncFrozenDataMeta((int) $id, $information->fresh());
     }
 
     public function destroy($id)
     {
 
+    }
+
+    private function syncFrozenDataMeta(int $userId, $info): void
+    {
+        $frozen = FrozenData::where('user_id', $userId)->latest()->first();
+        if (! $frozen) {
+            return; // Pas de frozen_data : rien à synchroniser, le prochain "Geler" prendra les valeurs à jour.
+        }
+
+        $civility = strtolower(trim((string) ($info->civility ?? '')));
+        $sexe = null;
+        if (in_array($civility, ['madame', 'mme', 'mlle', 'mademoiselle'], true)) {
+            $sexe = 'F';
+        } elseif (in_array($civility, ['monsieur', 'mr', 'm.'], true)) {
+            $sexe = 'M';
+        }
+
+        $meta = is_array($frozen->meta) ? $frozen->meta : [];
+        $meta['nom']            = $info->last_name      ?? ($meta['nom']            ?? '');
+        $meta['prenom']         = $info->first_name     ?? ($meta['prenom']         ?? '');
+        $meta['civilite']       = $info->civility       ?? ($meta['civilite']       ?? '');
+        $meta['date_naissance'] = $info->birth_date     ?? ($meta['date_naissance'] ?? null);
+        $meta['nombre_enfants'] = (int) ($info->children_number ?? ($meta['nombre_enfants'] ?? 0));
+        $meta['sexe']           = $sexe                 ?? ($meta['sexe']           ?? null);
+        $meta['nir']            = $info->secu_social    ?? ($meta['nir']            ?? null);
+        $meta['valide_le']      = now()->toDateString();
+        $meta['synced_from_user_at'] = now()->toIso8601String();
+
+        $frozen->meta = $meta;
+        $frozen->save();
     }
 }
