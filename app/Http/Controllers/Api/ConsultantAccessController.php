@@ -15,6 +15,9 @@ class ConsultantAccessController extends Controller
     private function checkAdminAccess(): ?JsonResponse
     {
         $user = auth()->user();
+        if (!$user) {
+            return response()->json(['error' => 'Non authentifié.'], 401);
+        }
         if (!in_array((int) $user->id, self::AUTHORIZED_IDS)) {
             return response()->json(['error' => 'Accès non autorisé.'], 403);
         }
@@ -23,35 +26,59 @@ class ConsultantAccessController extends Controller
 
     /**
      * GET /api/v1/consultant-access
+     * Retourne tous les users role=Consultant avec leur accès (ou null si aucun).
      */
     public function index(): JsonResponse
     {
         if ($err = $this->checkAdminAccess()) return $err;
 
-        $consultants = DB::table('consultants_access')->orderBy('nom')->get();
+        $consultants = DB::table('users')
+            ->leftJoin('personal_informations', 'users.id', '=', 'personal_informations.user_id')
+            ->leftJoin('consultants_access', 'users.id', '=', 'consultants_access.user_id')
+            ->where('users.role', 'Consultant')
+            ->select([
+                'users.id as user_id',
+                'users.name',
+                'users.email',
+                'personal_informations.first_name',
+                'personal_informations.last_name',
+                'personal_informations.birth_date',
+                'consultants_access.id as access_id',
+                'consultants_access.access_type',
+                'consultants_access.remaining_credits',
+                'consultants_access.pass_expiration_date',
+            ])
+            ->orderBy('personal_informations.last_name')
+            ->get();
+
         return response()->json($consultants);
     }
 
     /**
      * POST /api/v1/consultant-access
+     * Crée un accès pour un consultant (user_id requis).
+     * Auto-remplit nom/prenom/date_de_naissance depuis personal_informations.
      */
     public function store(Request $request): JsonResponse
     {
         if ($err = $this->checkAdminAccess()) return $err;
 
         $request->validate([
-            'nom'                  => 'required|string|max:100',
-            'prenom'               => 'required|string|max:100',
-            'date_de_naissance'    => 'required|date_format:Y-m-d',
+            'user_id'              => 'required|integer|exists:users,id|unique:consultants_access,user_id',
             'access_type'          => 'required|in:unlimited_pass,credits',
             'pass_expiration_date' => 'nullable|date',
             'remaining_credits'    => 'required_if:access_type,credits|integer|min:0',
         ]);
 
+        $pi = DB::table('personal_informations')
+            ->where('user_id', $request->input('user_id'))
+            ->first();
+
         $id = DB::table('consultants_access')->insertGetId([
-            'nom'                  => $request->input('nom'),
-            'prenom'               => $request->input('prenom'),
-            'date_de_naissance'    => $request->input('date_de_naissance'),
+            'user_id'              => $request->input('user_id'),
+            'nom'                  => $pi->last_name ?? '',
+            'prenom'               => $pi->first_name ?? '',
+            'date_de_naissance'    => $pi->birth_date ?? null,
             'access_type'          => $request->input('access_type'),
             'pass_expiration_date' => $request->input('pass_expiration_date'),
             'remaining_credits'    => $request->input('remaining_credits', 0),
@@ -69,25 +96,20 @@ class ConsultantAccessController extends Controller
     {
         if ($err = $this->checkAdminAccess()) return $err;
 
-        $consultant = DB::table('consultants_access')->find($id);
-        if (!$consultant) {
-            return response()->json(['error' => 'Consultant introuvable.'], 404);
+        $access = DB::table('consultants_access')->find($id);
+        if (!$access) {
+            return response()->json(['error' => 'Accès introuvable.'], 404);
         }
 
         $request->validate([
-            'nom'                  => 'sometimes|string|max:100',
-            'prenom'               => 'sometimes|string|max:100',
-            'date_de_naissance'    => 'sometimes|date_format:Y-m-d',
             'access_type'          => 'sometimes|in:unlimited_pass,credits',
             'pass_expiration_date' => 'nullable|date',
             'remaining_credits'    => 'sometimes|integer|min:0',
         ]);
 
         DB::table('consultants_access')->where('id', $id)->update(
-            array_merge($request->only([
-                'nom', 'prenom', 'date_de_naissance',
-                'access_type', 'pass_expiration_date', 'remaining_credits',
-            ]), ['updated_at' => now()])
+            array_merge($request->only(['access_type', 'pass_expiration_date', 'remaining_credits']),
+            ['updated_at' => now()])
         );
 
         return response()->json(DB::table('consultants_access')->find($id));
@@ -102,7 +124,7 @@ class ConsultantAccessController extends Controller
 
         $deleted = DB::table('consultants_access')->where('id', $id)->delete();
         if (!$deleted) {
-            return response()->json(['error' => 'Consultant introuvable.'], 404);
+            return response()->json(['error' => 'Accès introuvable.'], 404);
         }
 
         return response()->json(null, 204);
