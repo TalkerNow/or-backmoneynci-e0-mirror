@@ -51,7 +51,7 @@ class UsersController extends Controller
                     ->where('role', 'Client')
                     ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
                     ->orderby('users.created_at', 'DESC')
-                    ->get();
+                    ->get(['users.*', 'personal_informations.maiden_name', 'personal_informations.birth_date', 'personal_informations.birth_place', 'personal_informations.martial_status', 'personal_informations.children_number', 'personal_informations.mobile_number', 'personal_informations.office_number', 'personal_informations.personal_address', 'personal_informations.personal_address_2', 'personal_informations.personal_zip_code', 'personal_informations.personal_city', 'personal_informations.personal_country', 'personal_informations.society_name', 'personal_informations.society_address', 'personal_informations.society_address_2', 'personal_informations.society_zip_code', 'personal_informations.society_city', 'personal_informations.society_country', 'personal_informations.military_service', 'personal_informations.secu_social', 'personal_informations.secu_social_key']);
             } else {
                 $users = User::with('parent')
                     ->with('business_introducer')
@@ -59,7 +59,7 @@ class UsersController extends Controller
                     ->where('role', 'Client')
                     ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
                     ->orderby('users.created_at', 'DESC')
-                    ->get();
+                    ->get(['users.*', 'personal_informations.maiden_name', 'personal_informations.birth_date', 'personal_informations.birth_place', 'personal_informations.martial_status', 'personal_informations.children_number', 'personal_informations.mobile_number', 'personal_informations.office_number', 'personal_informations.personal_address', 'personal_informations.personal_address_2', 'personal_informations.personal_zip_code', 'personal_informations.personal_city', 'personal_informations.personal_country', 'personal_informations.society_name', 'personal_informations.society_address', 'personal_informations.society_address_2', 'personal_informations.society_zip_code', 'personal_informations.society_city', 'personal_informations.society_country', 'personal_informations.military_service', 'personal_informations.secu_social', 'personal_informations.secu_social_key']);
             }
         }
         return response()->json($users);
