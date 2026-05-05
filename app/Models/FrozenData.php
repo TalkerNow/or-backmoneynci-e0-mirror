@@ -20,6 +20,7 @@ class FrozenData extends Model
         'alertes',
         'totaux',
         'scenario_choisi',
+        'date_retenue',
         'locked_at',
         'locked_by',
         'deleted_by',
@@ -32,6 +33,7 @@ class FrozenData extends Model
         'alertes'         => 'array',
         'totaux'          => 'array',
         'scenario_choisi' => 'array',
+        'date_retenue'    => 'array',
         'locked_at'       => 'datetime',
     ];
 

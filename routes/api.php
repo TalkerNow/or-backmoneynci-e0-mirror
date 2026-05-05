@@ -88,6 +88,7 @@ Route::
             Route::post('/frozen_data/{user_id}/lock', 'Api\FrozenDataController@lock');
             Route::post('/frozen_data/{user_id}/unlock', 'Api\FrozenDataController@unlock');
             Route::post('/frozen_data/{user_id}/scenario', 'Api\FrozenDataController@setScenario');
+            Route::post('/frozen_data/{user_id}/date', 'Api\FrozenDataController@setDate');
             Route::delete('/frozen_data/{user_id}', 'Api\FrozenDataController@destroy');
 
             // ---- AUDIT_LOG (Traçabilité des exécutions IA) ----
@@ -188,6 +189,7 @@ Route::
                 Route::post('simulation-retraite/generate', 'Api\SimulationRetraiteController@generate');
                 Route::post('simulation-retraite-store', 'Api\SimulationRetraiteController@store');
                 Route::get('simulation-retraite/{clientId}', 'Api\SimulationRetraiteController@getByClient');
+                Route::patch('simulation-retraite/{clientId}/html', 'Api\SimulationRetraiteController@updateHtml');
                 Route::delete('simulation-retraite/{clientId}', 'Api\SimulationRetraiteController@destroy');
 
                 // system-prompt

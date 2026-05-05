@@ -115,6 +115,35 @@ class FrozenDataRepository
     }
 
     /**
+     * Met à jour la date de départ retenue pour un client.
+     * Autorisé même si les données sont gelées.
+     *
+     * @param int $userId
+     * @param array|null $date  null pour effacer le choix
+     * @param int|null $chosenByUserId
+     */
+    public function setDateRetenue(int $userId, ?array $date, ?int $chosenByUserId): FrozenData
+    {
+        $frozen = $this->getByUserId($userId);
+
+        if (!$frozen) {
+            abort(404, "Aucune donnée carrière trouvée pour le client {$userId}.");
+        }
+
+        if ($date !== null) {
+            $date['chosen_at'] = $date['chosen_at'] ?? Carbon::now()->toIso8601String();
+            if ($chosenByUserId !== null) {
+                $date['chosen_by'] = $chosenByUserId;
+            }
+        }
+
+        $frozen->date_retenue = $date;
+        $frozen->save();
+
+        return $frozen;
+    }
+
+    /**
      * Met à jour le scénario retenu pour un client.
      * Autorisé même si les données sont gelées : le choix de scénario
      * est une décision post-validation, distincte de la carrière elle-même.

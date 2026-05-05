@@ -91,13 +91,25 @@ class RapportConsultationController extends Controller
             // AVANT de répondre. Le frontend pourra ensuite raffiner (cleanup, upload),
             // mais si l'utilisateur navigue entre-temps ou ferme le navigateur,
             // le mount loader retrouvera quand même le livrable.
+            //
+            // Forme stockée alignée sur ce que saveSkillResult écrit côté front :
+            //   { id, name, type, createdAt, url, htmlContent }
             if ($n8nResponse->successful()) {
                 $rawHtml = $this->extractHtml($n8nResponse->json() ?? $n8nResponse->body());
                 if ($rawHtml !== null && $rawHtml !== '') {
-                    AnalysisReport::updateOrCreate(
-                        ['user_id' => $clientId, 'skill_id' => 'rapport_consultation'],
-                        ['result_json' => $rawHtml, 'statut' => 'brouillon']
-                    );
+                    AnalysisReport::create([
+                        'user_id'     => $clientId,
+                        'skill_id'    => 'rapport_consultation',
+                        'result_json' => [
+                            'id'          => 'rc_backend_' . time(),
+                            'name'        => 'Rapport de consultation retraite',
+                            'type'        => 'rapport_consultation',
+                            'createdAt'   => now()->toIso8601String(),
+                            'url'         => null,
+                            'htmlContent' => $rawHtml,
+                        ],
+                        'statut' => 'brouillon',
+                    ]);
                 }
             }
 

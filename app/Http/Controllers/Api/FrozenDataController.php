@@ -175,6 +175,30 @@ class FrozenDataController extends Controller
     }
 
     /**
+     * POST /api/frozen_data/{user_id}/date
+     * Met à jour la date de départ retenue par le consultant pour ce client.
+     * Autorisé même si la carrière est gelée.
+     *
+     * Body attendu :
+     * { "date": { "type": "age_legal", "label": "Âge légal", "date": "2023-06-01", "info": "..." } }
+     * Pour effacer : { "date": null }
+     */
+    public function setDate(Request $request, int $userId): JsonResponse
+    {
+        $data = $request->validate([
+            'date' => 'nullable|array',
+        ]);
+
+        $frozen = $this->repository->setDateRetenue(
+            $userId,
+            $data['date'] ?? null,
+            $request->user()?->id
+        );
+
+        return response()->json($frozen);
+    }
+
+    /**
      * DELETE /api/frozen_data/{user_id}
      * Soft-delete les données carrière — l'historique reste en BDD (deleted_at).
      * Interdit si les données sont gelées (423 Locked) : unlock requis avant.
