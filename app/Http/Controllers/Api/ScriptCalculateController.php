@@ -22,8 +22,11 @@ class ScriptCalculateController extends Controller
         'ARRET_ACTIVITE'        => 'https://n8n.srv796541.hstgr.cloud/webhook/arret-activite-v1-test',
         'CHOMAGE_INDEMNISE'     => 'https://n8n.srv796541.hstgr.cloud/webhook/chomage-indemnise-v1-test',
         'CHOMAGE_NON_INDEMNISE' => 'https://n8n.srv796541.hstgr.cloud/webhook/chomage-non-indemnise-v1-test',
+        // VPLR : workflow n8n unifié (un seul webhook traite incomplete + études + plafond partagé 12).
+        // Le code régime VPLR_INCOMPLETE / VPLR_ETUDE injecte automatiquement le `type` dans le payload (cf. calculate()).
+        'VPLR'                  => 'https://n8n.srv796541.hstgr.cloud/webhook/vplr-annee-incomplete-v1-test',
         'VPLR_INCOMPLETE'       => 'https://n8n.srv796541.hstgr.cloud/webhook/vplr-annee-incomplete-v1-test',
-        'VPLR_ETUDE'            => 'https://n8n.srv796541.hstgr.cloud/webhook/vplr-annee-etude-v1-test',
+        'VPLR_ETUDE'            => 'https://n8n.srv796541.hstgr.cloud/webhook/vplr-annee-incomplete-v1-test',
         'CER'                   => 'https://n8n.srv796541.hstgr.cloud/webhook/cer-executor-v1-test',
         'RP'                    => 'https://n8n.srv796541.hstgr.cloud/webhook/rp-executor-v1-test',
     ];
@@ -59,6 +62,16 @@ class ScriptCalculateController extends Controller
         // PHP encode les tableaux vides en [] mais Python attend {} pour scenario_params
         if (empty($payload['scenario_params'])) {
             $payload['scenario_params'] = new \stdClass();
+        }
+
+        // VPLR : injection automatique du `type` selon l'ancien régime appelé.
+        // Le workflow n8n unifié décide ensuite quel(s) résultat(s) calculer.
+        if (in_array($regimeCode, ['VPLR', 'VPLR_INCOMPLETE', 'VPLR_ETUDE'], true)) {
+            $payload['type'] = match ($regimeCode) {
+                'VPLR_INCOMPLETE' => 'incomplete',
+                'VPLR_ETUDE'      => 'etude',
+                default           => 'both',
+            };
         }
 
         // Tous les régimes : injecter frozen_data dans le payload
