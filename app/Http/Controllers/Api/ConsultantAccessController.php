@@ -14,7 +14,7 @@ class ConsultantAccessController extends Controller
 
     private function checkAdminAccess(): ?JsonResponse
     {
-        $user = auth()->user();
+        $user = auth('api')->user();
         if (!$user) {
             return response()->json(['error' => 'Non authentifié.'], 401);
         }
