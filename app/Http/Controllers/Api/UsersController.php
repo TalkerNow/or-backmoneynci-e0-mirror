@@ -184,6 +184,12 @@ class UsersController extends Controller
                 }
             
                 if ($request['parent_id'] !== $user['parent_id']) {
+                    if ($request['parent_id']) {
+                        $newParent = User::find($request['parent_id']);
+                        if (!$newParent || !in_array($newParent->role, ['Consultant', 'Admin', 'admin'])) {
+                            return response()->json(['error' => 'Le parent doit être un Consultant ou un Admin'], 422);
+                        }
+                    }
                     DB::table('documents')
                         ->where('user_id', $user->id)
                         ->where('document_state', '!=', 'Termine')
