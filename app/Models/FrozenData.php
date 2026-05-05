@@ -21,20 +21,24 @@ class FrozenData extends Model
         'totaux',
         'scenario_choisi',
         'date_retenue',
+        'scenarios_choisis',
+        'dates_retenues',
         'locked_at',
         'locked_by',
         'deleted_by',
     ];
 
     protected $casts = [
-        'meta'            => 'array',
-        'carriere'        => 'array',
-        'cipav'           => 'array',
-        'alertes'         => 'array',
-        'totaux'          => 'array',
-        'scenario_choisi' => 'array',
-        'date_retenue'    => 'array',
-        'locked_at'       => 'datetime',
+        'meta'              => 'array',
+        'carriere'          => 'array',
+        'cipav'             => 'array',
+        'alertes'           => 'array',
+        'totaux'            => 'array',
+        'scenario_choisi'   => 'array',
+        'date_retenue'      => 'array',
+        'scenarios_choisis' => 'array',
+        'dates_retenues'    => 'array',
+        'locked_at'         => 'datetime',
     ];
 
     public function isLocked(): bool

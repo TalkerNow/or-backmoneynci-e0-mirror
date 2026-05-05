@@ -89,6 +89,8 @@ Route::
             Route::post('/frozen_data/{user_id}/unlock', 'Api\FrozenDataController@unlock');
             Route::post('/frozen_data/{user_id}/scenario', 'Api\FrozenDataController@setScenario');
             Route::post('/frozen_data/{user_id}/date', 'Api\FrozenDataController@setDate');
+            Route::post('/frozen_data/{user_id}/scenarios', 'Api\FrozenDataController@setScenarios');
+            Route::post('/frozen_data/{user_id}/dates', 'Api\FrozenDataController@setDates');
             Route::delete('/frozen_data/{user_id}', 'Api\FrozenDataController@destroy');
 
             // ---- AUDIT_LOG (Traçabilité des exécutions IA) ----

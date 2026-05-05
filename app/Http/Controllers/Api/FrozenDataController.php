@@ -199,6 +199,75 @@ class FrozenDataController extends Controller
     }
 
     /**
+     * POST /api/frozen_data/{user_id}/scenarios
+     * Multi-select : remplace le tableau des scénarios retenus.
+     * Chaque scénario peut transporter ses paramètres et un snapshot de calcul
+     * (last_calc + last_calc_at) pour persister l'état complet d'un recalcul.
+     *
+     * Body attendu :
+     * {
+     *   "scenarios": [
+     *     {
+     *       "dispositif_id": "racl",
+     *       "label": "...",
+     *       "skill_code": "RACL",
+     *       "params": { ... },
+     *       "result_summary": { "eligible": true, ... },
+     *       "last_calc": { ... }
+     *     },
+     *     ...
+     *   ]
+     * }
+     *
+     * Pour tout effacer : { "scenarios": [] }
+     */
+    public function setScenarios(Request $request, int $userId): JsonResponse
+    {
+        $data = $request->validate([
+            'scenarios'   => 'present|array',
+            'scenarios.*' => 'array',
+        ]);
+
+        $frozen = $this->repository->setScenariosChoisis(
+            $userId,
+            $data['scenarios'],
+            $request->user()?->id
+        );
+
+        return response()->json($frozen);
+    }
+
+    /**
+     * POST /api/frozen_data/{user_id}/dates
+     * Multi-select : remplace le tableau des dates de départ retenues.
+     *
+     * Body attendu :
+     * {
+     *   "dates": [
+     *     { "type": "age_legal", "label": "...", "date": "YYYY-MM-DD", "info": "..." },
+     *     ...
+     *   ]
+     * }
+     *
+     * Pour tout effacer : { "dates": [] }
+     */
+    public function setDates(Request $request, int $userId): JsonResponse
+    {
+        $data = $request->validate([
+            'dates'   => 'present|array',
+            'dates.*' => 'array',
+        ]);
+
+        $frozen = $this->repository->setDatesRetenues(
+            $userId,
+            $data['dates'],
+            $request->user()?->id
+        );
+
+        return response()->json($frozen);
+    }
+
+    /**
      * DELETE /api/frozen_data/{user_id}
      * Soft-delete les données carrière — l'historique reste en BDD (deleted_at).
      * Interdit si les données sont gelées (423 Locked) : unlock requis avant.

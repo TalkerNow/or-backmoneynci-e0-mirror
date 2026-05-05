@@ -172,4 +172,93 @@ class FrozenDataRepository
 
         return $frozen;
     }
+
+    /**
+     * Remplace l'intégralité du tableau de scénarios retenus.
+     * Chaque item a une identité forte via `dispositif_id` (un dispositif
+     * n'apparaît qu'une fois). Les champs `chosen_at` / `chosen_by` sont
+     * normalisés ici si absents.
+     *
+     * @param int $userId
+     * @param array $scenarios  Tableau des scénarios (vide pour tout effacer)
+     * @param int|null $chosenByUserId
+     */
+    public function setScenariosChoisis(int $userId, array $scenarios, ?int $chosenByUserId): FrozenData
+    {
+        $frozen = $this->getByUserId($userId);
+
+        if (!$frozen) {
+            abort(404, "Aucune donnée carrière trouvée pour le client {$userId}.");
+        }
+
+        $now = Carbon::now()->toIso8601String();
+        $normalized = [];
+        $seen = [];
+        foreach ($scenarios as $scenario) {
+            if (!is_array($scenario) || empty($scenario['dispositif_id'])) {
+                continue;
+            }
+            $dispId = $scenario['dispositif_id'];
+            if (isset($seen[$dispId])) {
+                // Dédup : on garde la dernière occurrence (le payload est plus récent)
+                continue;
+            }
+            $seen[$dispId] = true;
+            $scenario['chosen_at'] = $scenario['chosen_at'] ?? $now;
+            if ($chosenByUserId !== null && empty($scenario['chosen_by'])) {
+                $scenario['chosen_by'] = $chosenByUserId;
+            }
+            $normalized[] = $scenario;
+        }
+
+        $frozen->scenarios_choisis = $normalized;
+        // Mirror le 1er élément dans la colonne singulière pour back-compat
+        $frozen->scenario_choisi = $normalized[0] ?? null;
+        $frozen->save();
+
+        return $frozen;
+    }
+
+    /**
+     * Remplace l'intégralité du tableau de dates retenues.
+     * Identité d'un item : couple (type, date). Plusieurs `date_libre`
+     * différentes sont autorisées.
+     *
+     * @param int $userId
+     * @param array $dates  Tableau des dates (vide pour tout effacer)
+     * @param int|null $chosenByUserId
+     */
+    public function setDatesRetenues(int $userId, array $dates, ?int $chosenByUserId): FrozenData
+    {
+        $frozen = $this->getByUserId($userId);
+
+        if (!$frozen) {
+            abort(404, "Aucune donnée carrière trouvée pour le client {$userId}.");
+        }
+
+        $now = Carbon::now()->toIso8601String();
+        $normalized = [];
+        $seen = [];
+        foreach ($dates as $date) {
+            if (!is_array($date) || empty($date['type'])) {
+                continue;
+            }
+            $key = $date['type'] . '|' . ($date['date'] ?? '');
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $date['chosen_at'] = $date['chosen_at'] ?? $now;
+            if ($chosenByUserId !== null && empty($date['chosen_by'])) {
+                $date['chosen_by'] = $chosenByUserId;
+            }
+            $normalized[] = $date;
+        }
+
+        $frozen->dates_retenues = $normalized;
+        $frozen->date_retenue = $normalized[0] ?? null;
+        $frozen->save();
+
+        return $frozen;
+    }
 }
