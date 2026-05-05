@@ -176,3 +176,26 @@ Sur un serveur prévu pour tout dockeriser (y compris MySQL), utiliser :
 - `docker compose -f docker.compose.prod.yml up -d`
 - Migrations dans ce cas (DB dans le service `db`) :
   - `docker compose -f docker.compose.prod.yml exec php-prod php artisan migrate`
+
+## Déploiement CI/CD (test)
+
+Tout push ou merge sur la branche `dev` déclenche un déploiement automatique sur la VPS de test (`vps-a1b847f6.vps.ovh.net`) via GitLab CI.
+
+Le pipeline ouvre une session SSH vers la VPS et lance `~/redeploy-test.sh`, qui :
+1. Pull les 2 repos (`backmoneynci-test` et `frontmoneynci-test`) sur la branche `dev` (`git reset --hard origin/dev`)
+2. Rebuild le backend Docker (services `php-test`, `nginx-test`, `browsershot-test` via `docker-compose.test.yml`)
+3. Run `composer install --no-dev` et `php artisan migrate --force`
+4. Rebuild le front si commit a changé (`npm install --legacy-peer-deps` + `npm run build`, output dans `~/frontmoneynci-test/build-test`)
+5. Reload Apache (vhost test sur `:8083`)
+6. Healthchecks `:8000/api/debug-db` et `:8083/`
+
+Concurrence sérialisée par `flock` sur `/tmp/redeploy-test.lock` — si 2 pipelines fire en même temps, le 2ᵉ attend que le 1ᵉʳ finisse.
+
+URLs :
+- Front test : http://vps-a1b847f6.vps.ovh.net:8083
+- API test : http://api-test.optionretraite.fr/api
+
+Le déploiement prod reste **manuel** (out of scope pour cette première version).
+
+Spec : `docs/superpowers/specs/2026-05-05-cicd-dev-vps-test-design.md`
+Plan : `docs/superpowers/plans/2026-05-05-cicd-dev-vps-test.md`
