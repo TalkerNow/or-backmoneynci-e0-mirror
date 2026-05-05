@@ -11,19 +11,18 @@ deploy_test:
   before_script:
     - apk add --no-cache openssh-client
     - eval "$(ssh-agent -s)"
-    # DEBUG: inspect the key file (size + first 30 bytes shape, not content)
-    - echo "Key file path: $SSH_PRIVATE_KEY"
-    - ls -la "$SSH_PRIVATE_KEY" || true
-    - wc -c < "$SSH_PRIVATE_KEY" | xargs -I {} echo "byte count = {}"
-    - head -c 30 "$SSH_PRIVATE_KEY" | od -c | head -3
-    - echo "Last 30 bytes:"
-    - tail -c 30 "$SSH_PRIVATE_KEY" | od -c | head -3
-    # Normalize key: strip CR, ensure trailing newline
+    # Normalize key (strip CR, ensure trailing newline) — workaround for GitLab File var copy-paste artifacts
     - (cat "$SSH_PRIVATE_KEY"; echo) | tr -d '\r' > /tmp/ssh_key
     - chmod 600 /tmp/ssh_key
     - ssh-add /tmp/ssh_key
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
-    - tr -d '\r' < "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+    # Pinned host keys (not secrets — captured via ssh-keyscan)
+    - |
+      cat > ~/.ssh/known_hosts <<'EOF'
+      [vps-a1b847f6.vps.ovh.net]:5096 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICyTkgI+b7OLG6EG09zk1F0Mk9sZpFU225RypKqqxkFk
+      [vps-a1b847f6.vps.ovh.net]:5096 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC1YYrgqyEt7eIsdtcdwVVik+u0M1x4dlQ0/wwGmsYFI+TzPJnZkxbKVj0sow6SSOKba8g39siDbLIuMA5oKBv73V9g7RrazsuBSamMxM6GtpppC7TsTXQ9ie4sH1k8u0XC9warg7qTucyFbP8vzNywsnULCncVC2e6FmYW+GEHrdIkbgJb13fvaVS9Qpsc//JYEl1klhm8sqdB52KmpQiwFZ2JXM2bjqCa7/s00RYioOouEX6gkD8U09zLx0cfBSYUtWoHojHmLWJ7/JNF1TkFpJAif7UZnBb6DbBWjDRtYvzxCliDyd9fZEEQv51bqtLLuXFwBwvJZSoIKNG86AtB
+      [vps-a1b847f6.vps.ovh.net]:5096 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBKVYsa3iJRyAu1j5pNDtSz0tr0NfRFsHX/tnTK8Q+vpXOeg/5mhOD7RSSDWeraekGCoKLo9DyRgshKKLSArKpx4=
+      EOF
   script:
     - ssh -p 5096 debian@vps-a1b847f6.vps.ovh.net "true"
   timeout: 30m
