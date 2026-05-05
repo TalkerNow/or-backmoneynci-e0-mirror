@@ -203,4 +203,37 @@ class SimulationRetraiteController extends Controller
             'created_at'  => $report->created_at,
         ]);
     }
+
+    /**
+     * PATCH /api/v1/simulation-retraite/{clientId}/html
+     * Met à jour le HTML du dernier rapport de simulation
+     * (édition consultant via ReportViewerModal — EOR-61).
+     */
+    public function updateHtml(Request $request, int $clientId): JsonResponse
+    {
+        $validated = $request->validate([
+            'html_report' => 'required|string',
+        ]);
+
+        $report = AnalysisReport::where('user_id', $clientId)
+            ->where('skill_id', self::SKILL_ID)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (! $report) {
+            return response()->json([
+                'error'     => 'No simulation report found',
+                'client_id' => $clientId,
+            ], 404);
+        }
+
+        $report->result_json = $validated['html_report'];
+        $report->save();
+
+        return response()->json([
+            'success'   => true,
+            'report_id' => $report->id,
+            'client_id' => $clientId,
+        ]);
+    }
 }

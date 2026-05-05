@@ -86,6 +86,33 @@ class RapportConsultationController extends Controller
 
             $n8nResponse = $n8nRequest->post(self::N8N_WEBHOOK);
 
+            // Persistance immédiate côté backend (EOR-61) :
+            // si la génération aboutit, on sauve le HTML brut dans analysis_reports
+            // AVANT de répondre. Le frontend pourra ensuite raffiner (cleanup, upload),
+            // mais si l'utilisateur navigue entre-temps ou ferme le navigateur,
+            // le mount loader retrouvera quand même le livrable.
+            //
+            // Forme stockée alignée sur ce que saveSkillResult écrit côté front :
+            //   { id, name, type, createdAt, url, htmlContent }
+            if ($n8nResponse->successful()) {
+                $rawHtml = $this->extractHtml($n8nResponse->json() ?? $n8nResponse->body());
+                if ($rawHtml !== null && $rawHtml !== '') {
+                    AnalysisReport::create([
+                        'user_id'     => $clientId,
+                        'skill_id'    => 'rapport_consultation',
+                        'result_json' => [
+                            'id'          => 'rc_backend_' . time(),
+                            'name'        => 'Rapport de consultation retraite',
+                            'type'        => 'rapport_consultation',
+                            'createdAt'   => now()->toIso8601String(),
+                            'url'         => null,
+                            'htmlContent' => $rawHtml,
+                        ],
+                        'statut' => 'brouillon',
+                    ]);
+                }
+            }
+
             return response()->json([
                 'success'    => $n8nResponse->successful(),
                 'n8n_status' => $n8nResponse->status(),
@@ -94,5 +121,22 @@ class RapportConsultationController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Extrait le HTML d'une réponse n8n hétérogène
+     * (string, tableau, objet avec html_report/output/text/response).
+     */
+    private function extractHtml($data): ?string
+    {
+        if ($data === null) return null;
+        $root = is_array($data) && array_keys($data) === range(0, count($data) - 1) ? ($data[0] ?? null) : $data;
+        if (is_string($root)) return $root;
+        if (is_array($root)) {
+            foreach (['html_report', 'output', 'text', 'response'] as $key) {
+                if (!empty($root[$key]) && is_string($root[$key])) return $root[$key];
+            }
+        }
+        return null;
     }
 }
