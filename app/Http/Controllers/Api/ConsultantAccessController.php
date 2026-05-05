@@ -33,22 +33,18 @@ class ConsultantAccessController extends Controller
         if ($err = $this->checkAdminAccess()) return $err;
 
         $consultants = DB::table('users')
-            ->leftJoin('personal_informations', 'users.id', '=', 'personal_informations.user_id')
             ->leftJoin('consultants_access', 'users.id', '=', 'consultants_access.user_id')
             ->where('users.role', 'Consultant')
             ->select([
                 'users.id as user_id',
                 'users.name',
                 'users.email',
-                'personal_informations.first_name',
-                'personal_informations.last_name',
-                'personal_informations.birth_date',
                 'consultants_access.id as access_id',
                 'consultants_access.access_type',
                 'consultants_access.remaining_credits',
                 'consultants_access.pass_expiration_date',
             ])
-            ->orderBy('personal_informations.last_name')
+            ->orderBy('users.name')
             ->get();
 
         return response()->json($consultants);
@@ -70,15 +66,12 @@ class ConsultantAccessController extends Controller
             'remaining_credits'    => 'required_if:access_type,credits|integer|min:0',
         ]);
 
-        $pi = DB::table('personal_informations')
-            ->where('user_id', $request->input('user_id'))
-            ->first();
+        $user = DB::table('users')->where('id', $request->input('user_id'))->first();
 
         $id = DB::table('consultants_access')->insertGetId([
             'user_id'              => $request->input('user_id'),
-            'nom'                  => $pi->last_name ?? '',
-            'prenom'               => $pi->first_name ?? '',
-            'date_de_naissance'    => $pi->birth_date ?? null,
+            'email'                => $user->email ?? null,
+            'name'                 => $user->name ?? null,
             'access_type'          => $request->input('access_type'),
             'pass_expiration_date' => $request->input('pass_expiration_date'),
             'remaining_credits'    => $request->input('remaining_credits', 0),
