@@ -113,4 +113,34 @@ class FrozenDataRepository
 
         return $frozen;
     }
+
+    /**
+     * Met à jour le scénario retenu pour un client.
+     * Autorisé même si les données sont gelées : le choix de scénario
+     * est une décision post-validation, distincte de la carrière elle-même.
+     *
+     * @param int $userId
+     * @param array|null $scenario  null pour effacer le choix
+     * @param int|null $chosenByUserId
+     */
+    public function setScenarioChoisi(int $userId, ?array $scenario, ?int $chosenByUserId): FrozenData
+    {
+        $frozen = $this->getByUserId($userId);
+
+        if (!$frozen) {
+            abort(404, "Aucune donnée carrière trouvée pour le client {$userId}.");
+        }
+
+        if ($scenario !== null) {
+            $scenario['chosen_at'] = $scenario['chosen_at'] ?? Carbon::now()->toIso8601String();
+            if ($chosenByUserId !== null) {
+                $scenario['chosen_by'] = $chosenByUserId;
+            }
+        }
+
+        $frozen->scenario_choisi = $scenario;
+        $frozen->save();
+
+        return $frozen;
+    }
 }

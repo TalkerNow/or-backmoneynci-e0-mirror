@@ -141,6 +141,40 @@ class FrozenDataController extends Controller
     }
 
     /**
+     * POST /api/frozen_data/{user_id}/scenario
+     * Met à jour le scénario retenu par le consultant pour ce client.
+     * Autorisé même si la carrière est gelée — le choix de scénario
+     * est une décision post-validation.
+     *
+     * Body attendu :
+     * {
+     *   "scenario": {
+     *     "dispositif_id": "racl",
+     *     "label": "Carrière longue (RACL)",
+     *     "skill_code": "RACL",
+     *     "params": {...},
+     *     "result_summary": {...}
+     *   }
+     * }
+     *
+     * Pour effacer le choix : { "scenario": null }
+     */
+    public function setScenario(Request $request, int $userId): JsonResponse
+    {
+        $data = $request->validate([
+            'scenario' => 'nullable|array',
+        ]);
+
+        $frozen = $this->repository->setScenarioChoisi(
+            $userId,
+            $data['scenario'] ?? null,
+            $request->user()?->id
+        );
+
+        return response()->json($frozen);
+    }
+
+    /**
      * DELETE /api/frozen_data/{user_id}
      * Soft-delete les données carrière — l'historique reste en BDD (deleted_at).
      * Interdit si les données sont gelées (423 Locked) : unlock requis avant.
