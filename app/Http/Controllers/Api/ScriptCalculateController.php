@@ -86,6 +86,19 @@ class ScriptCalculateController extends Controller
 
             $frozenArray = $frozen->toArray();
 
+            // Le champ `regimes` (map des régimes par année — CARPIMKO et autres
+            // non-câblés côté Python) n'est consommé que par le frontend pour
+            // restaurer la grille au reload. Les workflows Python n'attendent pas
+            // ce champ et crashent à la validation de schéma s'il est présent.
+            if (!empty($frozenArray['carriere']) && is_array($frozenArray['carriere'])) {
+                foreach ($frozenArray['carriere'] as &$entry) {
+                    if (is_array($entry)) {
+                        unset($entry['regimes']);
+                    }
+                }
+                unset($entry);
+            }
+
             // Garantir date_naissance dans meta (fallback DB si absent)
             if (empty($frozenArray['meta']['date_naissance'])) {
                 $rawDate = DB::table('personal_informations')
