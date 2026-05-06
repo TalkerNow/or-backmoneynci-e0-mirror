@@ -108,6 +108,32 @@ class ConsultantAccessController extends Controller
         return response()->json(DB::table('consultants_access')->find($id));
     }
 
+    private function verifyDirect(int $userId): JsonResponse
+    {
+        $access = DB::table('consultants_access')->where('user_id', $userId)->first();
+
+        if (!$access) {
+            return response()->json(['error' => 'Accès refusé : consultant non enregistré.'], 403);
+        }
+
+        $now = now();
+        $isPass    = $access->access_type === 'unlimited_pass' && $access->pass_expiration_date && $now->lt($access->pass_expiration_date);
+        $isCredits = $access->access_type === 'credits' && (int) $access->remaining_credits > 0;
+
+        if (!$isPass && !$isCredits) {
+            return response()->json(['error' => 'Accès refusé : crédits insuffisants ou pass expiré.'], 403);
+        }
+
+        if ($access->access_type === 'credits') {
+            DB::table('consultants_access')
+                ->where('user_id', $userId)
+                ->where('remaining_credits', '>', 0)
+                ->decrement('remaining_credits');
+        }
+
+        return response()->json(['authorized' => true], 200);
+    }
+
     /**
      * DELETE /api/v1/consultant-access/{id}
      */
@@ -141,7 +167,7 @@ class ConsultantAccessController extends Controller
         $webhookUrl = config('services.n8n.consultant_access_url');
 
         if (empty($webhookUrl)) {
-            return response()->json(['error' => 'Webhook non configuré.'], 503);
+            return $this->verifyDirect((int) $user->id);
         }
 
         $n8nResponse = Http::timeout(15)->post($webhookUrl, [
