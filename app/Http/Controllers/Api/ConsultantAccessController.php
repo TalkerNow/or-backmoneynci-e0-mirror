@@ -124,14 +124,20 @@ class ConsultantAccessController extends Controller
             return response()->json(['error' => 'Accès refusé : crédits insuffisants ou pass expiré.'], 403);
         }
 
+        $remainingAfter = null;
         if ($access->access_type === 'credits') {
             DB::table('consultants_access')
                 ->where('user_id', $userId)
                 ->where('remaining_credits', '>', 0)
                 ->decrement('remaining_credits');
+            $remainingAfter = (int) $access->remaining_credits - 1;
         }
 
-        return response()->json(['authorized' => true], 200);
+        return response()->json([
+            'authorized'        => true,
+            'remaining_credits' => $remainingAfter,
+            'access_type'       => $access->access_type,
+        ], 200);
     }
 
     /**
