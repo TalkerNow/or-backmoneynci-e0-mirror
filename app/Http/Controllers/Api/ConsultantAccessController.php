@@ -125,14 +125,18 @@ class ConsultantAccessController extends Controller
 
     /**
      * POST /api/v1/consultant-access/verify
+     * Vérifie l'accès du consultant authentifié et décrémente 1 crédit via n8n.
      */
     public function verify(Request $request): JsonResponse
     {
-        $request->validate([
-            'last_name'     => 'required|string|max:100',
-            'first_name'    => 'required|string|max:100',
-            'date_of_birth' => 'required|date_format:Y-m-d',
-        ]);
+        $user = auth('api')->user();
+        if (!$user) {
+            return response()->json(['error' => 'Non authentifié.'], 401);
+        }
+
+        if ($user->role !== 'Consultant') {
+            return response()->json(['authorized' => true], 200);
+        }
 
         $webhookUrl = config('services.n8n.consultant_access_url');
 
@@ -141,9 +145,7 @@ class ConsultantAccessController extends Controller
         }
 
         $n8nResponse = Http::timeout(15)->post($webhookUrl, [
-            'last_name'     => $request->input('last_name'),
-            'first_name'    => $request->input('first_name'),
-            'date_of_birth' => $request->input('date_of_birth'),
+            'user_id' => (int) $user->id,
         ]);
 
         if ($n8nResponse->status() === 200) {

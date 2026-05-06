@@ -220,12 +220,32 @@ class UsersController extends Controller
                     }
                     throw $e;
                 }
-            
+
             if (isset($request->p_password)) {
                 $user->update(['password' => Hash::make($request->p_password)]);
             }
+
+            if ($request->has('role')) {
+                $newRole = $request->input('role');
+                if ($newRole === 'Consultant') {
+                    $exists = DB::table('consultants_access')->where('user_id', $id)->exists();
+                    if (!$exists) {
+                        DB::table('consultants_access')->insert([
+                            'user_id'           => $id,
+                            'email'             => $user->email,
+                            'name'              => $user->name,
+                            'access_type'       => 'credits',
+                            'remaining_credits' => 0,
+                            'created_at'        => now(),
+                            'updated_at'        => now(),
+                        ]);
+                    }
+                } else {
+                    DB::table('consultants_access')->where('user_id', $id)->delete();
+                }
+            }
         }
-    
+
         return response()->json(['success' => true, 'message' => 'Utilisateur mis à jour avec succès']);
     }
 
