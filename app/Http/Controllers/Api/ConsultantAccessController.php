@@ -108,6 +108,67 @@ class ConsultantAccessController extends Controller
         return response()->json(DB::table('consultants_access')->find($id));
     }
 
+    private function verifyDirect(int $userId): JsonResponse
+    {
+        $access = DB::table('consultants_access')->where('user_id', $userId)->first();
+
+        if (!$access) {
+            return response()->json(['error' => 'Accès refusé : consultant non enregistré.'], 403);
+        }
+
+        $now = now();
+        $isPass    = $access->access_type === 'unlimited_pass' && $access->pass_expiration_date && $now->lt($access->pass_expiration_date);
+        $isCredits = $access->access_type === 'credits' && (int) $access->remaining_credits > 0;
+
+        if (!$isPass && !$isCredits) {
+            return response()->json(['error' => 'Accès refusé : crédits insuffisants ou pass expiré.'], 403);
+        }
+
+        $remainingAfter = null;
+        if ($access->access_type === 'credits') {
+            DB::table('consultants_access')
+                ->where('user_id', $userId)
+                ->where('remaining_credits', '>', 0)
+                ->decrement('remaining_credits');
+            $remainingAfter = (int) $access->remaining_credits - 1;
+        }
+
+        return response()->json([
+            'authorized'        => true,
+            'remaining_credits' => $remainingAfter,
+            'access_type'       => $access->access_type,
+        ], 200);
+    }
+
+    /**
+     * GET /api/v1/consultant-access/user/{userId}
+     * Retourne l'accès d'un consultant spécifique (admin uniquement).
+     */
+    public function showByUser(int $userId): JsonResponse
+    {
+        if ($err = $this->checkAdminAccess()) return $err;
+
+        $row = DB::table('users')
+            ->leftJoin('consultants_access', 'users.id', '=', 'consultants_access.user_id')
+            ->where('users.id', $userId)
+            ->select([
+                'users.id as user_id',
+                'users.name',
+                'users.email',
+                'consultants_access.id as access_id',
+                'consultants_access.access_type',
+                'consultants_access.remaining_credits',
+                'consultants_access.pass_expiration_date',
+            ])
+            ->first();
+
+        if (!$row) {
+            return response()->json(['error' => 'Utilisateur introuvable.'], 404);
+        }
+
+        return response()->json($row);
+    }
+
     /**
      * DELETE /api/v1/consultant-access/{id}
      */
@@ -125,25 +186,27 @@ class ConsultantAccessController extends Controller
 
     /**
      * POST /api/v1/consultant-access/verify
+     * Vérifie l'accès du consultant authentifié et décrémente 1 crédit via n8n.
      */
     public function verify(Request $request): JsonResponse
     {
-        $request->validate([
-            'last_name'     => 'required|string|max:100',
-            'first_name'    => 'required|string|max:100',
-            'date_of_birth' => 'required|date_format:Y-m-d',
-        ]);
+        $user = auth('api')->user();
+        if (!$user) {
+            return response()->json(['error' => 'Non authentifié.'], 401);
+        }
+
+        if ($user->role !== 'Consultant') {
+            return response()->json(['authorized' => true], 200);
+        }
 
         $webhookUrl = config('services.n8n.consultant_access_url');
 
         if (empty($webhookUrl)) {
-            return response()->json(['error' => 'Webhook non configuré.'], 503);
+            return $this->verifyDirect((int) $user->id);
         }
 
         $n8nResponse = Http::timeout(15)->post($webhookUrl, [
-            'last_name'     => $request->input('last_name'),
-            'first_name'    => $request->input('first_name'),
-            'date_of_birth' => $request->input('date_of_birth'),
+            'user_id' => (int) $user->id,
         ]);
 
         if ($n8nResponse->status() === 200) {
