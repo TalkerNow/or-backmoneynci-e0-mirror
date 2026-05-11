@@ -141,6 +141,35 @@ class ConsultantAccessController extends Controller
     }
 
     /**
+     * GET /api/v1/consultant-access/user/{userId}
+     * Retourne l'accès d'un consultant spécifique (admin uniquement).
+     */
+    public function showByUser(int $userId): JsonResponse
+    {
+        if ($err = $this->checkAdminAccess()) return $err;
+
+        $row = DB::table('users')
+            ->leftJoin('consultants_access', 'users.id', '=', 'consultants_access.user_id')
+            ->where('users.id', $userId)
+            ->select([
+                'users.id as user_id',
+                'users.name',
+                'users.email',
+                'consultants_access.id as access_id',
+                'consultants_access.access_type',
+                'consultants_access.remaining_credits',
+                'consultants_access.pass_expiration_date',
+            ])
+            ->first();
+
+        if (!$row) {
+            return response()->json(['error' => 'Utilisateur introuvable.'], 404);
+        }
+
+        return response()->json($row);
+    }
+
+    /**
      * DELETE /api/v1/consultant-access/{id}
      */
     public function destroy(int $id): JsonResponse

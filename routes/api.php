@@ -175,6 +175,7 @@ Route::
 
                 // consultant-access (gatekeeper + admin CRUD IDs 4/1271/1638)
                 Route::post('consultant-access/verify', 'Api\ConsultantAccessController@verify');
+                Route::get('consultant-access/user/{userId}', 'Api\ConsultantAccessController@showByUser');
                 Route::get('consultant-access',          'Api\ConsultantAccessController@index');
                 Route::post('consultant-access',         'Api\ConsultantAccessController@store');
                 Route::put('consultant-access/{id}',     'Api\ConsultantAccessController@update');
