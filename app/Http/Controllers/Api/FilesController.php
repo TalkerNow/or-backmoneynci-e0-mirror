@@ -60,27 +60,8 @@ class FilesController extends Controller
     {
         $image_urls = [];
 
-        $targetDir = public_path('img');
-        try {
-            if (!File::exists($targetDir)) {
-                File::makeDirectory($targetDir, 0755, true);
-            }
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Impossible de créer le dossier public/img.',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-        if (!is_writable($targetDir)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Le dossier public/img est inaccessible en écriture.',
-            ], 500);
-        }
-
         $user_id = $request->input('user_id');
-        $dossier = (int) $request->input('dossier', 0); // 0 = non trié
+        $dossier = (int) $request->input('dossier', 0);
 
         foreach ($request->allFiles() as $file) {
             $size = $file->getSize();
@@ -91,26 +72,23 @@ class FilesController extends Controller
                 ], 413);
             }
 
-            $ext = $file->getClientOriginalExtension();
-            $filename = $file->getClientOriginalName();
-            $file_path = public_path('img/' . $filename);
+            $filename  = $file->getClientOriginalName();
+            $mimeType  = $file->getMimeType();
+            $content   = file_get_contents($file->getPathname());
 
-            if (file_exists($file_path)) {
-                unlink($file_path);
+            if ($content === false) {
+                return response()->json(['success' => false, 'message' => 'Impossible de lire le fichier.'], 500);
             }
 
-            $file->move(public_path('img'), $filename);
-            $image_url = url('img/' . $filename);
-
-            if (!file_exists($file_path) || !is_readable($file_path)) {
-                return response()->json(['success' => false], 500);
-            }
-
+            // Stocker le contenu binaire directement en DB — rien sur le disque
             $fileModel = new Files();
-            $fileModel->user_id = $user_id;
-            $fileModel->filename = $filename;
-            $fileModel->url = $image_url;
-            $fileModel->dossier = $dossier;
+            $fileModel->user_id      = $user_id;
+            $fileModel->filename     = $filename;
+            $fileModel->url          = null; // plus d'URL disque
+            $fileModel->dossier      = $dossier;
+            $fileModel->file_content = $content;
+            $fileModel->mime_type    = $mimeType;
+            $fileModel->file_size    = $size;
             $fileModel->save();
 
             $image_urls[] = $fileModel;
@@ -131,13 +109,16 @@ class FilesController extends Controller
             return response()->json(['error' => 'File not found'], 404);
         }
 
-        $file_path = public_path('img/' . $file->filename);
-
-        if (!file_exists($file_path)) {
-            return response()->json(['error' => 'File not found on disk'], 404);
+        if (empty($file->file_content)) {
+            return response()->json(['error' => 'File content not available in database'], 404);
         }
 
-        return response()->download($file_path);
+        $mimeType = $file->mime_type ?? 'application/octet-stream';
+
+        return response($file->file_content, 200)
+            ->header('Content-Type', $mimeType)
+            ->header('Content-Disposition', 'attachment; filename="' . $file->filename . '"')
+            ->header('Content-Length', strlen($file->file_content));
     }
 
     /**
@@ -335,10 +316,16 @@ class FilesController extends Controller
             $zip->addFromString('word/document.xml', $xml);
             $zip->close();
 
-            // 7. URL publique pour ton front
+            // 7. Récupérer le contenu du fichier en base64 avant de le supprimer
+            $fileContent = base64_encode(file_get_contents($outputPath));
+
+            // Supprimer le fichier physique immédiatement pour ne pas saturer le disque
+            @unlink($outputPath);
+
             return [
-                'docx' => url('reports/' . $filename),
-                'pdf'  => null,
+                'docx'           => url('reports/' . $filename),
+                'docx_base64'    => $fileContent,
+                'pdf'            => null,
             ];
         }
 
