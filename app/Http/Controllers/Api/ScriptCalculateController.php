@@ -29,7 +29,25 @@ class ScriptCalculateController extends Controller
         'VPLR_ETUDE'            => 'https://n8n.srv796541.hstgr.cloud/webhook/vplr-annee-incomplete-v1-test',
         'CER'                   => 'https://n8n.srv796541.hstgr.cloud/webhook/cer-executor-v1-test',
         'RP'                    => 'https://n8n.srv796541.hstgr.cloud/webhook/rp-executor-v1-test',
+        // CARPIMKO : workflow n8n unifié (un seul webhook traite Base + ASV + Complémentaire).
+        // Le code régime CARPIMKO_ASV / CARPIMKO_COMPL injecte automatiquement le `type` (cf. calculate()).
+        'CARPIMKO'              => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-carpimko-v1-test',
+        'CARPIMKO_ASV'          => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-carpimko-v1-test',
+        'CARPIMKO_COMPL'        => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-carpimko-v1-test',
+        // Tier 1 : régimes simples multi-piliers — un seul workflow n8n générique.
+        // Le code régime est injecté dans body.regime_code (cf. calculate()).
+        'CARMF'                 => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-regime-simple-v1-test',
+        'CARCDSF'               => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-regime-simple-v1-test',
+        'CARPV'                 => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-regime-simple-v1-test',
+        'CAVP'                  => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-regime-simple-v1-test',
+        'CNBF'                  => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-regime-simple-v1-test',
+        'CAVAMAC'               => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-regime-simple-v1-test',
+        'CAVOM'                 => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-regime-simple-v1-test',
+        'CRN'                   => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-regime-simple-v1-test',
+        'MSA'                   => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-regime-simple-v1-test',
     ];
+
+    private const REGIMES_TIER1 = ['CARMF', 'CARCDSF', 'CARPV', 'CAVP', 'CNBF', 'CAVAMAC', 'CAVOM', 'CRN', 'MSA'];
 
     public function __construct(private FrozenDataRepository $frozenRepo) {}
 
@@ -74,6 +92,22 @@ class ScriptCalculateController extends Controller
             };
         }
 
+        // CARPIMKO : injection automatique du `type` (base | asv | compl | all).
+        // CARPIMKO seul = renvoie les 3 piliers (base + ASV + complémentaire).
+        if (in_array($regimeCode, ['CARPIMKO', 'CARPIMKO_ASV', 'CARPIMKO_COMPL'], true)) {
+            $payload['type'] = match ($regimeCode) {
+                'CARPIMKO_ASV'   => 'asv',
+                'CARPIMKO_COMPL' => 'compl',
+                default          => 'all',
+            };
+        }
+
+        // Tier 1 : workflow n8n générique → on injecte regime_code dans le body
+        // pour que le workflow + Python sachent quel régime calculer.
+        if (in_array($regimeCode, self::REGIMES_TIER1, true)) {
+            $payload['regime_code'] = $regimeCode;
+        }
+
         // Tous les régimes : injecter frozen_data dans le payload
         // pour que n8n n'ait jamais besoin de rappeler le serveur
         if (in_array($regimeCode, array_keys(self::WEBHOOKS))) {
@@ -85,6 +119,21 @@ class ScriptCalculateController extends Controller
             }
 
             $frozenArray = $frozen->toArray();
+
+            // Le champ `regimes` (map des régimes par année) est consommé :
+            // - par le calculateur Python régime_simple (Tier 1) pour extraire les points
+            // - par le frontend pour restaurer la grille au reload
+            // Les anciens workflows Python (CNAV, CIPAV, etc.) ont des schémas Pydantic
+            // qui ne le supportent pas → on ne le strip que pour ceux-là.
+            $needsRegimes = in_array($regimeCode, self::REGIMES_TIER1, true);
+            if (!$needsRegimes && !empty($frozenArray['carriere']) && is_array($frozenArray['carriere'])) {
+                foreach ($frozenArray['carriere'] as &$entry) {
+                    if (is_array($entry)) {
+                        unset($entry['regimes']);
+                    }
+                }
+                unset($entry);
+            }
 
             // Garantir date_naissance dans meta (fallback DB si absent)
             if (empty($frozenArray['meta']['date_naissance'])) {

@@ -9,8 +9,8 @@ class AddPreviousConsultantToUsersTable extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->unsignedBigInteger('previous_consultant_id')->nullable()->after('parent_id');
-            $table->string('previous_consultant_name')->nullable()->after('previous_consultant_id');
+            $table->unsignedBigInteger('previous_consultant_id')->nullable();
+            $table->string('previous_consultant_name')->nullable();
         });
     }
 

@@ -36,8 +36,10 @@ class FrozenDataRepository
             'source'   => $data['source'] ?? null,
             'meta'     => $data['meta'] ?? null,
             'carriere' => $data['carriere'] ?? null,
-            'cipav'    => $data['cipav'] ?? null,
-            'alertes'  => $data['alertes'] ?? null,
+            'cipav'          => $data['cipav'] ?? null,
+            'carpimko'       => $data['carpimko'] ?? null,
+            'regimes_points' => $data['regimes_points'] ?? null,
+            'alertes'        => $data['alertes'] ?? null,
             'totaux'   => $data['totaux'] ?? null,
         ];
 

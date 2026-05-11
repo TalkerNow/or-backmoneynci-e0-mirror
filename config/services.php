@@ -18,6 +18,13 @@ return [
         'consultant_access_url' => env('N8N_CONSULTANT_ACCESS_URL'),
     ],
 
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+        'model'   => env('GEMINI_MODEL', 'gemini-2.0-flash'),
+        'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
+        'timeout' => (int) env('GEMINI_TIMEOUT', 120),
+    ],
+
     'docusign' => [
     'base_path'   => env('DOCUSIGN_BASE_PATH', 'account.docusign.com'),
     'api_path'    => env('DOCUSIGN_API_PATH', 'https://eu.docusign.net/restapi'),
