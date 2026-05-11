@@ -171,6 +171,14 @@ Route::
                 Route::get('analysis-reports/latest/{clientId}/{skillCode}', 'Api\AnalysisReportController@latest');
                 Route::get('analysis-reports/client/{clientId}', 'Api\AnalysisReportController@getByClient');
                 Route::post('analysis-reports/{analysisReport}/validate', 'Api\AnalysisReportController@validateReport');
+
+                // report chat (édition IA du livrable) — DOIT être avant apiResource pour éviter les conflits
+                Route::get('analysis-reports/{analysisReport}/chat', 'Api\ReportChatController@show');
+                Route::post('analysis-reports/{analysisReport}/chat/message', 'Api\ReportChatController@sendMessage');
+                Route::post('analysis-reports/{analysisReport}/chat/messages/{message}/apply', 'Api\ReportChatController@applyMessage');
+                Route::get('analysis-reports/{analysisReport}/versions', 'Api\ReportChatController@listVersions');
+                Route::post('analysis-reports/{analysisReport}/versions/{version}/restore', 'Api\ReportChatController@restoreVersion');
+
                 Route::apiResource('analysis-reports', 'Api\AnalysisReportController');
 
                 // consultant-access (gatekeeper + admin CRUD IDs 4/1271/1638)
