@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Files;
 use Illuminate\Http\Request;
 
 class PdfController extends Controller
@@ -19,8 +20,24 @@ class PdfController extends Controller
 
         try {
             $parsedUrl = parse_url($request->url);
+            $path = $parsedUrl['path'] ?? '';
+
+            // Short-circuit : URL interne /api/downloadFile?file_id=X → lecture DB directe.
+            // Évite un round-trip HTTP qui prendrait un 401 (la route est sous auth).
+            if (preg_match('#/downloadFile$#', $path) && !empty($parsedUrl['query'])) {
+                parse_str($parsedUrl['query'], $params);
+                if (!empty($params['file_id'])) {
+                    $file = Files::find($params['file_id']);
+                    if ($file && !empty($file->file_content)) {
+                        return response()->json([
+                            'success' => true,
+                            'html' => $file->file_content,
+                        ]);
+                    }
+                }
+            }
+
             if (!empty($parsedUrl['host']) && in_array($parsedUrl['host'], ['localhost', '127.0.0.1'], true)) {
-                $path = $parsedUrl['path'] ?? '';
                 if (str_starts_with($path, '/img/')) {
                     $localPath = public_path(ltrim($path, '/'));
                     if (is_readable($localPath)) {

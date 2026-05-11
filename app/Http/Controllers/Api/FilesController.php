@@ -84,11 +84,15 @@ class FilesController extends Controller
             $fileModel = new Files();
             $fileModel->user_id      = $user_id;
             $fileModel->filename     = $filename;
-            $fileModel->url          = null; // plus d'URL disque
             $fileModel->dossier      = $dossier;
             $fileModel->file_content = $content;
             $fileModel->mime_type    = $mimeType;
             $fileModel->file_size    = $size;
+            $fileModel->save();
+
+            // URL fetchable pointant vers le contenu stocké en DB.
+            // Le front utilise ce champ pour : afficher le lien, fetch le HTML via /fetch-html, etc.
+            $fileModel->url = url('/api/downloadFile?file_id=' . $fileModel->id);
             $fileModel->save();
 
             $image_urls[] = $fileModel;
