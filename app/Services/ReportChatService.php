@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AnalysisReport;
+use App\Models\FrozenData;
 use App\Models\ReportChatMessage;
 use App\Models\ReportChatSession;
 use App\Models\ReportVersion;
@@ -26,6 +27,22 @@ class ReportChatService
 {
     public function __construct(private GeminiClient $gemini)
     {
+    }
+
+    /**
+     * Retourne le contexte exact envoyé à l'IA pour ce livrable (debug consultant/admin).
+     *
+     * @return array{ context: array, system_prompt: string }
+     */
+    public function getChatContext(AnalysisReport $report): array
+    {
+        $context = $this->buildContext($report);
+        $systemPrompt = $this->buildSystemPrompt($report->skill_id, $context);
+
+        return [
+            'context'       => $context,
+            'system_prompt' => $systemPrompt,
+        ];
     }
 
     public function getOrCreateSession(AnalysisReport $report, ?int $userId): ReportChatSession
@@ -179,12 +196,20 @@ class ReportChatService
     {
         $report->loadMissing(['user', 'frozenData']);
 
+        // Fallback : pour les rapports créés avant que frozen_data_id ne soit câblé
+        // dans SimulationRetraiteController, la relation est null. On rattache alors
+        // le dernier FrozenData du même user pour que le chat ait quand même la donnée.
+        $frozen = $report->frozenData;
+        if (! $frozen && $report->user_id) {
+            $frozen = FrozenData::where('user_id', $report->user_id)->latest()->first();
+        }
+
         return [
             'client' => [
                 'name'  => $report->user->name ?? null,
                 'email' => $report->user->email ?? null,
             ],
-            'frozen_data' => $report->frozenData ? $report->frozenData->toArray() : null,
+            'frozen_data' => $frozen ? $frozen->toArray() : null,
             'calcul_json' => $report->calcul_json,
             'current_html' => $this->extractCurrentHtml($report),
         ];

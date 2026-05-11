@@ -78,6 +78,7 @@ class SimulationRetraiteController extends Controller
                         'statut'   => 'brouillon',
                     ],
                     [
+                        'frozen_data_id'      => $frozen->id,
                         'result_json'         => $body['html_report'],
                         'calcul_json'         => $body['calcul_json'] ?? [],
                         'restitution_json'    => [],

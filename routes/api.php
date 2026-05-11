@@ -174,6 +174,7 @@ Route::
 
                 // report chat (édition IA du livrable) — DOIT être avant apiResource pour éviter les conflits
                 Route::get('analysis-reports/{analysisReport}/chat', 'Api\ReportChatController@show');
+                Route::get('analysis-reports/{analysisReport}/chat/context', 'Api\ReportChatController@context');
                 Route::post('analysis-reports/{analysisReport}/chat/message', 'Api\ReportChatController@sendMessage');
                 Route::post('analysis-reports/{analysisReport}/chat/messages/{message}/apply', 'Api\ReportChatController@applyMessage');
                 Route::get('analysis-reports/{analysisReport}/versions', 'Api\ReportChatController@listVersions');

@@ -92,6 +92,19 @@ class ReportChatController extends Controller
     }
 
     /**
+     * GET /api/v1/analysis-reports/{analysisReport}/chat/context
+     * Renvoie le contexte exact passé à l'IA + le system prompt résolu (debug consultant/admin).
+     */
+    public function context(AnalysisReport $analysisReport)
+    {
+        try {
+            return response()->json($this->service->getChatContext($analysisReport));
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
      * GET /api/v1/analysis-reports/{analysisReport}/versions
      * Liste des versions du HTML (les plus récentes d'abord).
      */
