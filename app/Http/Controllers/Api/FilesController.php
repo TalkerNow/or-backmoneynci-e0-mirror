@@ -113,16 +113,33 @@ class FilesController extends Controller
             return response()->json(['error' => 'File not found'], 404);
         }
 
-        if (empty($file->file_content)) {
-            return response()->json(['error' => 'File content not available in database'], 404);
-        }
-
         $mimeType = $file->mime_type ?? 'application/octet-stream';
 
-        return response($file->file_content, 200)
-            ->header('Content-Type', $mimeType)
-            ->header('Content-Disposition', 'attachment; filename="' . $file->filename . '"')
-            ->header('Content-Length', strlen($file->file_content));
+        // Contenu en DB (uploads récents, après la migration BLOB).
+        if (!empty($file->file_content)) {
+            return response($file->file_content, 200)
+                ->header('Content-Type', $mimeType)
+                ->header('Content-Disposition', 'attachment; filename="' . $file->filename . '"')
+                ->header('Content-Length', strlen($file->file_content));
+        }
+
+        // Fallback legacy : fichiers uploadés avant la migration BLOB,
+        // toujours présents sur disque dans public/img/.
+        $legacyPath = public_path('img/' . $file->filename);
+        if (is_readable($legacyPath)) {
+            if ($mimeType === 'application/octet-stream') {
+                $detected = @mime_content_type($legacyPath);
+                if ($detected) {
+                    $mimeType = $detected;
+                }
+            }
+            return response()->file($legacyPath, [
+                'Content-Type'        => $mimeType,
+                'Content-Disposition' => 'attachment; filename="' . $file->filename . '"',
+            ]);
+        }
+
+        return response()->json(['error' => 'File content not available'], 404);
     }
 
     /**
