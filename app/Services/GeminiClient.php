@@ -59,7 +59,7 @@ class GeminiClient
             'contents' => $contents,
             'generationConfig' => [
                 'temperature' => 0.4,
-                'maxOutputTokens' => 8192,
+                'maxOutputTokens' => 65536,
             ],
         ];
 
