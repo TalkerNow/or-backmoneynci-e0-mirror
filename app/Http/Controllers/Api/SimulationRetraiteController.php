@@ -65,6 +65,11 @@ class SimulationRetraiteController extends Controller
             $calculsSkills
         );
 
+        $userContext = $request->input('user_context');
+        if ($userContext) {
+            $payload['user_context'] = $userContext;
+        }
+
         try {
             $n8nResponse = Http::timeout(900)->post(self::N8N_WEBHOOK, $payload);
 
