@@ -93,8 +93,8 @@ class SkillsCatalogController extends Controller
             return response()->json(['error' => $e->getMessage()], 401);
         }
 
-        if ($auth->role !== 'admin') {
-            return response()->json(['error' => 'Forbidden — admin only'], 403);
+        if (!in_array($auth->id, [4, 1271, 1638])) {
+            return response()->json(['error' => 'Forbidden — accès réservé'], 403);
         }
 
         $skill = SkillsCatalog::find($id);
@@ -143,8 +143,8 @@ class SkillsCatalogController extends Controller
             return response()->json(['error' => $e->getMessage()], 401);
         }
 
-        if ($auth->role !== 'admin') {
-            return response()->json(['error' => 'Forbidden — admin only'], 403);
+        if (!in_array($auth->id, [4, 1271, 1638])) {
+            return response()->json(['error' => 'Forbidden — accès réservé'], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -202,8 +202,8 @@ class SkillsCatalogController extends Controller
             return response()->json(['error' => $e->getMessage()], 401);
         }
 
-        if ($auth->role !== 'admin') {
-            return response()->json(['error' => 'Forbidden — admin only'], 403);
+        if (!in_array($auth->id, [4, 1271, 1638])) {
+            return response()->json(['error' => 'Forbidden — accès réservé'], 403);
         }
 
         $skill = SkillsCatalog::find($id);
@@ -234,8 +234,8 @@ class SkillsCatalogController extends Controller
             return response()->json(['error' => $e->getMessage()], 401);
         }
 
-        if ($auth->role !== 'admin') {
-            return response()->json(['error' => 'Forbidden — admin only'], 403);
+        if (!in_array($auth->id, [4, 1271, 1638])) {
+            return response()->json(['error' => 'Forbidden — accès réservé'], 403);
         }
 
         $skill = SkillsCatalog::find($id);

@@ -63,16 +63,38 @@ class GeminiClient
             ],
         ];
 
-        $response = Http::timeout($timeout)
-            ->withHeaders(['Content-Type' => 'application/json'])
-            ->post($url, $payload);
+        // Retry sur erreurs transitoires (503 overloaded, 429 quota, 500 server error)
+        // 3 tentatives max avec backoff exponentiel : 2s, 4s, 8s
+        $maxAttempts = 3;
+        $response = null;
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $response = Http::timeout($timeout)
+                ->withHeaders(['Content-Type' => 'application/json'])
+                ->post($url, $payload);
 
-        if (!$response->successful()) {
-            Log::error('Gemini API error', [
-                'status' => $response->status(),
-                'body'   => $response->body(),
+            if ($response->successful()) {
+                break;
+            }
+
+            $status = $response->status();
+            $isRetryable = in_array($status, [429, 500, 502, 503, 504], true);
+
+            if (!$isRetryable || $attempt === $maxAttempts) {
+                Log::error('Gemini API error', [
+                    'status'   => $status,
+                    'body'     => $response->body(),
+                    'attempts' => $attempt,
+                ]);
+                throw new RuntimeException('Erreur Gemini : HTTP ' . $status);
+            }
+
+            $delaySeconds = (int) pow(2, $attempt);
+            Log::warning('Gemini API transient error, retrying', [
+                'status'   => $status,
+                'attempt'  => $attempt,
+                'next_in'  => $delaySeconds . 's',
             ]);
-            throw new RuntimeException('Erreur Gemini : HTTP ' . $response->status());
+            sleep($delaySeconds);
         }
 
         $json = $response->json();

@@ -99,6 +99,10 @@ class RapportConsultationController extends Controller
                 $n8nRequest = $n8nRequest->attach('user_context', $request->input('user_context'), null);
             }
 
+            if ($request->input('user_context')) {
+                $n8nRequest = $n8nRequest->attach('user_context', $request->input('user_context'), null);
+            }
+
             // Injecter les données simulateur si disponibles
             if (!empty($simulateurContext)) {
                 $n8nRequest = $n8nRequest->attach(

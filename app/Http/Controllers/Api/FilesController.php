@@ -124,22 +124,42 @@ class FilesController extends Controller
         }
 
         // Fallback legacy : fichiers uploadés avant la migration BLOB,
-        // toujours présents sur disque dans public/img/.
-        $legacyPath = public_path('img/' . $file->filename);
-        if (is_readable($legacyPath)) {
-            if ($mimeType === 'application/octet-stream') {
-                $detected = @mime_content_type($legacyPath);
-                if ($detected) {
-                    $mimeType = $detected;
-                }
+        // toujours présents sur disque. Plusieurs emplacements possibles :
+        // public/img/{filename}, public/img/{dossier}/{filename}, public/img/{user_id}/{filename}.
+        $candidates = [
+            public_path('img/' . $file->filename),
+        ];
+        if (!empty($file->dossier)) {
+            $candidates[] = public_path('img/' . $file->dossier . '/' . $file->filename);
+        }
+        if (!empty($file->user_id)) {
+            $candidates[] = public_path('img/' . $file->user_id . '/' . $file->filename);
+            if (!empty($file->dossier)) {
+                $candidates[] = public_path('img/' . $file->user_id . '/' . $file->dossier . '/' . $file->filename);
             }
-            return response()->file($legacyPath, [
-                'Content-Type'        => $mimeType,
-                'Content-Disposition' => 'attachment; filename="' . $file->filename . '"',
-            ]);
         }
 
-        return response()->json(['error' => 'File content not available'], 404);
+        foreach ($candidates as $legacyPath) {
+            if (is_readable($legacyPath)) {
+                if ($mimeType === 'application/octet-stream') {
+                    $detected = @mime_content_type($legacyPath);
+                    if ($detected) {
+                        $mimeType = $detected;
+                    }
+                }
+                return response()->file($legacyPath, [
+                    'Content-Type'        => $mimeType,
+                    'Content-Disposition' => 'attachment; filename="' . $file->filename . '"',
+                ]);
+            }
+        }
+
+        return response()->json([
+            'error' => 'File content not available in database',
+            'file_id' => $file->id,
+            'filename' => $file->filename,
+            'searched_paths' => $candidates,
+        ], 404);
     }
 
     /**
