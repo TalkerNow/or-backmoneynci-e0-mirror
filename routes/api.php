@@ -182,6 +182,11 @@ Route::
 
                 Route::apiResource('analysis-reports', 'Api\AnalysisReportController');
 
+                // consultant prompt notes — historique des notes IA par consultant/client
+                Route::get('clients/{clientId}/prompt-notes',  'Api\ConsultantPromptNoteController@index');
+                Route::post('clients/{clientId}/prompt-notes', 'Api\ConsultantPromptNoteController@store');
+                Route::delete('prompt-notes/{id}',             'Api\ConsultantPromptNoteController@destroy');
+
                 // consultant-access (gatekeeper + admin CRUD IDs 4/1271/1638)
                 Route::post('consultant-access/verify', 'Api\ConsultantAccessController@verify');
                 Route::get('consultant-access/user/{userId}', 'Api\ConsultantAccessController@showByUser');
