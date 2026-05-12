@@ -211,6 +211,20 @@ Route::
 
                 // system-prompt
                 Route::get('system-prompt/latest', 'Api\SystemPromptController@latest');
+
+                // admin-engine-chat
+                Route::prefix('admin-chat')->group(function () {
+                    Route::get('sessions',                      'Api\AdminEngineChatController@listSessions');
+                    Route::post('sessions',                     'Api\AdminEngineChatController@createSession');
+                    Route::get('sessions/{id}',                 'Api\AdminEngineChatController@getSession');
+                    Route::delete('sessions/{id}',              'Api\AdminEngineChatController@deleteSession');
+                    Route::post('sessions/{id}/message',        'Api\AdminEngineChatController@sendMessage');
+                    Route::post('sessions/{id}/apply',          'Api\AdminEngineChatController@applyModification');
+                    Route::post('snapshots/{id}/revert',        'Api\AdminEngineChatController@revertSnapshot');
+                    Route::get('memory',                        'Api\AdminEngineChatController@getMemory');
+                    Route::put('memory',                        'Api\AdminEngineChatController@updateMemory');
+                    Route::get('memory/history',                'Api\AdminEngineChatController@getMemoryHistory');
+                });
             });
 
 
