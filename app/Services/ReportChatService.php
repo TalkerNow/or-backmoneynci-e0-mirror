@@ -7,6 +7,7 @@ use App\Models\FrozenData;
 use App\Models\ReportChatMessage;
 use App\Models\ReportChatSession;
 use App\Models\ReportVersion;
+use App\Services\Prompts\RapportConsultationPrompt;
 use App\Services\Prompts\SimulationRetraitePrompt;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -217,11 +218,11 @@ class ReportChatService
 
     private function buildSystemPrompt(string $skillId, array $context): string
     {
-        // Pour v1, seul simulation_retraite est implémenté.
-        // Les autres types de livrable ajouteront leur propre Prompt class ici.
         switch ($skillId) {
             case 'simulation_retraite':
                 return SimulationRetraitePrompt::build($context);
+            case 'rapport_consultation':
+                return RapportConsultationPrompt::build($context);
             default:
                 throw new RuntimeException("Aucun prompt système défini pour le skill_id '{$skillId}'.");
         }
