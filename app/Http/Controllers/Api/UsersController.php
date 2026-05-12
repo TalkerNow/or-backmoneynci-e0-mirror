@@ -46,22 +46,33 @@ class UsersController extends Controller
                     ->get();
             }
         } else {
-            if ($auth->role === "admin" || $auth->role === "Consultant") {
-                $users = User::with('parent')
-                    ->with('business_introducer')
-                    ->where('role', 'Client')
-                    ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
-                    ->orderby('users.created_at', 'DESC')
-                    ->get(['users.*', 'personal_informations.first_name', 'personal_informations.last_name', 'personal_informations.civility', 'personal_informations.maiden_name', 'personal_informations.birth_date', 'personal_informations.birth_place', 'personal_informations.martial_status', 'personal_informations.children_number', 'personal_informations.mobile_number', 'personal_informations.office_number', 'personal_informations.personal_address', 'personal_informations.personal_address_2', 'personal_informations.personal_zip_code', 'personal_informations.personal_city', 'personal_informations.personal_country', 'personal_informations.society_name', 'personal_informations.society_address', 'personal_informations.society_address_2', 'personal_informations.society_zip_code', 'personal_informations.society_city', 'personal_informations.society_country', 'personal_informations.military_service', 'personal_informations.secu_social', 'personal_informations.secu_social_key']);
-            } else {
-                $users = User::with('parent')
-                    ->with('business_introducer')
-                    ->where('users.parent_id', $auth->id)
-                    ->where('role', 'Client')
-                    ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
-                    ->orderby('users.created_at', 'DESC')
-                    ->get(['users.*', 'personal_informations.first_name', 'personal_informations.last_name', 'personal_informations.civility', 'personal_informations.maiden_name', 'personal_informations.birth_date', 'personal_informations.birth_place', 'personal_informations.martial_status', 'personal_informations.children_number', 'personal_informations.mobile_number', 'personal_informations.office_number', 'personal_informations.personal_address', 'personal_informations.personal_address_2', 'personal_informations.personal_zip_code', 'personal_informations.personal_city', 'personal_informations.personal_country', 'personal_informations.society_name', 'personal_informations.society_address', 'personal_informations.society_address_2', 'personal_informations.society_zip_code', 'personal_informations.society_city', 'personal_informations.society_country', 'personal_informations.military_service', 'personal_informations.secu_social', 'personal_informations.secu_social_key']);
+            $fields = ['users.*', 'personal_informations.first_name', 'personal_informations.last_name', 'personal_informations.civility', 'personal_informations.maiden_name', 'personal_informations.birth_date', 'personal_informations.birth_place', 'personal_informations.martial_status', 'personal_informations.children_number', 'personal_informations.mobile_number', 'personal_informations.office_number', 'personal_informations.personal_address', 'personal_informations.personal_address_2', 'personal_informations.personal_zip_code', 'personal_informations.personal_city', 'personal_informations.personal_country', 'personal_informations.society_name', 'personal_informations.society_address', 'personal_informations.society_address_2', 'personal_informations.society_zip_code', 'personal_informations.society_city', 'personal_informations.society_country', 'personal_informations.military_service', 'personal_informations.secu_social', 'personal_informations.secu_social_key'];
+            $perPage = (int) $request->get('per_page', 0);
+            $page = (int) $request->get('page', 0);
+            $usePagination = $page > 0 && $perPage > 0;
+
+            $query = User::with('parent')
+                ->with('business_introducer')
+                ->where('role', 'Client')
+                ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
+                ->orderby('users.created_at', 'DESC');
+
+            if ($auth->role !== "admin" && $auth->role !== "Consultant") {
+                $query->where('users.parent_id', $auth->id);
             }
+
+            if ($usePagination) {
+                $paginated = $query->paginate($perPage, $fields, 'page', $page);
+                return response()->json([
+                    'data' => $paginated->items(),
+                    'total' => $paginated->total(),
+                    'per_page' => $paginated->perPage(),
+                    'current_page' => $paginated->currentPage(),
+                    'last_page' => $paginated->lastPage(),
+                ]);
+            }
+
+            $users = $query->get($fields);
         }
         return response()->json($users);
     }
