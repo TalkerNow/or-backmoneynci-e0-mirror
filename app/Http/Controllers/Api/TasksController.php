@@ -49,32 +49,36 @@ class TasksController extends Controller
                     ->get();
             }
         } else {
+            // Get IDs of clients belonging to this consultant
+            $clientIds = User::where('parent_id', $auth->id)->pluck('id');
+
+            $baseQuery = Tasks::with(['taskCustomer'])
+                ->where(function ($q) use ($auth, $clientIds) {
+                    $q->where('creator_id', $auth->id)
+                      ->orWhereIn('customer_id', $clientIds);
+                });
+
             if ($filter == "all") {
-                $tasks = Tasks::with(['taskCustomer'])
-                    ->where('creator_id', $auth->id)
+                $tasks = (clone $baseQuery)
                     ->orderBy('end_date', 'desc')
                     ->get();
             } else if ($filter == "completed") {
-                $tasks = Tasks::with(['taskCustomer'])
-                    ->where('creator_id', $auth->id)
+                $tasks = (clone $baseQuery)
                     ->where('isCompleted', true)
                     ->orderBy('end_date', 'desc')
                     ->get();
             } else if ($filter == "unread") {
-                $tasks = Tasks::with(['taskCustomer'])
-                    ->where('creator_id', $auth->id)
+                $tasks = (clone $baseQuery)
                     ->where('isRead', false)
                     ->orderBy('end_date', 'desc')
                     ->get();
             } else if ($filter == "important") {
-                $tasks = Tasks::with(['taskCustomer'])
-                    ->where('creator_id', $auth->id)
+                $tasks = (clone $baseQuery)
                     ->where('isImportant', true)
                     ->orderBy('end_date', 'desc')
                     ->get();
             } else {
-                $tasks = Tasks::with(['taskCustomer'])
-                    ->where('creator_id', $auth->id)
+                $tasks = (clone $baseQuery)
                     ->where('type', $filter)
                     ->orderBy('end_date', 'desc')
                     ->get();
