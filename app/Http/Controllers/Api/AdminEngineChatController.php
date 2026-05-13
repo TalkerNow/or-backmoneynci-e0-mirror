@@ -9,8 +9,8 @@ use App\Models\AdminChatMessage;
 use App\Models\AdminChatSession;
 use App\Models\AdminChatSnapshot;
 use App\Models\Prompt;
+use App\Models\ReportedError;
 use App\Models\SkillsCatalog;
-use App\Models\SystemPrompt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -139,6 +139,13 @@ class AdminEngineChatController extends Controller
             ->map(fn($m) => ['role' => $m->role, 'content' => $m->content])
             ->toArray();
 
+        $catalog = [
+            'skills'  => SkillsCatalog::where('active', true)
+                ->get(['id', 'code', 'nom', 'skill_md', 'regles_json'])
+                ->toArray(),
+            'prompts' => Prompt::all(['id', 'name', 'type', 'prompt_text'])->toArray(),
+        ];
+
         $n8nPayload = [
             'session_id'   => $session->id,
             'context_page' => $session->context_page,
@@ -150,6 +157,7 @@ class AdminEngineChatController extends Controller
             'memory'    => $memoryContent,
             'history'   => $history,
             'message'   => $data['content'],
+            'catalog'   => $catalog,
             'timestamp' => now()->toIso8601String(),
         ];
 
@@ -343,8 +351,8 @@ class AdminEngineChatController extends Controller
                 return $row ? $row->prompt_text : null;
 
             case 'system_prompt':
-                $row = SystemPrompt::find($entityId);
-                return $row ? $row->content : null;
+                $row = Prompt::find($entityId);
+                return $row ? $row->prompt_text : null;
 
             case 'skill_md':
                 $row = SkillsCatalog::find($entityId);
@@ -371,8 +379,8 @@ class AdminEngineChatController extends Controller
                 break;
 
             case 'system_prompt':
-                $row = SystemPrompt::findOrFail($entityId);
-                $row->update(['content' => $newContent]);
+                $row = Prompt::findOrFail($entityId);
+                $row->update(['prompt_text' => $newContent]);
                 break;
 
             case 'skill_md':
@@ -394,6 +402,333 @@ class AdminEngineChatController extends Controller
                 $row->update(['calcul_py' => $newContent]);
                 break;
         }
+    }
+
+    // ─── Registry ────────────────────────────────────────────────────────────
+
+    public function getRegistry(Request $request)
+    {
+        $user = $this->getAuthUser();
+        $this->assertAdmin($user);
+
+        $prompt = Prompt::where('name', 'REGISTRE_ERREURS_COHERENCE')->firstOrFail();
+
+        return response()->json([
+            'raw_markdown' => $prompt->prompt_text,
+            'parsed'       => $this->parseRegistryMarkdown($prompt->prompt_text),
+            'prompt_id'    => $prompt->id,
+        ]);
+    }
+
+    public function reportError(Request $request)
+    {
+        $user = $this->getAuthUser();
+
+        if (!in_array($user->role, ['admin', 'Admin', 'Consultant', 'Expert'])) {
+            abort(403, 'Accès non autorisé.');
+        }
+
+        $data = $request->validate([
+            'client_id'   => ['nullable', 'integer', 'exists:users,id'],
+            'section'     => ['required', 'in:carriere,scenarios_dates,livrables,autre'],
+            'description' => ['required', 'string', 'max:5000'],
+        ]);
+
+        $error = ReportedError::create([
+            'user_id'     => $user->id,
+            'client_id'   => $data['client_id'] ?? null,
+            'section'     => $data['section'],
+            'description' => $data['description'],
+            'status'      => 'pending',
+        ]);
+
+        return response()->json($error, 201);
+    }
+
+    public function appendRule(Request $request)
+    {
+        $user = $this->getAuthUser();
+        $this->assertAdmin($user);
+
+        $data = $request->validate([
+            'title'                    => ['required', 'string', 'max:255'],
+            'prompt_concerne'          => ['required', 'string', 'max:255'],
+            'erreur_detectee'          => ['required', 'string'],
+            'condition_python'         => ['nullable', 'string'],
+            'message_erreur'           => ['required', 'string'],
+            'niveau'                   => ['nullable', 'string'],
+            'impact'                   => ['required', 'string'],
+            'cas_origine'              => ['nullable', 'string', 'max:255'],
+            'source_reported_error_id' => ['nullable', 'integer', 'exists:reported_errors,id'],
+        ]);
+
+        $prompt = Prompt::where('name', 'REGISTRE_ERREURS_COHERENCE')->firstOrFail();
+
+        // Auto-generate code: count active R0XX rules + 1
+        preg_match_all('/^### (R\d{3})\s*\|/m', $prompt->prompt_text, $codeMatches);
+        $existingNumbers = array_map(fn($c) => (int) substr($c, 1), $codeMatches[1] ?? []);
+        $nextNumber = count($existingNumbers) > 0 ? (max($existingNumbers) + 1) : 1;
+        $data['code']       = 'R' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        $data['date_ajout'] = now()->format('d/m/Y');
+        $data['consultant'] = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: 'Admin';
+        $data['statut']     = '✅ ACTIF';
+        $data['niveau']     = $data['niveau'] ?: '🔴 CRITIQUE (bloquant)';
+        $data['cas_origine']      = $data['cas_origine'] ?? 'Signalement via chat admin';
+        $data['condition_python'] = $data['condition_python'] ?: '# à définir';
+
+        $newBlock = $this->buildRuleMarkdownBlock($data);
+
+        // Insert at end of active rules section (before ## 📋 TEMPLATE, or before ## 🟢, or append)
+        $markers = ['## 📋 TEMPLATE', '## 🟢 RÈGLES ARCHIVÉES'];
+        $newContent = null;
+        foreach ($markers as $marker) {
+            if (str_contains($prompt->prompt_text, $marker)) {
+                $newContent = str_replace($marker, $newBlock . "\n---\n\n" . $marker, $prompt->prompt_text);
+                break;
+            }
+        }
+        if ($newContent === null) $newContent = $prompt->prompt_text . "\n---\n\n" . $newBlock;
+
+        DB::transaction(function () use ($prompt, $newContent, $data, $user) {
+            // Snapshot BEFORE update
+            AdminChatSnapshot::create([
+                'session_id'     => null,
+                'message_id'     => null,
+                'user_id'        => $user->id,
+                'entity_type'    => 'prompt',
+                'entity_id'      => $prompt->id,
+                'content_before' => $prompt->prompt_text,
+                'content_after'  => $newContent,
+                'applied_at'     => now(),
+            ]);
+
+            // Update triggers Prompt::boot() → prompt_history versioning
+            $prompt->update(['prompt_text' => $newContent]);
+
+            if (!empty($data['source_reported_error_id'])) {
+                ReportedError::where('id', $data['source_reported_error_id'])
+                    ->update(['status' => 'converted_to_rule']);
+            }
+        });
+
+        return response()->json(['message' => 'Règle ajoutée.', 'code' => $data['code']], 201);
+    }
+
+    public function detectTrigger(Request $request)
+    {
+        $user = $this->getAuthUser();
+        $this->assertAdmin($user);
+
+        $data = $request->validate([
+            'message' => ['required', 'string', 'max:16000'],
+        ]);
+
+        $msg = mb_strtolower(preg_replace('/\s+/', ' ', trim($data['message'])));
+
+        $triggers = [
+            ['pattern' => 'cette erreur ne doit plus se reproduire', 'phrase' => 'cette erreur ne doit plus se reproduire', 'prompt' => null],
+            ['pattern' => 'bloquer cette erreur',                    'phrase' => 'bloquer cette erreur',                    'prompt' => null],
+            ['pattern' => 'nouvelle règle de cohérence',             'phrase' => 'nouvelle règle de cohérence',             'prompt' => null],
+            ['pattern' => 'ajouter règle gate',                      'phrase' => 'ajouter règle gate #2',                   'prompt' => null],
+        ];
+
+        foreach ($triggers as $t) {
+            if (str_contains($msg, $t['pattern'])) {
+                return response()->json([
+                    'triggered'              => true,
+                    'matched_phrase'         => $t['phrase'],
+                    'suggested_prompt_number' => null,
+                ]);
+            }
+        }
+
+        // Pattern: prompt [1|2|3] erreur
+        if (preg_match('/prompt\s*([123])\s*erreur/i', $data['message'], $m)) {
+            return response()->json([
+                'triggered'               => true,
+                'matched_phrase'          => 'prompt ' . $m[1] . ' erreur',
+                'suggested_prompt_number' => (int) $m[1],
+            ]);
+        }
+
+        return response()->json([
+            'triggered'               => false,
+            'matched_phrase'          => null,
+            'suggested_prompt_number' => null,
+        ]);
+    }
+
+    // ─── Registry helpers ─────────────────────────────────────────────────────
+
+    private function parseRegistryMarkdown(string $md): array
+    {
+        $stats = [
+            'total_errors'        => null,
+            'active_rules_count'  => null,
+            'archived_rules_count' => null,
+            'last_updated'        => null,
+        ];
+
+        if (preg_match('/\*\*Total erreurs capturées\*\*\s*:\s*(\d+)/u', $md, $m)) $stats['total_errors'] = (int) $m[1];
+        if (preg_match('/\*\*Règles actives\*\*\s*:\s*(\d+)/u', $md, $m))           $stats['active_rules_count'] = (int) $m[1];
+        if (preg_match('/\*\*Règles archivées\*\*\s*:\s*(\d+)/u', $md, $m))         $stats['archived_rules_count'] = (int) $m[1];
+        if (preg_match('/\*\*Dernière mise à jour\*\*\s*:\s*([\d\/]+)/u', $md, $m)) $stats['last_updated'] = $m[1];
+
+        $version     = null;
+        $lastUpdated = null;
+        if (preg_match('/\*\*Version\*\*\s*:\s*([\d.]+)/u', $md, $m))              $version = $m[1];
+        if (preg_match('/\*\*Dernière mise à jour\*\*\s*:\s*([\d\/]+)/u', $md, $m)) $lastUpdated = $m[1];
+
+        $template = '';
+        if (preg_match('/## 📋 TEMPLATE[\s\S]*?```markdown([\s\S]*?)```/u', $md, $m)) {
+            $template = trim($m[1]);
+        }
+
+        // Parse all rules from entire document, split by statut
+        $allRules      = $this->parseAllRules($md);
+        $activeRules   = array_values(array_filter($allRules, fn($r) => str_contains($r['statut'] ?? '', '✅')));
+        $archivedRules = array_values(array_filter($allRules, fn($r) => str_contains($r['statut'] ?? '', '❌')));
+
+        // Update stats from actual parsed data
+        $stats['active_rules_count']   = count($activeRules);
+        $stats['archived_rules_count'] = count($archivedRules);
+
+        return [
+            'stats'          => $stats,
+            'active_rules'   => $activeRules,
+            'archived_rules' => $archivedRules,
+            'template'       => $template,
+            'version'        => $version,
+            'last_updated'   => $lastUpdated,
+        ];
+    }
+
+    private function parseAllRules(string $md): array
+    {
+        $fields = [
+            'date_ajout'       => "Date d'ajout",
+            'cas_origine'      => 'Cas origine',
+            'prompt_concerne'  => 'Prompt concerné',
+            'consultant'       => 'Consultant',
+            'erreur_detectee'  => 'Erreur détectée',
+            'condition_python' => 'Condition Python',
+            'message_erreur'   => "Message d'erreur",
+            'niveau'           => 'Niveau',
+            'statut'           => 'Statut',
+            'impact'           => 'Impact',
+        ];
+
+        $parts = preg_split('/(?=### R\d+\s*\|)/u', $md);
+        $rules = [];
+
+        foreach ($parts as $part) {
+            $part = trim($part);
+            if (!preg_match('/^### (R\d{3,})\s*\|\s*(.+)/u', $part, $header)) continue;
+
+            $rule = ['code' => trim($header[1]), 'title' => trim($header[2])];
+
+            foreach ($fields as $key => $label) {
+                if (preg_match('/\*\*' . preg_quote($label, '/') . '\*\*\s*:\s*`?([^`\n]+)`?/u', $part, $fm)) {
+                    $rule[$key] = trim($fm[1]);
+                } else {
+                    $rule[$key] = null;
+                }
+            }
+
+            if (preg_match('/\*\*Impact\*\*\s*:\s*(.+)/u', $part, $fm)) {
+                $rule['impact'] = trim($fm[1]);
+            }
+
+            $rules[] = $rule;
+        }
+
+        return $rules;
+    }
+
+    private function buildRuleMarkdownBlock(array $data): string
+    {
+        return <<<MD
+### {$data['code']} | {$data['title']}
+**Date d'ajout** : {$data['date_ajout']}
+**Cas origine** : {$data['cas_origine']}
+**Prompt concerné** : {$data['prompt_concerne']}
+**Consultant** : {$data['consultant']}
+**Erreur détectée** : {$data['erreur_detectee']}
+**Condition Python** : `{$data['condition_python']}`
+**Message d'erreur** : "{$data['message_erreur']}"
+**Niveau** : {$data['niveau']}
+**Statut** : {$data['statut']}
+
+**Impact** : {$data['impact']}
+MD;
+    }
+
+    public function toggleRuleStatus(Request $request, string $code)
+    {
+        $user = $this->getAuthUser();
+        $this->assertAdmin($user);
+
+        $code   = strtoupper($code);
+        $prompt = Prompt::where('name', 'REGISTRE_ERREURS_COHERENCE')->firstOrFail();
+
+        // Extract this rule's block (stop at next --- or next ### or end)
+        $codeQ = preg_quote($code, '/');
+        if (!preg_match('/(### ' . $codeQ . '\s*\|[\s\S]*?)(?=\n---|\n### R\d|\z)/u', $prompt->prompt_text, $blockMatch)) {
+            return response()->json(['error' => 'Règle introuvable.'], 404);
+        }
+
+        $block   = $blockMatch[1];
+        $isActif = str_contains($block, '✅ ACTIF');
+        $from    = $isActif ? '✅ ACTIF' : '❌ INACTIF';
+        $to      = $isActif ? '❌ INACTIF' : '✅ ACTIF';
+
+        // Replace statut only inside this block, then substitute block back into full text
+        $newBlock   = preg_replace('/(\*\*Statut\*\*\s*:)\s*' . preg_quote($from, '/') . '/u', '$1 ' . $to, $block, 1);
+        $newContent = str_replace($block, $newBlock, $prompt->prompt_text);
+
+        DB::transaction(function () use ($prompt, $newContent, $user) {
+            AdminChatSnapshot::create([
+                'session_id' => null, 'message_id' => null, 'user_id' => $user->id,
+                'entity_type' => 'prompt', 'entity_id' => $prompt->id,
+                'content_before' => $prompt->prompt_text, 'content_after' => $newContent,
+                'applied_at' => now(),
+            ]);
+            $prompt->update(['prompt_text' => $newContent]);
+        });
+
+        return response()->json(['code' => $code, 'statut' => $to]);
+    }
+
+    public function deleteRule(Request $request, string $code)
+    {
+        $user = $this->getAuthUser();
+        $this->assertAdmin($user);
+
+        $code   = strtoupper($code);
+        $prompt = Prompt::where('name', 'REGISTRE_ERREURS_COHERENCE')->firstOrFail();
+
+        // Match rule block: from ### RXXX | to next --- or next ### or end of active section
+        $newContent = preg_replace(
+            '/### ' . preg_quote($code, '/') . '\s*\|[\s\S]*?(?=\n---\n|\n### R\d|\n## |\z)/u',
+            '',
+            $prompt->prompt_text
+        );
+
+        // Clean up orphaned --- separators
+        $newContent = preg_replace('/\n---\n\n---\n/', "\n---\n", $newContent);
+        $newContent = preg_replace('/\n---\n(\n## )/', '$1', $newContent);
+
+        DB::transaction(function () use ($prompt, $newContent, $user) {
+            AdminChatSnapshot::create([
+                'session_id' => null, 'message_id' => null, 'user_id' => $user->id,
+                'entity_type' => 'prompt', 'entity_id' => $prompt->id,
+                'content_before' => $prompt->prompt_text, 'content_after' => $newContent,
+                'applied_at' => now(),
+            ]);
+            $prompt->update(['prompt_text' => $newContent]);
+        });
+
+        return response()->json(['message' => "Règle {$code} supprimée."]);
     }
 
     private function pruneSnapshots(int $userId): void

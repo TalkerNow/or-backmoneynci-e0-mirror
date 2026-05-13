@@ -224,6 +224,14 @@ Route::
                     Route::get('memory',                        'Api\AdminEngineChatController@getMemory');
                     Route::put('memory',                        'Api\AdminEngineChatController@updateMemory');
                     Route::get('memory/history',                'Api\AdminEngineChatController@getMemoryHistory');
+                    // registry
+                    Route::get('registry',                      'Api\AdminEngineChatController@getRegistry');
+                    Route::post('registry/report-error',        'Api\AdminEngineChatController@reportError');
+                    Route::post('registry/append-rule',         'Api\AdminEngineChatController@appendRule');
+                    Route::patch('registry/rules/{code}/status','Api\AdminEngineChatController@toggleRuleStatus');
+                    Route::delete('registry/rules/{code}',      'Api\AdminEngineChatController@deleteRule');
+                    // trigger detection
+                    Route::post('chat/detect-trigger',          'Api\AdminEngineChatController@detectTrigger');
                 });
             });
 
