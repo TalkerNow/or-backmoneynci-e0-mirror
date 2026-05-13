@@ -157,9 +157,10 @@ Route::
                 Route::get('call-reports/client/{clientId}', 'Api\CallReportController@getByClient');
 
                 // skills catalog (IA architecture)
-                // ATTENTION : skills/id/{skillId} DOIT être avant skills/{code}
+                // ATTENTION : skills/id/{skillId} et skills/{code}/for-n8n DOIVENT être avant skills/{code}
                 Route::get('skills', 'Api\SkillsCatalogController@index');
                 Route::get('skills/id/{skillId}', 'Api\SkillsCatalogController@showBySkillId');
+                Route::get('skills/{code}/for-n8n', 'Api\SkillsCatalogController@showForN8n');
                 Route::get('skills/{id}/history',           'Api\SkillsCatalogController@history');
                 Route::post('skills/{id}/restore/{version}', 'Api\SkillsCatalogController@restore');
                 Route::get('skills/{code}', 'Api\SkillsCatalogController@showByCode');

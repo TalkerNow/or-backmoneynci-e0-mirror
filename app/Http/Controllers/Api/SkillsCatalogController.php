@@ -56,6 +56,31 @@ class SkillsCatalogController extends Controller
     }
 
     /**
+     * GET /api/v1/skills/{code}/for-n8n
+     *
+     * Variante allégée de showByCode : ne retourne que les champs consommés
+     * par les workflows n8n et le serveur Python (skill_md + regles_json),
+     * sans calcul_py ni description ni timestamps. Réduit le payload réseau
+     * d'environ 25 KB à 8 KB pour les appels depuis n8n cloud.
+     * Route publique, comme les autres GET skills/*.
+     */
+    public function showForN8n(string $code)
+    {
+        $skill = SkillsCatalog::active()->byCode($code)
+            ->select(['skill_id', 'code', 'version', 'skill_md', 'regles_json'])
+            ->first();
+
+        if (!$skill) {
+            return response()->json([
+                'error' => 'Skill not found or inactive',
+                'code'  => strtoupper($code),
+            ], 404);
+        }
+
+        return response()->json($skill);
+    }
+
+    /**
      * GET /api/v1/skills/id/{skillId}
      *
      * Charge un skill par son skill_id exact (ex: "SKILL_calcul_cnav_v1").
@@ -93,8 +118,8 @@ class SkillsCatalogController extends Controller
             return response()->json(['error' => $e->getMessage()], 401);
         }
 
-        if (!in_array($auth->id, [4, 1271, 1638])) {
-            return response()->json(['error' => 'Forbidden — accès réservé'], 403);
+        if (strtolower($auth->role ?? '') !== 'admin') {
+            return response()->json(['error' => 'Forbidden — accès réservé admin'], 403);
         }
 
         $skill = SkillsCatalog::find($id);
@@ -143,8 +168,8 @@ class SkillsCatalogController extends Controller
             return response()->json(['error' => $e->getMessage()], 401);
         }
 
-        if (!in_array($auth->id, [4, 1271, 1638])) {
-            return response()->json(['error' => 'Forbidden — accès réservé'], 403);
+        if (strtolower($auth->role ?? '') !== 'admin') {
+            return response()->json(['error' => 'Forbidden — accès réservé admin'], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -202,8 +227,8 @@ class SkillsCatalogController extends Controller
             return response()->json(['error' => $e->getMessage()], 401);
         }
 
-        if (!in_array($auth->id, [4, 1271, 1638])) {
-            return response()->json(['error' => 'Forbidden — accès réservé'], 403);
+        if (strtolower($auth->role ?? '') !== 'admin') {
+            return response()->json(['error' => 'Forbidden — accès réservé admin'], 403);
         }
 
         $skill = SkillsCatalog::find($id);
@@ -234,8 +259,8 @@ class SkillsCatalogController extends Controller
             return response()->json(['error' => $e->getMessage()], 401);
         }
 
-        if (!in_array($auth->id, [4, 1271, 1638])) {
-            return response()->json(['error' => 'Forbidden — accès réservé'], 403);
+        if (strtolower($auth->role ?? '') !== 'admin') {
+            return response()->json(['error' => 'Forbidden — accès réservé admin'], 403);
         }
 
         $skill = SkillsCatalog::find($id);

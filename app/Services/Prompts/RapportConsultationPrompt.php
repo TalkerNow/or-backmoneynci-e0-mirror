@@ -24,6 +24,31 @@ class RapportConsultationPrompt
         $calculJson = json_encode($context['calcul_json'] ?? null, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         $currentHtml = (string) ($context['current_html'] ?? '');
 
+        // Skills additionnels attachés au chat (cf. ReportChatService::loadExtraSkills).
+        $extraSkillsBlock = '';
+        $extraSkills = $context['extra_skills'] ?? [];
+        if (is_array($extraSkills) && !empty($extraSkills)) {
+            $parts = [];
+            $parts[] = "SKILLS ADDITIONNELS — RÈGLES À RESPECTER";
+            $parts[] = "------------------------------------------";
+            $parts[] = "Le consultant a attaché les skills suivants au contexte de ce chat.";
+            $parts[] = "Tu DOIS les appliquer en plus des règles ci-dessus.";
+            $parts[] = "";
+            foreach ($extraSkills as $s) {
+                $code = $s['code'] ?? '?';
+                $nom  = $s['nom']  ?? '';
+                $ver  = $s['version'] ?? '';
+                $md   = (string) ($s['skill_md'] ?? '');
+                $rj   = json_encode($s['regles_json'] ?? null, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                $parts[] = "### Skill {$code} — {$nom} (v{$ver})";
+                $parts[] = $md;
+                $parts[] = "Configuration JSON associée :";
+                $parts[] = $rj;
+                $parts[] = "";
+            }
+            $extraSkillsBlock = "\n" . implode("\n", $parts) . "\n";
+        }
+
         return <<<PROMPT
 Tu es un assistant éditorial spécialisé dans les rapports de consultation retraite pour le cabinet EOR Consultants.
 
@@ -47,7 +72,7 @@ Résultats des calculs de dispositifs (sortie des skills CNAV/ARRCO/RACL/RP/CER/
 DOCUMENT À ÉDITER (HTML courant, sera rafraîchi à chaque tour)
 --------------------------------------------------------------
 {$currentHtml}
-
+{$extraSkillsBlock}
 SOURCES DE DONNÉES — COMMENT LES UTILISER
 -----------------------------------------
 - `calcul_json` : agrège les résultats officiels des calculs de dispositifs lancés par le consultant.

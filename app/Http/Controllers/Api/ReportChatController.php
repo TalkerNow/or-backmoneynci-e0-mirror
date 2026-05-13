@@ -45,13 +45,16 @@ class ReportChatController extends Controller
     public function sendMessage(Request $request, AnalysisReport $analysisReport)
     {
         $data = $request->validate([
-            'content' => ['required', 'string', 'max:8000'],
+            'content'             => ['required', 'string', 'max:8000'],
+            'extra_skill_codes'   => ['nullable', 'array'],
+            'extra_skill_codes.*' => ['string', 'max:100'],
         ]);
 
         $userId = optional(auth()->user())->id;
+        $extraSkillCodes = $data['extra_skill_codes'] ?? [];
 
         try {
-            $result = $this->service->sendMessage($analysisReport, $data['content'], $userId);
+            $result = $this->service->sendMessage($analysisReport, $data['content'], $userId, $extraSkillCodes);
         } catch (InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         } catch (RuntimeException $e) {
@@ -95,10 +98,17 @@ class ReportChatController extends Controller
      * GET /api/v1/analysis-reports/{analysisReport}/chat/context
      * Renvoie le contexte exact passé à l'IA + le system prompt résolu (debug consultant/admin).
      */
-    public function context(AnalysisReport $analysisReport)
+    public function context(Request $request, AnalysisReport $analysisReport)
     {
+        $extraSkillCodes = (array) $request->input('extra_skill_codes', []);
+        // Filtrer + caster pour éviter les surprises avec ?extra_skill_codes[]=…
+        $extraSkillCodes = array_values(array_filter(array_map(
+            fn ($v) => is_string($v) ? trim($v) : null,
+            $extraSkillCodes,
+        )));
+
         try {
-            return response()->json($this->service->getChatContext($analysisReport));
+            return response()->json($this->service->getChatContext($analysisReport, $extraSkillCodes));
         } catch (RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

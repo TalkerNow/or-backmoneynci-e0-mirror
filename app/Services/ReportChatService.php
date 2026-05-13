@@ -7,6 +7,7 @@ use App\Models\FrozenData;
 use App\Models\ReportChatMessage;
 use App\Models\ReportChatSession;
 use App\Models\ReportVersion;
+use App\Models\SkillsCatalog;
 use App\Services\Prompts\RapportConsultationPrompt;
 use App\Services\Prompts\SimulationRetraitePrompt;
 use Illuminate\Support\Facades\DB;
@@ -33,11 +34,13 @@ class ReportChatService
     /**
      * Retourne le contexte exact envoyé à l'IA pour ce livrable (debug consultant/admin).
      *
+     * @param string[] $extraSkillCodes Skills additionnels (codes catalogue) à injecter dans le contexte/prompt
+     *
      * @return array{ context: array, system_prompt: string }
      */
-    public function getChatContext(AnalysisReport $report): array
+    public function getChatContext(AnalysisReport $report, array $extraSkillCodes = []): array
     {
-        $context = $this->buildContext($report);
+        $context = $this->buildContext($report, $extraSkillCodes);
         $systemPrompt = $this->buildSystemPrompt($report->skill_id, $context);
 
         return [
@@ -65,7 +68,7 @@ class ReportChatService
      *
      * @return array{ user_message: ReportChatMessage, assistant_message: ReportChatMessage }
      */
-    public function sendMessage(AnalysisReport $report, string $userContent, ?int $userId): array
+    public function sendMessage(AnalysisReport $report, string $userContent, ?int $userId, array $extraSkillCodes = []): array
     {
         $userContent = trim($userContent);
         if ($userContent === '') {
@@ -81,8 +84,8 @@ class ReportChatService
             'content'    => $userContent,
         ]);
 
-        // 2. Construire le contexte + prompt système
-        $context = $this->buildContext($report);
+        // 2. Construire le contexte + prompt système (avec d'éventuels skills additionnels)
+        $context = $this->buildContext($report, $extraSkillCodes);
         $systemPrompt = $this->buildSystemPrompt($report->skill_id, $context);
 
         // 3. Récupérer l'historique (sauf le message user qu'on vient de créer, qui sera passé séparément)
@@ -193,7 +196,7 @@ class ReportChatService
         ]);
     }
 
-    private function buildContext(AnalysisReport $report): array
+    private function buildContext(AnalysisReport $report, array $extraSkillCodes = []): array
     {
         $report->loadMissing(['user', 'frozenData']);
 
@@ -210,10 +213,41 @@ class ReportChatService
                 'name'  => $report->user->name ?? null,
                 'email' => $report->user->email ?? null,
             ],
-            'frozen_data' => $frozen ? $frozen->toArray() : null,
-            'calcul_json' => $report->calcul_json,
+            'frozen_data'  => $frozen ? $frozen->toArray() : null,
+            'calcul_json'  => $report->calcul_json,
             'current_html' => $this->extractCurrentHtml($report),
+            'extra_skills' => $this->loadExtraSkills($extraSkillCodes),
         ];
+    }
+
+    /**
+     * Charge le contenu des skills additionnels demandés par le consultant.
+     * Renvoie un tableau [{ code, nom, version, skill_md, regles_json }, ...].
+     */
+    private function loadExtraSkills(array $skillCodes): array
+    {
+        $skillCodes = array_values(array_unique(array_filter(array_map(
+            fn ($c) => is_string($c) ? strtoupper(trim($c)) : null,
+            $skillCodes,
+        ))));
+
+        if (empty($skillCodes)) {
+            return [];
+        }
+
+        return SkillsCatalog::query()
+            ->where('active', true)
+            ->whereIn(DB::raw('UPPER(code)'), $skillCodes)
+            ->get(['code', 'nom', 'version', 'skill_md', 'regles_json'])
+            ->map(fn ($s) => [
+                'code'        => $s->code,
+                'nom'         => $s->nom,
+                'version'     => $s->version,
+                'skill_md'    => $s->skill_md,
+                'regles_json' => $s->regles_json,
+            ])
+            ->values()
+            ->all();
     }
 
     private function buildSystemPrompt(string $skillId, array $context): string
