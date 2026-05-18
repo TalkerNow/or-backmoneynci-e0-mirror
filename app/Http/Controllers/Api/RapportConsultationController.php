@@ -35,7 +35,7 @@ class RapportConsultationController extends Controller
         @set_time_limit(0);
 
         $request->validate([
-            'file'      => 'required|file',
+            'file'      => 'nullable|file',
             'client_id' => 'required',
         ]);
 
@@ -56,12 +56,16 @@ class RapportConsultationController extends Controller
 
         if ($frozenData) {
             $simulateurContext['frozen_data'] = [
-                'carriere' => $frozenData->carriere,
-                'cipav'    => $frozenData->cipav,
-                'totaux'   => $frozenData->totaux,
-                'alertes'  => $frozenData->alertes,
-                'meta'     => $frozenData->meta,
-                'locked'   => $frozenData->isLocked(),
+                'carriere'          => $frozenData->carriere,
+                'cipav'             => $frozenData->cipav,
+                'carpimko'          => $frozenData->carpimko,
+                'regimes_points'    => $frozenData->regimes_points,
+                'totaux'            => $frozenData->totaux,
+                'alertes'           => $frozenData->alertes,
+                'meta'              => $frozenData->meta,
+                'locked'            => $frozenData->isLocked(),
+                'scenarios_choisis' => $frozenData->scenarios_choisis,
+                'dates_retenues'    => $frozenData->dates_retenues,
             ];
         }
 
@@ -69,6 +73,7 @@ class RapportConsultationController extends Controller
             $simulateurContext['calculs'] = $analysisReports->map(fn($r) => [
                 'skill_id'            => $r->skill_id,
                 'result_json'         => $r->result_json,
+                'calcul_json'         => $r->calcul_json,
                 'alertes_json'        => $r->alertes_json,
                 'arret_critique_json' => $r->arret_critique_json,
                 'updated_at'          => $r->updated_at?->toIso8601String(),
@@ -77,15 +82,19 @@ class RapportConsultationController extends Controller
 
         Log::info('rapport_consultation: start', [
             'client_id'      => $clientId,
-            'file_name'      => $file->getClientOriginalName(),
-            'file_size'      => $file->getSize(),
+            'file_name'      => $file?->getClientOriginalName(),
+            'file_size'      => $file?->getSize(),
+            'has_file'       => $file !== null,
             'frozen_data_id' => $frozenData?->id,
             'calculs_count'  => $analysisReports->count(),
         ]);
 
         try {
-            $n8nRequest = Http::timeout(self::N8N_TIMEOUT_SECONDS)
-                ->attach('file', file_get_contents($file->getPathname()), $file->getClientOriginalName());
+            $n8nRequest = Http::timeout(self::N8N_TIMEOUT_SECONDS);
+
+            if ($file !== null) {
+                $n8nRequest = $n8nRequest->attach('file', file_get_contents($file->getPathname()), $file->getClientOriginalName());
+            }
 
             if ($message !== '') {
                 $n8nRequest = $n8nRequest->attach('message', $message, null);
