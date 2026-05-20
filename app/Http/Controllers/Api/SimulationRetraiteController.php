@@ -142,6 +142,7 @@ class SimulationRetraiteController extends Controller
                 'sexe'           => $resolvedMeta['sexe']           ?? null,
                 'nir'            => $resolvedMeta['nir']            ?? null,
                 'enfants'        => $resolvedMeta['enfants']        ?? null,
+                'statut_marital' => $resolvedMeta['statut_marital'] ?? null,
             ],
 
             'frozen' => [
@@ -228,12 +229,18 @@ class SimulationRetraiteController extends Controller
      */
     private static function resolveMeta(array $meta, int $clientId): array
     {
-        if (empty($meta['date_naissance'])) {
-            $rawDate = DB::table('personal_informations')
+        if (empty($meta['date_naissance']) || empty($meta['statut_marital'])) {
+            $pi = DB::table('personal_informations')
                 ->where('user_id', $clientId)
-                ->value('birth_date');
-            if ($rawDate) {
-                $meta['date_naissance'] = $rawDate;
+                ->select('birth_date', 'martial_status')
+                ->first();
+            if ($pi) {
+                if (empty($meta['date_naissance']) && $pi->birth_date) {
+                    $meta['date_naissance'] = $pi->birth_date;
+                }
+                if (empty($meta['statut_marital']) && $pi->martial_status) {
+                    $meta['statut_marital'] = $pi->martial_status;
+                }
             }
         }
         return $meta;

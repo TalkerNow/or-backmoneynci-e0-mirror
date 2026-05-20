@@ -41,8 +41,12 @@ VALEUR_POINT_AGIRC_2025 = 1.4384
 VALEUR_POINT_IRCANTEC_2025 = 0.47
 VALEUR_POINT_RCI_2025 = 1.351
 TAUX_PRELEVEMENT_NET = 0.091   # CSG + CRDS + CASA approximation
-AGE_LEGAL_ANS = 64
+AGE_LEGAL_ANS = 64             # post-réforme 2023 (loi Borne)
 AGE_TAUX_PLEIN_AUTO = 67
+SURCOTE_PAR_TRIM = 0.0125      # +1,25 % par trim. au-delà de l'âge légal et de la durée requise
+TAUX_REVERSION_CNAV = 0.54     # CNAV / régime général
+TAUX_REVERSION_AGIRC = 0.60    # AGIRC-ARRCO
+TAUX_REVERSION_IRCANTEC = 0.50
 DUREES_REQUISES = {
     1958: 167,
     1959: 167,
@@ -52,7 +56,7 @@ DUREES_REQUISES = {
     1963: 170,
     1964: 171,
 }
-# 1965+ → 172
+# 1965+ → 172 (réforme 2023 — palier final atteint dès la génération 1965)
 
 # ============================================================================
 # UTILITAIRES DATES
@@ -160,6 +164,84 @@ def calcul_pension_cnav(
     prorata = min(trimestres_acquis_rg / duree_requise, 1.0)
     pension = sam_annuel * taux * prorata / 12
     return round(pension, 2)
+
+
+def calcul_surcote(
+    trim_rg_at_depart: int,
+    duree_requise: int,
+    date_depart: date,
+    date_age_legal: date,
+) -> Tuple[float, int]:
+    """
+    Surcote CNAV : +1,25 % par trimestre cotisé après l'âge légal au-delà de
+    la durée requise. Approximation pragmatique : compte les trimestres acquis
+    projetés au-delà de duree_requise, à condition que date_depart >= date_age_legal.
+
+    Returns:
+        Tuple[coef_surcote, nb_trim_surcote]
+        - coef_surcote ∈ [1.00, ~1.40] à multiplier à la pension CNAV
+        - nb_trim_surcote pour traçabilité
+    """
+    if date_depart < date_age_legal:
+        return (1.00, 0)
+    if trim_rg_at_depart <= duree_requise:
+        return (1.00, 0)
+    months_after_legal = (date_depart.year - date_age_legal.year) * 12 + (date_depart.month - date_age_legal.month)
+    trim_after_legal = max(0, months_after_legal // 3)
+    trim_surplus = trim_rg_at_depart - duree_requise
+    trim_surcote = min(trim_surplus, trim_after_legal)
+    coef = round(1 + trim_surcote * SURCOTE_PAR_TRIM, 4)
+    return (coef, trim_surcote)
+
+
+def calcul_reversion(
+    pension_cnav_mensuelle: float,
+    pension_agirc_mensuelle: float,
+    pension_ircantec_mensuelle: float,
+    statut_marital: Optional[str],
+) -> Dict:
+    """
+    Pension de réversion estimée pour le conjoint survivant (≥55 ans).
+
+    Règles simplifiées :
+    - CNAV : 54 % de la pension du défunt (sous conditions ressources)
+    - AGIRC-ARRCO : 60 % (sans condition ressources)
+    - IRCANTEC : 50 %
+    - Réversion CNAV réservée aux mariés (pas PACS, pas concubinage)
+
+    Returns:
+        Dict avec {applicable, cnav, agirc, ircantec, total, note}
+    """
+    statut = (statut_marital or "").lower()
+    # Reconnaît "married" (EN), "marié(e)", "marie(e)", "pacs", "pacsé"
+    import re as _re
+    is_married = bool(_re.match(r"^marr?i", statut))
+    is_pacs = "pacs" in statut
+    applicable = is_married or is_pacs
+    if not applicable:
+        return {
+            "applicable": False,
+            "cnav": 0, "agirc": 0, "ircantec": 0, "total": 0,
+            "note": "Pension de réversion non applicable (statut marital : célibataire/divorcé)."
+        }
+    rev_cnav = round(pension_cnav_mensuelle * TAUX_REVERSION_CNAV, 2) if is_married else 0
+    rev_agirc = round(pension_agirc_mensuelle * TAUX_REVERSION_AGIRC, 2)
+    rev_ircantec = round(pension_ircantec_mensuelle * TAUX_REVERSION_IRCANTEC, 2) if is_married else 0
+    total = round(rev_cnav + rev_agirc + rev_ircantec, 2)
+    return {
+        "applicable": True,
+        "cnav": rev_cnav,
+        "agirc": rev_agirc,
+        "ircantec": rev_ircantec,
+        "total": total,
+        "note": (
+            f"Pension de réversion estimée pour le conjoint survivant (≥55 ans) : "
+            f"{rev_cnav} € CNAV (54 %, sous conditions ressources) + {rev_agirc} € AGIRC-ARRCO (60 %, sans condition) "
+            f"+ {rev_ircantec} € IRCANTEC = {total} €/mois bruts. "
+            f"{'Réversion CNAV non applicable au PACS.' if is_pacs else ''} "
+            f"Estimation indicative — règles définitives à valider avec la CARSAT."
+        ).strip()
+    }
 
 
 def calcul_date_taux_plein(
