@@ -25,15 +25,20 @@
       "formule": "age_rp = max(age_legal - 2, 60)",
       "controle_id": "RP_C01",
       "exemples": {
+        "_source": "Circulaire Cnav 2026-07 du 05/03/2026 (loi n°2025-1403 du 30/12/2025 — suspension de la réforme 2023). Effet retraite ≥ 01/09/2026.",
         "generation_1962": {
           "age_legal": "62 ans 6 mois",
           "age_rp": "60 ans 6 mois"
         },
-        "generation_1965": {
+        "generation_1964": {
+          "age_legal": "62 ans 9 mois",
+          "age_rp": "60 ans 9 mois"
+        },
+        "generation_1965_avril_dec": {
           "age_legal": "63 ans",
           "age_rp": "61 ans"
         },
-        "generation_1972": {
+        "generation_1969_et_apres": {
           "age_legal": "64 ans",
           "age_rp": "62 ans"
         }

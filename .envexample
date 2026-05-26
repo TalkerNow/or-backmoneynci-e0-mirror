@@ -61,3 +61,6 @@ DOCUSIGN_PROCURATION_TEMPLATE_ID=
 DOCUSIGN_CONNECT_REDIRECT_URL=
 # (Optionnel) si tu actives HMAC dans DocuSign Connect, mets la même clé ici :
 DOCUSIGN_CONNECT_KEY=
+
+# N8N — Admin Engine Chat (Phase 2 — laisser vide pour activer le stub)
+# N8N_ADMIN_CHAT_WEBHOOK=https://n8n.srv796541.hstgr.cloud/webhook/admin-engine-chat

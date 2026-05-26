@@ -36,6 +36,7 @@ Route::
 
             Route::apiResource('/me', 'Api\MeController');
             Route::apiResource('/users', 'Api\UsersController');
+            Route::get('/users/{id}/consultant-history', 'Api\UsersController@consultantHistory')->name('users.consultantHistory');
             Route::get('/duplicated_email', 'Api\UsersController@duplicated_email')->name('duplicated_email');
             Route::post('/set_user_subscribe_services', 'Api\UsersController@set_user_subscribe_services')->name('set_user_subscribe_services');
 
@@ -86,6 +87,10 @@ Route::
             Route::post('/frozen_data', 'Api\FrozenDataController@store');
             Route::post('/frozen_data/{user_id}/lock', 'Api\FrozenDataController@lock');
             Route::post('/frozen_data/{user_id}/unlock', 'Api\FrozenDataController@unlock');
+            Route::post('/frozen_data/{user_id}/scenario', 'Api\FrozenDataController@setScenario');
+            Route::post('/frozen_data/{user_id}/date', 'Api\FrozenDataController@setDate');
+            Route::post('/frozen_data/{user_id}/scenarios', 'Api\FrozenDataController@setScenarios');
+            Route::post('/frozen_data/{user_id}/dates', 'Api\FrozenDataController@setDates');
             Route::delete('/frozen_data/{user_id}', 'Api\FrozenDataController@destroy');
 
             // ---- AUDIT_LOG (Traçabilité des exécutions IA) ----
@@ -152,9 +157,10 @@ Route::
                 Route::get('call-reports/client/{clientId}', 'Api\CallReportController@getByClient');
 
                 // skills catalog (IA architecture)
-                // ATTENTION : skills/id/{skillId} DOIT être avant skills/{code}
+                // ATTENTION : skills/id/{skillId} et skills/{code}/for-n8n DOIVENT être avant skills/{code}
                 Route::get('skills', 'Api\SkillsCatalogController@index');
                 Route::get('skills/id/{skillId}', 'Api\SkillsCatalogController@showBySkillId');
+                Route::get('skills/{code}/for-n8n', 'Api\SkillsCatalogController@showForN8n');
                 Route::get('skills/{id}/history',           'Api\SkillsCatalogController@history');
                 Route::post('skills/{id}/restore/{version}', 'Api\SkillsCatalogController@restore');
                 Route::get('skills/{code}', 'Api\SkillsCatalogController@showByCode');
@@ -166,7 +172,29 @@ Route::
                 Route::get('analysis-reports/latest/{clientId}/{skillCode}', 'Api\AnalysisReportController@latest');
                 Route::get('analysis-reports/client/{clientId}', 'Api\AnalysisReportController@getByClient');
                 Route::post('analysis-reports/{analysisReport}/validate', 'Api\AnalysisReportController@validateReport');
+
+                // report chat (édition IA du livrable) — DOIT être avant apiResource pour éviter les conflits
+                Route::get('analysis-reports/{analysisReport}/chat', 'Api\ReportChatController@show');
+                Route::get('analysis-reports/{analysisReport}/chat/context', 'Api\ReportChatController@context');
+                Route::post('analysis-reports/{analysisReport}/chat/message', 'Api\ReportChatController@sendMessage');
+                Route::post('analysis-reports/{analysisReport}/chat/messages/{message}/apply', 'Api\ReportChatController@applyMessage');
+                Route::get('analysis-reports/{analysisReport}/versions', 'Api\ReportChatController@listVersions');
+                Route::post('analysis-reports/{analysisReport}/versions/{version}/restore', 'Api\ReportChatController@restoreVersion');
+
                 Route::apiResource('analysis-reports', 'Api\AnalysisReportController');
+
+                // consultant prompt notes — historique des notes IA par consultant/client
+                Route::get('clients/{clientId}/prompt-notes',  'Api\ConsultantPromptNoteController@index');
+                Route::post('clients/{clientId}/prompt-notes', 'Api\ConsultantPromptNoteController@store');
+                Route::delete('prompt-notes/{id}',             'Api\ConsultantPromptNoteController@destroy');
+
+                // consultant-access (gatekeeper + admin CRUD IDs 4/1271/1638)
+                Route::post('consultant-access/verify', 'Api\ConsultantAccessController@verify');
+                Route::get('consultant-access/user/{userId}', 'Api\ConsultantAccessController@showByUser');
+                Route::get('consultant-access',          'Api\ConsultantAccessController@index');
+                Route::post('consultant-access',         'Api\ConsultantAccessController@store');
+                Route::put('consultant-access/{id}',     'Api\ConsultantAccessController@update');
+                Route::delete('consultant-access/{id}',  'Api\ConsultantAccessController@destroy');
 
                 // rapports
                 Route::post('rapports/consultation', 'Api\RapportConsultationController@generate');
@@ -179,10 +207,33 @@ Route::
                 Route::post('simulation-retraite/generate', 'Api\SimulationRetraiteController@generate');
                 Route::post('simulation-retraite-store', 'Api\SimulationRetraiteController@store');
                 Route::get('simulation-retraite/{clientId}', 'Api\SimulationRetraiteController@getByClient');
+                Route::patch('simulation-retraite/{clientId}/html', 'Api\SimulationRetraiteController@updateHtml');
                 Route::delete('simulation-retraite/{clientId}', 'Api\SimulationRetraiteController@destroy');
 
                 // system-prompt
                 Route::get('system-prompt/latest', 'Api\SystemPromptController@latest');
+
+                // admin-engine-chat
+                Route::prefix('admin-chat')->group(function () {
+                    Route::get('sessions',                      'Api\AdminEngineChatController@listSessions');
+                    Route::post('sessions',                     'Api\AdminEngineChatController@createSession');
+                    Route::get('sessions/{id}',                 'Api\AdminEngineChatController@getSession');
+                    Route::delete('sessions/{id}',              'Api\AdminEngineChatController@deleteSession');
+                    Route::post('sessions/{id}/message',        'Api\AdminEngineChatController@sendMessage');
+                    Route::post('sessions/{id}/apply',          'Api\AdminEngineChatController@applyModification');
+                    Route::post('snapshots/{id}/revert',        'Api\AdminEngineChatController@revertSnapshot');
+                    Route::get('memory',                        'Api\AdminEngineChatController@getMemory');
+                    Route::put('memory',                        'Api\AdminEngineChatController@updateMemory');
+                    Route::get('memory/history',                'Api\AdminEngineChatController@getMemoryHistory');
+                    // registry
+                    Route::get('registry',                      'Api\AdminEngineChatController@getRegistry');
+                    Route::post('registry/report-error',        'Api\AdminEngineChatController@reportError');
+                    Route::post('registry/append-rule',         'Api\AdminEngineChatController@appendRule');
+                    Route::patch('registry/rules/{code}/status','Api\AdminEngineChatController@toggleRuleStatus');
+                    Route::delete('registry/rules/{code}',      'Api\AdminEngineChatController@deleteRule');
+                    // trigger detection
+                    Route::post('chat/detect-trigger',          'Api\AdminEngineChatController@detectTrigger');
+                });
             });
 
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Auth;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Controllers\Api\Controller;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Log;
@@ -39,6 +40,18 @@ class RegisterController extends Controller
         $user = User::where('email', $email);
         if (isset($request->role)) {
             $user->update(['role' => $request->role]);
+            if ($request->role === 'Consultant') {
+                $createdUser = $user->first();
+                DB::table('consultants_access')->insert([
+                    'user_id'           => $createdUser->id,
+                    'email'             => $createdUser->email,
+                    'name'              => $createdUser->name,
+                    'access_type'       => 'credits',
+                    'remaining_credits' => 0,
+                    'created_at'        => now(),
+                    'updated_at'        => now(),
+                ]);
+            }
         }
         if (isset($request->parent_id)) {
             $user->update(['parent_id' => $request->parent_id]);

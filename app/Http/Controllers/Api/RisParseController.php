@@ -101,7 +101,8 @@ class RisParseController extends Controller
 
             $meta   = $risData['profil'] ?? null;
             $totaux = null;
-            $points = null;
+            $points = $risData['synthese']['points'] ?? null;
+            $dureeAssurance = $risData['duree_assurance_trimestres'] ?? null;
         } else {
             // ── Ancien format : { trimestres, detail_carriere, personne, points }
             if (empty($risData['trimestres']) || !isset($risData['detail_carriere'])) {
@@ -164,15 +165,18 @@ class RisParseController extends Controller
             $meta   = $risData['personne'] ?? null;
             $totaux = $risData['trimestres'] ?? null;
             $points = $risData['points'] ?? null;
+            $dureeAssurance = null;
         }
 
         // ── 5. Réponse au frontend ───────────────────────────────────────────
         // Note : le RIS n'est PAS sauvegardé automatiquement dans frozen_data.
         // Le consultant doit valider et cliquer "Geler & Calculer" pour persister les données.
         return response()->json([
-            'carriere' => $carriere,
-            'totaux'   => $totaux,
-            'meta'     => $meta,
+            'carriere'                   => $carriere,
+            'totaux'                     => $totaux,
+            'meta'                       => $meta,
+            'points'                     => $points,
+            'duree_assurance_trimestres' => $dureeAssurance,
         ], 200);
     }
 }

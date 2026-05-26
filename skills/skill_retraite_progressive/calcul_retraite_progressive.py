@@ -58,11 +58,16 @@ AGES_LEGAUX = {
 }
 
 # Durées d'assurance requises par génération
+# Source : Circulaire Cnav 2026-07 du 05/03/2026 (loi n°2025-1403 du 30/12/2025 —
+# suspension de la réforme 2023). Effet retraite ≥ 01/09/2026.
+# NB : pour 1965, la valeur exacte dépend du mois (jan-mars: 170, avril-déc: 171).
+# La table par année renvoie 170 ; le code appelant devrait utiliser
+# `duree_assurance_requise(annee, mois)` pour la résolution mensuelle.
 DUREES_REQUISES = {
     1962: 169,
     1963: 170,
-    1964: 171,
-    1965: 172,
+    1964: 170,
+    1965: 170,   # 170 jan-mars / 171 avril-déc — voir duree_assurance_requise()
     1966: 172,
     1967: 172,
     1968: 172,
@@ -72,6 +77,16 @@ DUREES_REQUISES = {
     1972: 172,
     1973: 172,
 }
+
+
+def duree_assurance_requise(annee: int, mois: int = 1) -> int:
+    """Retourne la durée d'assurance requise pour le taux plein, avec résolution mensuelle.
+
+    Circulaire Cnav 2026-07 : 1965 est splitté (jan-mars = 170, avril-déc = 171).
+    """
+    if annee == 1965 and mois and mois >= 4:
+        return 171
+    return DUREES_REQUISES.get(annee, 172)
 
 
 # ========== FONCTIONS DE CALCUL ==========

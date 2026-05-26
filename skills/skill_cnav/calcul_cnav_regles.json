@@ -46,12 +46,15 @@
       "total": 9.2
     },
     "durees_assurance": {
+      "_source": "Circulaire Cnav 2026-07 du 05/03/2026 (loi n°2025-1403 du 30/12/2025 — suspension de la réforme 2023). Applicable aux retraites prenant effet à compter du 01/09/2026.",
       "1958_1960": 167,
       "1961_janv_aout": 168,
       "1961_sept_dec_1962": 169,
       "1963": 170,
-      "1964": 171,
-      "1965_et_apres": 172
+      "1964": 170,
+      "1965_jan_mars": 170,
+      "1965_avril_dec": 171,
+      "1966_et_apres": 172
     }
   },
   

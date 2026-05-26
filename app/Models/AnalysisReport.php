@@ -56,6 +56,30 @@ class AnalysisReport extends Model
     }
 
     /**
+     * Session de chat IA pour éditer le livrable
+     */
+    public function chatSession()
+    {
+        return $this->hasOne(ReportChatSession::class, 'analysis_report_id');
+    }
+
+    /**
+     * Historique des versions du HTML du livrable
+     */
+    public function versions()
+    {
+        return $this->hasMany(ReportVersion::class, 'analysis_report_id')->orderBy('id', 'desc');
+    }
+
+    /**
+     * Données carrière figées liées à ce rapport
+     */
+    public function frozenData()
+    {
+        return $this->belongsTo(FrozenData::class, 'frozen_data_id');
+    }
+
+    /**
      * Vérifie si le rapport a un arrêt critique
      */
     public function hasArretCritique(): bool
