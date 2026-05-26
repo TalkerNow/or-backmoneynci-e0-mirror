@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Rapport de Consultation - EOR Consultants</title>
+    <style>
+        body { background-color: #f0f2f5; font-family: 'Arial', sans-serif; padding: 40px; display: flex; justify-content: center; }
+        .page-container { background-color: white; width: 21cm; min-height: 29.7cm; padding: 2cm; box-shadow: 0 4px 15px rgba(0,0,0,0.1); color: #333; }
+        .header { border-bottom: 4px solid #20295B; padding-bottom: 10px; margin-bottom: 30px; }
+        .logo-text { font-size: 20px; font-weight: bold; color: #20295B; text-transform: uppercase; letter-spacing: 1px; }
+        .doc-title { font-size: 24px; font-weight: bold; color: #F39130; margin-top: 5px; text-transform: uppercase; }
+        .client-box { background-color: #f8f9fa; border-left: 5px solid #2B3E71; padding: 15px 20px; margin-bottom: 30px; display: flex; justify-content: space-between; font-size: 13px; align-items: center; }
+        h2 { font-size: 16px; color: #20295B; border-bottom: 2px solid #eee; padding-bottom: 8px; margin-top: 40px; margin-bottom: 20px; text-transform: uppercase; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        .dash-box { background-color: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; }
+        .dash-title { font-size: 12px; color: #20295B; font-weight: bold; text-transform: uppercase; background-color: #e8eaf6; padding: 8px 10px; border-bottom: 1px solid #d1d5db; }
+        .dash-data { padding: 10px; font-size: 12px; line-height: 1.5; }
+        .status-danger { color: #c62828; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 15px; table-layout: fixed; }
+        th { padding: 10px 5px; text-align: center; border: 1px solid #20295B; color: white; background-color: #20295B; font-weight: 600; text-transform: uppercase; }
+        td { border: 1px solid #e0e0e0; padding: 8px; text-align: center; vertical-align: middle; }
+        .row-label { text-align: left; font-weight: bold; color: #2B3E71; background-color: #fafafa; padding-left: 10px; }
+        .highlight-col-header { background-color: #20295B !important; border: 1px solid #20295B; color: #fff; border-bottom: 2px solid #F39130; }
+        .highlight-cell { background-color: #e8eaf6; font-weight: bold; color: #20295B; border-left: 1px solid #20295B; border-right: 1px solid #20295B; }
+        .total-row { background-color: #fff3e0; font-weight: bold; color: #bf360c; border-top: 2px solid #F39130; font-size: 12px; }
+        .consultant-note { background-color: #fff3e0; border: 1px solid #F39130; padding: 20px; margin-top: 35px; border-radius: 4px; font-size: 12px; line-height: 1.5; color: #333; text-align: justify; }
+        .footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid #ccc; text-align: center; color: #666; font-size: 9px; }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <header class="header">
+            <div class="logo-text">Audit Retraite EOR</div>
+            <div class="doc-title">Rapport de Consultation</div>
+        </header>
+
+        <div class="client-box">
+            <div><strong>Client :</strong> Marie DUPONT-TESTCLAUDE</div>
+            <div><strong>Date de naissance :</strong> 15/03/1965 (61 ans)</div>
+            <div><strong>Trimestres Requis :</strong> 172</div>
+        </div>
+
+        <h2>Synthèse de la Situation Actuelle</h2>
+        <div class="dashboard-grid">
+            <div class="dash-box">
+                <div class="dash-title">Jalons & Dates Clés</div>
+                <div class="dash-data">
+                    <strong>Âge Légal :</strong> 01/07/2028<br>
+                    <strong>Âge Taux Plein Auto (67 ans) :</strong> 01/04/2032<br>
+                    <strong>Âge Actuel :</strong> 61 ans<br>
+                    <strong>Date de Relevé :</strong> 31/12/2024
+                </div>
+            </div>
+            <div class="dash-box">
+                <div class="dash-title">État du Relevé de Carrière (RIS)</div>
+                <div class="dash-data">
+                    <strong>Trimestres Acquis (au 31/12/2024) :</strong> 159<br>
+                    <strong>Majoration Enfants :</strong> 16<br>
+                    <strong>Total avec majoration :</strong> 175<br>
+                    <strong>Trimestres Manquants :</strong> 0
+                </div>
+            </div>
+        </div>
+
+        <h2>Projection à l'Âge du Taux Plein Automatique</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date de Départ</th>
+                    <th>Âge au Départ</th>
+                    <th>Trimestres Valides</th>
+                    <th>Taux de Liquidation</th>
+                    <th>Pension Base Est.</th>
+                    <th>Pension Compl. Est.</th>
+                    <th class="highlight-col-header">Total Brut Mensuel</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>01/04/2032</td>
+                    <td>67 ans et 0 mois</td>
+                    <td>175 / 172</td>
+                    <td>50,00 %</td>
+                    <td>2367.04 €</td>
+                    <td>1090.99 €</td>
+                    <td class="highlight-cell">3458.03 €</td>
+                </tr>
+            </tbody>
+        </table>
+        <p style="font-size: 9px; color: #666; margin-top: 5px;">* Si une valeur est marquée N/A, le moteur de calcul n'a pas pu la projeter pour ce dossier.</p>
+
+        <h2>Note de Synthèse</h2>
+        <div class="consultant-note">
+            <strong>📝 NOTE DE SYNTHÈSE DU CONSULTANT :</strong><br><br>
+            <strong>1. Statut des droits acquis :</strong> Le stock de trimestres actuel (175) dépasse d'ores et déjà la durée d'assurance requise par la loi Borne (172 trimestres). La majoration de 16 trimestres au titre de vos 2 enfants a été correctement intégrée dans ce calcul.<br><br>
+            <strong>2. Trimestres manquants & règle légale :</strong> Votre situation est saine au regard de la durée d'assurance. Aucun trimestre n'est manquant pour prétendre à une retraite à taux plein dès l'ouverture de vos droits à l'âge légal.<br><br>
+            <strong>3. Application du Taux Plein Automatique :</strong> Conformément à l'article L.351-8 du CSS, le taux plein (50%) est garanti à l'âge de 67 ans (01/04/2032). Cependant, dans votre cas précis, le taux plein est déjà sécurisé par la durée d'assurance avant cet âge.<br><br>
+            <strong>4. Concordance Régime de Base / Complémentaire :</strong> On observe une bonne cohérence entre les salaires reportés au régime général (SAM de 56809.36 €) et l'acquisition des points Agirc-Arrco et Cipav. Les estimations de pension (3458.03 € brut mensuel global) reflètent une carrière régulière.<br><br>
+            <strong>Recommandation immédiate :</strong> Le dossier ne présente pas d'anomalie majeure. Il est recommandé de surveiller le bon report de vos dernières années d'activité jusqu'en 2028 et de préparer la demande de liquidation environ 6 mois avant la date de départ choisie.
+        </div>
+
+        <div class="footer">Audit Retraite Généré le 13/05/2026 — Les calculs sont effectués à partir des éléments inscrits au RIS et soumis à la réglementation en vigueur (Loi n°2023-270). Document de travail confidentiel.</div>
+    </div>
+</body>
+</html>

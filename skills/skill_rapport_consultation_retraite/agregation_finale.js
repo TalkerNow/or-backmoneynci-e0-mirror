@@ -19,9 +19,14 @@ const carriere = Array.isArray(frozen.carriere) ? frozen.carriere : [];
 
 const findSkill = (id) => calculs.find(c => (c.skill_id || '').toLowerCase() === String(id).toLowerCase());
 
+// Durée d'assurance requise pour le taux plein.
+// Source : Circulaire Cnav 2026-07 du 5 mars 2026 (loi n°2025-1403 du 30/12/2025
+// "suspension de la réforme 2023"), page 7. Effet ≥ 01/09/2026.
+// NB : indexation par année seule — pour les natifs de sept-déc 1961 ou
+// avril-déc 1965, l'année produit la borne basse de la tranche.
 function getTrimestresRequis(annee) {
   if (!annee) return null;
-  const TABLE = { 1958:167,1959:167,1960:167,1961:168,1962:169,1963:170,1964:171,1965:172,1966:172,1967:172 };
+  const TABLE = { 1958:167, 1959:167, 1960:167, 1961:168, 1962:169, 1963:170, 1964:170, 1965:170, 1966:172, 1967:172 };
   if (annee in TABLE) return TABLE[annee];
   if (annee < 1958) return 166;
   if (annee >= 1968) return 172;

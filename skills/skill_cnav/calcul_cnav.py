@@ -51,13 +51,16 @@ DECOTE_PAR_TRIMESTRE = Decimal('1.25')
 SURCOTE_PAR_TRIMESTRE = Decimal('1.25')
 
 # Durées d'assurance par génération
+# Source : Circulaire Cnav 2026-07 du 05/03/2026 (loi n°2025-1403 du 30/12/2025 —
+# suspension de la réforme 2023). Effet retraite ≥ 01/09/2026.
 DUREES_ASSURANCE = {
     (1958, 1960): 167,
-    (1961, 1961, 1, 8): 168,  # Janvier-Août 1961
+    (1961, 1961, 1, 8): 168,   # Janvier-Août 1961
     (1961, 1962, 9, 12): 169,  # Sept-Déc 1961 et 1962
-    (1963, 1963): 170,
-    (1964, 1964): 171,
-    (1965, 2030): 172
+    (1963, 1964): 170,
+    (1965, 1965, 1, 3): 170,   # Janvier-Mars 1965
+    (1965, 1965, 4, 12): 171,  # Avril-Décembre 1965
+    (1966, 2030): 172
 }
 
 FICHIER_EXCEL = 'CNAV_baremes_calculs.xlsx'

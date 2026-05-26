@@ -47,16 +47,21 @@ SURCOTE_PAR_TRIM = 0.0125      # +1,25 % par trim. au-delà de l'âge légal et 
 TAUX_REVERSION_CNAV = 0.54     # CNAV / régime général
 TAUX_REVERSION_AGIRC = 0.60    # AGIRC-ARRCO
 TAUX_REVERSION_IRCANTEC = 0.50
+# Source : Circulaire Cnav 2026-07 du 05/03/2026 (loi n°2025-1403 du 30/12/2025 —
+# suspension de la réforme 2023). Effet retraite ≥ 01/09/2026.
+# NB : pour 1965, jan-mars = 170, avril-déc = 171. La résolution mensuelle
+# nécessite d'appeler get_duree_requise(annee, mois) plutôt que get(annee).
 DUREES_REQUISES = {
     1958: 167,
     1959: 167,
     1960: 167,
-    1961: 168,
+    1961: 168,  # 1961 jan-août ; sept-déc = 169 (résolution mensuelle nécessaire)
     1962: 169,
     1963: 170,
-    1964: 171,
+    1964: 170,
+    1965: 170,  # jan-mars ; avril-déc = 171 (résolution mensuelle nécessaire)
 }
-# 1965+ → 172 (réforme 2023 — palier final atteint dès la génération 1965)
+# 1966+ → 172 (palier final atteint dès la génération 1966 sous la suspension 2026)
 
 # ============================================================================
 # UTILITAIRES DATES
@@ -80,13 +85,20 @@ def parse_date(s: str) -> date:
         return datetime.strptime(s, '%Y-%m-%d').date()
 
 
-def get_duree_requise(annee_naissance: int) -> int:
+def get_duree_requise(annee_naissance: int, mois_naissance: int = 1) -> int:
     """
     Retourne la durée d'assurance requise (en trimestres) pour une génération.
 
+    Résolution mensuelle pour 1965 (jan-mars: 170, avril-déc: 171) per
+    Circulaire Cnav 2026-07.
+
     Returns:
-        int : nombre de trimestres requis (défaut 172 pour 1965+)
+        int : nombre de trimestres requis (défaut 172 pour 1966+)
     """
+    if annee_naissance == 1965 and mois_naissance and mois_naissance >= 4:
+        return 171
+    if annee_naissance == 1961 and mois_naissance and mois_naissance >= 9:
+        return 169
     return DUREES_REQUISES.get(annee_naissance, 172)
 
 

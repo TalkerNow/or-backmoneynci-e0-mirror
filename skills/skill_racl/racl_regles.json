@@ -60,12 +60,15 @@
   "condition_duree_cotisee": {
     "principe": "Durée d'assurance cotisée = durée requise pour le taux plein selon année de naissance",
     "durees_par_generation": {
+      "_source": "Circulaire Cnav 2026-07 du 05/03/2026 (loi n°2025-1403 du 30/12/2025 — suspension de la réforme 2023). Effet retraite ≥ 01/09/2026.",
       "1961_sept_dec": 169,
       "1962": 169,
       "1963_jan_aout": 170,
       "1963_sept_dec": 170,
-      "1964": 171,
-      "1965_et_suivantes": 172
+      "1964": 170,
+      "1965_jan_mars": 170,
+      "1965_avril_dec": 171,
+      "1966_et_suivantes": 172
     },
     "clause_sauvegarde": {
       "applicable": "Générations 1961-1963",
