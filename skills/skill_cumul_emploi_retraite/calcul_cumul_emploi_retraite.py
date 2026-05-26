@@ -49,13 +49,16 @@ DELAI_DECLARATION_JOURS = 30
 DELAI_DERNIER_EMPLOYEUR_MOIS = 6
 
 # Durées d'assurance pour taux plein par génération
+# Source : Circulaire Cnav 2026-07 du 05/03/2026 (loi n°2025-1403 du 30/12/2025 —
+# suspension de la réforme 2023). Effet retraite ≥ 01/09/2026.
 DUREES_TAUX_PLEIN = {
     (1958, 1960): 167,
     (1961, 1961, 1, 8): 168,
     (1961, 1962, 9, 12): 169,
-    (1963, 1963): 170,
-    (1964, 1964): 171,
-    (1965, 2100): 172  # 1965 et après
+    (1963, 1964): 170,
+    (1965, 1965, 1, 3): 170,   # Janvier-Mars 1965
+    (1965, 1965, 4, 12): 171,  # Avril-Décembre 1965
+    (1966, 2100): 172  # 1966 et après
 }
 
 # ============================================================================

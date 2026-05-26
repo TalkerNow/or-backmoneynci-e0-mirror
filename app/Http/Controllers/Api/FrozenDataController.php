@@ -141,6 +141,133 @@ class FrozenDataController extends Controller
     }
 
     /**
+     * POST /api/frozen_data/{user_id}/scenario
+     * Met à jour le scénario retenu par le consultant pour ce client.
+     * Autorisé même si la carrière est gelée — le choix de scénario
+     * est une décision post-validation.
+     *
+     * Body attendu :
+     * {
+     *   "scenario": {
+     *     "dispositif_id": "racl",
+     *     "label": "Carrière longue (RACL)",
+     *     "skill_code": "RACL",
+     *     "params": {...},
+     *     "result_summary": {...}
+     *   }
+     * }
+     *
+     * Pour effacer le choix : { "scenario": null }
+     */
+    public function setScenario(Request $request, int $userId): JsonResponse
+    {
+        $data = $request->validate([
+            'scenario' => 'nullable|array',
+        ]);
+
+        $frozen = $this->repository->setScenarioChoisi(
+            $userId,
+            $data['scenario'] ?? null,
+            $request->user()?->id
+        );
+
+        return response()->json($frozen);
+    }
+
+    /**
+     * POST /api/frozen_data/{user_id}/date
+     * Met à jour la date de départ retenue par le consultant pour ce client.
+     * Autorisé même si la carrière est gelée.
+     *
+     * Body attendu :
+     * { "date": { "type": "age_legal", "label": "Âge légal", "date": "2023-06-01", "info": "..." } }
+     * Pour effacer : { "date": null }
+     */
+    public function setDate(Request $request, int $userId): JsonResponse
+    {
+        $data = $request->validate([
+            'date' => 'nullable|array',
+        ]);
+
+        $frozen = $this->repository->setDateRetenue(
+            $userId,
+            $data['date'] ?? null,
+            $request->user()?->id
+        );
+
+        return response()->json($frozen);
+    }
+
+    /**
+     * POST /api/frozen_data/{user_id}/scenarios
+     * Multi-select : remplace le tableau des scénarios retenus.
+     * Chaque scénario peut transporter ses paramètres et un snapshot de calcul
+     * (last_calc + last_calc_at) pour persister l'état complet d'un recalcul.
+     *
+     * Body attendu :
+     * {
+     *   "scenarios": [
+     *     {
+     *       "dispositif_id": "racl",
+     *       "label": "...",
+     *       "skill_code": "RACL",
+     *       "params": { ... },
+     *       "result_summary": { "eligible": true, ... },
+     *       "last_calc": { ... }
+     *     },
+     *     ...
+     *   ]
+     * }
+     *
+     * Pour tout effacer : { "scenarios": [] }
+     */
+    public function setScenarios(Request $request, int $userId): JsonResponse
+    {
+        $data = $request->validate([
+            'scenarios'   => 'present|array',
+            'scenarios.*' => 'array',
+        ]);
+
+        $frozen = $this->repository->setScenariosChoisis(
+            $userId,
+            $data['scenarios'],
+            $request->user()?->id
+        );
+
+        return response()->json($frozen);
+    }
+
+    /**
+     * POST /api/frozen_data/{user_id}/dates
+     * Multi-select : remplace le tableau des dates de départ retenues.
+     *
+     * Body attendu :
+     * {
+     *   "dates": [
+     *     { "type": "age_legal", "label": "...", "date": "YYYY-MM-DD", "info": "..." },
+     *     ...
+     *   ]
+     * }
+     *
+     * Pour tout effacer : { "dates": [] }
+     */
+    public function setDates(Request $request, int $userId): JsonResponse
+    {
+        $data = $request->validate([
+            'dates'   => 'present|array',
+            'dates.*' => 'array',
+        ]);
+
+        $frozen = $this->repository->setDatesRetenues(
+            $userId,
+            $data['dates'],
+            $request->user()?->id
+        );
+
+        return response()->json($frozen);
+    }
+
+    /**
      * DELETE /api/frozen_data/{user_id}
      * Soft-delete les données carrière — l'historique reste en BDD (deleted_at).
      * Interdit si les données sont gelées (423 Locked) : unlock requis avant.

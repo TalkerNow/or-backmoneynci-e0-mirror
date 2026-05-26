@@ -13,7 +13,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        // Force DB name from FORCE_DB_DATABASE env var (prod workaround for FPM env
+        // inheritance issues). If not set, env('DB_DATABASE') from .env is used as-is.
+        $forcedDatabase = env('FORCE_DB_DATABASE');
+        if ($forcedDatabase && config('database.connections.mysql.database') !== $forcedDatabase) {
+            config([
+                'database.connections.mysql.database' => $forcedDatabase,
+            ]);
+        }
     }
 
     /**

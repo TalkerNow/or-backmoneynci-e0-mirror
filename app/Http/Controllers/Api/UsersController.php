@@ -9,6 +9,7 @@ use App\Models\OldClients;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Models\Documents;
+use App\Models\ConsultantHistory;
 use DB;
 use Log;
 
@@ -45,22 +46,33 @@ class UsersController extends Controller
                     ->get();
             }
         } else {
-            if ($auth->role === "admin" || $auth->role === "Consultant") {
-                $users = User::with('parent')
-                    ->with('business_introducer')
-                    ->where('role', 'Client')
-                    ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
-                    ->orderby('users.created_at', 'DESC')
-                    ->get(['users.*', 'personal_informations.first_name', 'personal_informations.last_name', 'personal_informations.civility', 'personal_informations.maiden_name', 'personal_informations.birth_date', 'personal_informations.birth_place', 'personal_informations.martial_status', 'personal_informations.children_number', 'personal_informations.mobile_number', 'personal_informations.office_number', 'personal_informations.personal_address', 'personal_informations.personal_address_2', 'personal_informations.personal_zip_code', 'personal_informations.personal_city', 'personal_informations.personal_country', 'personal_informations.society_name', 'personal_informations.society_address', 'personal_informations.society_address_2', 'personal_informations.society_zip_code', 'personal_informations.society_city', 'personal_informations.society_country', 'personal_informations.military_service', 'personal_informations.secu_social', 'personal_informations.secu_social_key']);
-            } else {
-                $users = User::with('parent')
-                    ->with('business_introducer')
-                    ->where('users.parent_id', $auth->id)
-                    ->where('role', 'Client')
-                    ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
-                    ->orderby('users.created_at', 'DESC')
-                    ->get(['users.*', 'personal_informations.first_name', 'personal_informations.last_name', 'personal_informations.civility', 'personal_informations.maiden_name', 'personal_informations.birth_date', 'personal_informations.birth_place', 'personal_informations.martial_status', 'personal_informations.children_number', 'personal_informations.mobile_number', 'personal_informations.office_number', 'personal_informations.personal_address', 'personal_informations.personal_address_2', 'personal_informations.personal_zip_code', 'personal_informations.personal_city', 'personal_informations.personal_country', 'personal_informations.society_name', 'personal_informations.society_address', 'personal_informations.society_address_2', 'personal_informations.society_zip_code', 'personal_informations.society_city', 'personal_informations.society_country', 'personal_informations.military_service', 'personal_informations.secu_social', 'personal_informations.secu_social_key']);
+            $fields = ['users.*', 'personal_informations.first_name', 'personal_informations.last_name', 'personal_informations.civility', 'personal_informations.maiden_name', 'personal_informations.birth_date', 'personal_informations.birth_place', 'personal_informations.martial_status', 'personal_informations.children_number', 'personal_informations.mobile_number', 'personal_informations.office_number', 'personal_informations.personal_address', 'personal_informations.personal_address_2', 'personal_informations.personal_zip_code', 'personal_informations.personal_city', 'personal_informations.personal_country', 'personal_informations.society_name', 'personal_informations.society_address', 'personal_informations.society_address_2', 'personal_informations.society_zip_code', 'personal_informations.society_city', 'personal_informations.society_country', 'personal_informations.military_service', 'personal_informations.secu_social', 'personal_informations.secu_social_key'];
+            $perPage = (int) $request->get('per_page', 0);
+            $page = (int) $request->get('page', 0);
+            $usePagination = $page > 0 && $perPage > 0;
+
+            $query = User::with('parent')
+                ->with('business_introducer')
+                ->where('role', 'Client')
+                ->join('personal_informations', 'users.id', '=', 'personal_informations.id')
+                ->orderby('users.created_at', 'DESC');
+
+            if ($auth->role !== "admin" && $auth->role !== "Consultant") {
+                $query->where('users.parent_id', $auth->id);
             }
+
+            if ($usePagination) {
+                $paginated = $query->paginate($perPage, $fields, 'page', $page);
+                return response()->json([
+                    'data' => $paginated->items(),
+                    'total' => $paginated->total(),
+                    'per_page' => $paginated->perPage(),
+                    'current_page' => $paginated->currentPage(),
+                    'last_page' => $paginated->lastPage(),
+                ]);
+            }
+
+            $users = $query->get($fields);
         }
         return response()->json($users);
     }
@@ -183,10 +195,32 @@ class UsersController extends Controller
                 }
             
                 if ($request['parent_id'] !== $user['parent_id']) {
+                    if ($request['parent_id']) {
+                        $newParent = User::find($request['parent_id']);
+                        if (!$newParent || !in_array($newParent->role, ['Consultant', 'Admin', 'admin'])) {
+                            return response()->json(['error' => 'Le parent doit être un Consultant ou un Admin'], 422);
+                        }
+                    }
                     DB::table('documents')
                         ->where('user_id', $user->id)
                         ->where('document_state', '!=', 'Termine')
                         ->update(['parent_id' => $request['parent_id']]);
+
+                    if ($user['parent_id']) {
+                        $oldParent = User::find($user['parent_id']);
+                        $oldParentName = $oldParent
+                            ? (($oldParent->first_name || $oldParent->last_name)
+                                ? trim(($oldParent->first_name ?? '') . ' ' . ($oldParent->last_name ?? ''))
+                                : $oldParent->name)
+                            : null;
+                        $request['previous_consultant_id'] = $user['parent_id'];
+                        $request['previous_consultant_name'] = $oldParentName;
+                        ConsultantHistory::create([
+                            'user_id'         => $user->id,
+                            'consultant_id'   => $user['parent_id'],
+                            'consultant_name' => $oldParentName,
+                        ]);
+                    }
                 }
             
                 try {
@@ -197,12 +231,32 @@ class UsersController extends Controller
                     }
                     throw $e;
                 }
-            
+
             if (isset($request->p_password)) {
                 $user->update(['password' => Hash::make($request->p_password)]);
             }
+
+            if ($request->has('role')) {
+                $newRole = $request->input('role');
+                if ($newRole === 'Consultant') {
+                    $exists = DB::table('consultants_access')->where('user_id', $id)->exists();
+                    if (!$exists) {
+                        DB::table('consultants_access')->insert([
+                            'user_id'           => $id,
+                            'email'             => $user->email,
+                            'name'              => $user->name,
+                            'access_type'       => 'credits',
+                            'remaining_credits' => 0,
+                            'created_at'        => now(),
+                            'updated_at'        => now(),
+                        ]);
+                    }
+                } else {
+                    DB::table('consultants_access')->where('user_id', $id)->delete();
+                }
+            }
         }
-    
+
         return response()->json(['success' => true, 'message' => 'Utilisateur mis à jour avec succès']);
     }
 
@@ -292,5 +346,20 @@ class UsersController extends Controller
         }
 
         return response()->json($user, 200);
+    }
+
+    public function consultantHistory(Request $request, $id)
+    {
+        try {
+            $auth = auth()->userOrFail();
+        } catch (\Tymon\JWTAuth\Exceptions\UserNotDefinedException $e) {
+            return response()->json(['error' => $e->getMessage()], 401);
+        }
+
+        $history = ConsultantHistory::where('user_id', $id)
+            ->orderBy('changed_at', 'desc')
+            ->get();
+
+        return response()->json($history);
     }
 }
