@@ -41,21 +41,20 @@ TAUX_PLEIN = 50.0
 DUREE_CONV_PARTICULIER_EMPLOYEUR = 40  # heures/semaine
 DUREE_CONV_ASSISTANTE_MATERNELLE = 45  # heures/semaine
 
-# Âges légaux par génération (simplifiés - à compléter selon circulaire)
+# Âges légaux par génération — Circulaire Cnav 2026-07 du 05/03/2026
+# (suspension réforme Borne 2023, application ≥ 01/09/2026)
 AGES_LEGAUX = {
-    1962: (62, 6),   # 62 ans 6 mois
-    1963: (62, 9),   # 62 ans 9 mois
-    1964: (63, 0),
-    1965: (63, 0),
-    1966: (63, 0),
-    1967: (63, 0),
-    1968: (63, 3),
-    1969: (63, 6),
-    1970: (63, 9),
-    1971: (63, 9),
-    1972: (64, 0),
-    1973: (64, 0),
+    1961: (62, 3),   # sept-déc 1961 : 62 ans 3 mois (747 mois)
+    1962: (62, 6),   # 62 ans 6 mois (750 mois)
+    1963: (62, 9),   # 62 ans 9 mois (753 mois)
+    1964: (62, 9),   # 62 ans 9 mois (753 mois)
+    1965: (63, 0),   # 63 ans (756 mois — valeur avr-déc 1965; jan-mars = 62 ans 9 mois)
+    1966: (63, 3),   # 63 ans 3 mois (759 mois)
+    1967: (63, 6),   # 63 ans 6 mois (762 mois)
+    1968: (63, 9),   # 63 ans 9 mois (765 mois)
 }
+# Pour ≥ 1969 : 64 ans (768 mois, BAREME_DEFAULT)
+# Pour ≤ 1960 : 62 ans (720 mois)
 
 # Durées d'assurance requises par génération
 # Source : Circulaire Cnav 2026-07 du 05/03/2026 (loi n°2025-1403 du 30/12/2025 —
@@ -89,20 +88,48 @@ def duree_assurance_requise(annee: int, mois: int = 1) -> int:
     return DUREES_REQUISES.get(annee, 172)
 
 
+def _age_legal_from_bareme(annee_naissance: int, mois_naissance: int, bareme: list) -> Tuple[int, int]:
+    """Retourne l'âge légal (années, mois) depuis le payload bareme_depart."""
+    birth_ym = annee_naissance * 100 + (mois_naissance or 12)
+    sorted_rows = sorted(
+        [r for r in bareme if not r.get('is_default') and r.get('key_max') is not None],
+        key=lambda r: r['key_max']
+    )
+    for row in sorted_rows:
+        if birth_ym <= row['key_max']:
+            am = row['age_months']
+            return (am // 12, am % 12)
+    default_row = next((r for r in bareme if r.get('is_default')), None)
+    if default_row:
+        am = default_row['age_months']
+        return (am // 12, am % 12)
+    return (64, 0)
+
+
+def _obtenir_age_legal(annee_naissance: int, mois_naissance: int = None, bareme: list = None) -> Tuple[int, int]:
+    """Retourne l'âge légal (années, mois) pour une génération donnée."""
+    if bareme:
+        return _age_legal_from_bareme(annee_naissance, mois_naissance or 12, bareme)
+    if annee_naissance <= 1960:
+        return (62, 0)
+    return AGES_LEGAUX.get(annee_naissance, (64, 0))
+
+
 # ========== FONCTIONS DE CALCUL ==========
 
-def calculer_age_rp_minimal(date_naissance: str) -> Tuple[int, int, datetime]:
+def calculer_age_rp_minimal(date_naissance: str, bareme: list = None) -> Tuple[int, int, datetime]:
     """
     Calcule l'âge minimum pour accéder à la RP.
-    
+
     Règle: Âge légal - 2 ans, sans pouvoir être inférieur à 60 ans
-    
+
     Args:
         date_naissance: Format "DD/MM/YYYY" ou "YYYY-MM-DD"
-    
+        bareme: Liste bareme_depart depuis le payload (optionnel)
+
     Returns:
         Tuple (années, mois, date_eligibilite)
-    
+
     Exemple:
         >>> calculer_age_rp_minimal("15/03/1965")
         (61, 0, datetime(2026, 3, 15))
@@ -114,16 +141,12 @@ def calculer_age_rp_minimal(date_naissance: str) -> Tuple[int, int, datetime]:
             dt_naissance = datetime.strptime(date_naissance, "%Y-%m-%d")
     except ValueError as e:
         raise ValueError(f"Format de date invalide: {date_naissance}. Utiliser DD/MM/YYYY ou YYYY-MM-DD") from e
-    
+
     annee_naissance = dt_naissance.year
-    
+    mois_naissance = dt_naissance.month
+
     # Récupérer l'âge légal pour la génération
-    if annee_naissance < 1962:
-        age_legal = (62, 0)
-    elif annee_naissance > 1973:
-        age_legal = (64, 0)
-    else:
-        age_legal = AGES_LEGAUX.get(annee_naissance, (64, 0))
+    age_legal = _obtenir_age_legal(annee_naissance, mois_naissance=mois_naissance, bareme=bareme)
     
     # Calculer âge RP: âge légal - 2 ans
     age_rp_ans = age_legal[0] - 2
@@ -389,16 +412,18 @@ def calculer_montant_rp(pension_entiere_mensuelle: float, fraction: int) -> Dict
 def verifier_eligibilite_complete(
     date_naissance: str,
     trimestres_tous_regimes: int,
-    emplois: List[Dict]
+    emplois: List[Dict],
+    bareme: list = None
 ) -> Dict:
     """
     Vérifie l'éligibilité complète à la RP (3 conditions).
-    
+
     Args:
         date_naissance: Date de naissance (DD/MM/YYYY ou YYYY-MM-DD)
         trimestres_tous_regimes: Trimestres tous régimes + PRE
         emplois: Liste des emplois (format multi-employeurs)
-    
+        bareme: Liste bareme_depart depuis le payload (optionnel)
+
     Returns:
         Dict avec résultat d'éligibilité et détails
     """
@@ -408,10 +433,10 @@ def verifier_eligibilite_complete(
         "controles": [],
         "alertes": []
     }
-    
+
     # CONDITION 1: Âge
     try:
-        age_rp_ans, age_rp_mois, date_eligibilite = calculer_age_rp_minimal(date_naissance)
+        age_rp_ans, age_rp_mois, date_eligibilite = calculer_age_rp_minimal(date_naissance, bareme=bareme)
         
         # Calculer âge actuel
         if "/" in date_naissance:
@@ -503,11 +528,12 @@ def calculer_retraite_progressive_complete(
     trimestres_rg: int,
     sam: float,
     emplois: List[Dict],
-    majoration_enfants: float = 0.0
+    majoration_enfants: float = 0.0,
+    bareme: list = None
 ) -> Dict:
     """
     Calcul complet de la retraite progressive.
-    
+
     Args:
         date_naissance: Date de naissance
         trimestres_tous_regimes: Trimestres tous régimes + PRE
@@ -515,12 +541,13 @@ def calculer_retraite_progressive_complete(
         sam: Salaire annuel moyen (€)
         emplois: Liste des emplois
         majoration_enfants: Majoration pour enfants (%)
-    
+        bareme: Liste bareme_depart depuis le payload (optionnel)
+
     Returns:
         Dict avec tous les calculs et recommandations
     """
     # Vérifier éligibilité
-    eligibilite = verifier_eligibilite_complete(date_naissance, trimestres_tous_regimes, emplois)
+    eligibilite = verifier_eligibilite_complete(date_naissance, trimestres_tous_regimes, emplois, bareme=bareme)
     
     if not eligibilite["eligible"]:
         return {
@@ -613,20 +640,21 @@ def api_handler(params: Dict) -> Dict:
         sam = float(params.get("sam", 0))
         emplois = params.get("emplois", [])
         majoration_enfants = float(params.get("majoration_enfants", 0))
-        
+        bareme_depart = params.get('bareme_depart', None)
+
         # Validation des données
         if not date_naissance:
             return {
                 "success": False,
                 "erreur": "Date de naissance manquante"
             }
-        
+
         if not emplois:
             return {
                 "success": False,
                 "erreur": "Au moins un emploi doit être fourni"
             }
-        
+
         # Calcul complet
         resultat = calculer_retraite_progressive_complete(
             date_naissance,
@@ -634,7 +662,8 @@ def api_handler(params: Dict) -> Dict:
             trimestres_rg,
             sam,
             emplois,
-            majoration_enfants
+            majoration_enfants,
+            bareme=bareme_depart
         )
         
         return {
