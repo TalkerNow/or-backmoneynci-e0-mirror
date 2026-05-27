@@ -13,3 +13,5 @@ docker-compose.override.yml
 
 graphify-out/
 CLAUDE.md
+.DS_Store
+docs/superpowers/
