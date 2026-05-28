@@ -19,17 +19,26 @@ const carriere = Array.isArray(frozen.carriere) ? frozen.carriere : [];
 
 const findSkill = (id) => calculs.find(c => (c.skill_id || '').toLowerCase() === String(id).toLowerCase());
 
-// Durée d'assurance requise pour le taux plein.
-// Source : Circulaire Cnav 2026-07 du 5 mars 2026 (loi n°2025-1403 du 30/12/2025
-// "suspension de la réforme 2023"), page 7. Effet ≥ 01/09/2026.
-// NB : indexation par année seule — pour les natifs de sept-déc 1961 ou
-// avril-déc 1965, l'année produit la borne basse de la tranche.
+// Durée d'assurance requise — lue depuis bareme_depart (injecté par Laravel) si disponible,
+// fallback sur table Circulaire 2026-07 si clé absente.
+const TRIM_REQUIS_FALLBACK = { 1958:167, 1959:167, 1960:167, 1961:168, 1962:169, 1963:170, 1964:170, 1965:170, 1966:172, 1967:172 };
+
 function getTrimestresRequis(annee) {
   if (!annee) return null;
-  const TABLE = { 1958:167, 1959:167, 1960:167, 1961:168, 1962:169, 1963:170, 1964:170, 1965:170, 1966:172, 1967:172 };
-  if (annee in TABLE) return TABLE[annee];
+  const bareme = webhookBody.bareme_depart;
+  if (Array.isArray(bareme) && bareme.length > 0) {
+    const birthYM = annee * 100 + 12;
+    const sorted = bareme
+      .filter(r => !r.is_default && r.key_max != null)
+      .sort((a, b) => a.key_max - b.key_max);
+    for (const row of sorted) {
+      if (birthYM <= row.key_max) return row.trim;
+    }
+    const def = bareme.find(r => r.is_default);
+    return def ? def.trim : 172;
+  }
+  if (annee in TRIM_REQUIS_FALLBACK) return TRIM_REQUIS_FALLBACK[annee];
   if (annee < 1958) return 166;
-  if (annee >= 1968) return 172;
   return 172;
 }
 
