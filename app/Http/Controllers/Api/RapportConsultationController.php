@@ -175,6 +175,15 @@ class RapportConsultationController extends Controller
                 ], 502);
             }
 
+            // Enforcement Gate #2 — DÉTERMINISTE côté Laravel : on évalue les règles
+            // ACTIVES du registre éditable (source unique de vérité) contre un namespace
+            // construit depuis frozen_data (meta + totaux). Une règle CRITIQUE déclenchée
+            // => arrêt critique => livraison bloquée (garde sur AnalysisReport).
+            $enforcement = (new \App\Services\Registre\RuleEvaluator())->evaluate(
+                (new \App\Services\Registre\RegistreRules())->selectActiveRules(),
+                \App\Services\Registre\NamespaceBuilder::fromFrozenData($frozenData?->meta, $frozenData?->totaux)
+            );
+
             // Cas 3 : succès — persistance immédiate côté backend (EOR-61).
             // updateOrCreate sur (user_id, skill_id, statut=brouillon) pour éviter
             // les doublons quand le consultant régénère plusieurs fois.
@@ -194,6 +203,8 @@ class RapportConsultationController extends Controller
                         'url'         => null,
                         'htmlContent' => $rawHtml,
                     ],
+                    'alertes_json'        => $enforcement['alertes'],
+                    'arret_critique_json' => $enforcement['arret_critique'] ?? [],
                     'statut' => 'brouillon',
                 ]
             );
@@ -206,11 +217,13 @@ class RapportConsultationController extends Controller
             ]);
 
             return response()->json([
-                'success'    => true,
-                'report_id'  => $report->id,
-                'n8n_status' => $n8nResponse->status(),
-                'elapsed_s'  => $elapsed,
-                'data'       => $n8nResponse->json() ?? $n8nResponse->body(),
+                'success'        => true,
+                'report_id'      => $report->id,
+                'n8n_status'     => $n8nResponse->status(),
+                'elapsed_s'      => $elapsed,
+                'alertes'        => $enforcement['alertes'],
+                'arret_critique' => $enforcement['arret_critique'],
+                'data'           => $n8nResponse->json() ?? $n8nResponse->body(),
             ], 200);
         } catch (ConnectionException $e) {
             $elapsed = round(microtime(true) - $startedAt, 1);
