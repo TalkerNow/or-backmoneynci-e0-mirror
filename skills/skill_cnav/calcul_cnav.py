@@ -63,6 +63,19 @@ DUREES_ASSURANCE = {
     (1966, 2030): 172
 }
 
+def _duree_from_bareme(annee_naissance: int, mois_naissance: int, bareme: list) -> int:
+    """Retourne le nombre de trimestres requis depuis le payload bareme_depart."""
+    birth_ym = annee_naissance * 100 + (mois_naissance or 12)
+    sorted_rows = sorted(
+        [r for r in bareme if not r.get('is_default') and r.get('key_max') is not None],
+        key=lambda r: r['key_max']
+    )
+    for row in sorted_rows:
+        if birth_ym <= row['key_max']:
+            return row['trim']
+    default_row = next((r for r in bareme if r.get('is_default')), None)
+    return default_row['trim'] if default_row else 172
+
 FICHIER_EXCEL = 'CNAV_baremes_calculs.xlsx'
 
 # ============================================================================
@@ -256,9 +269,11 @@ def verifier_alertes_excel() -> Optional[Dict]:
 # CALCULS DIRECTS (si Excel indisponible)
 # ============================================================================
 
-def obtenir_duree_requise(annee_naissance: int) -> int:
+def obtenir_duree_requise(annee_naissance: int, mois_naissance: int = None, bareme: list = None) -> int:
     """Retourne la durée d'assurance requise pour la génération"""
-    
+    if bareme:
+        return _duree_from_bareme(annee_naissance, mois_naissance or 12, bareme)
+
     for cle, duree in DUREES_ASSURANCE.items():
         if len(cle) == 2:
             debut, fin = cle

@@ -61,6 +61,19 @@ DUREES_TAUX_PLEIN = {
     (1966, 2100): 172  # 1966 et après
 }
 
+def _duree_from_bareme(annee_naissance: int, mois_naissance: int, bareme: list) -> int:
+    """Retourne le nombre de trimestres requis depuis le payload bareme_depart."""
+    birth_ym = annee_naissance * 100 + (mois_naissance or 12)
+    sorted_rows = sorted(
+        [r for r in bareme if not r.get('is_default') and r.get('key_max') is not None],
+        key=lambda r: r['key_max']
+    )
+    for row in sorted_rows:
+        if birth_ym <= row['key_max']:
+            return row['trim']
+    default_row = next((r for r in bareme if r.get('is_default')), None)
+    return default_row['trim'] if default_row else 172
+
 # ============================================================================
 # API HANDLER - POINT D'ENTRÉE N8N
 # ============================================================================
@@ -121,6 +134,8 @@ def api_handler(params: Dict) -> Dict:
         retraites_non_liquidees = params.get('retraites_non_liquidees', [])
         regimes_ages_ouverture = params.get('regimes_ages_ouverture', {})
         
+        bareme_depart = params.get('bareme_depart', None)
+
         # 2. Détermination type cumul
         type_cumul, motif_plafonne = determiner_type_cumul(
             date_naissance,
@@ -128,11 +143,12 @@ def api_handler(params: Dict) -> Dict:
             duree_trimestres,
             retraites_liquidees,
             retraites_non_liquidees,
-            regimes_ages_ouverture
+            regimes_ages_ouverture,
+            bareme=bareme_depart
         )
-        
+
         # 3. Exécution contrôles de cohérence
-        controles = executer_controles_coherence(params, type_cumul)
+        controles = executer_controles_coherence(params, type_cumul, bareme=bareme_depart)
         
         # 4. Génération alertes
         alertes = generer_alertes(controles, params, type_cumul)
@@ -166,19 +182,20 @@ def determiner_type_cumul(
     duree_trimestres: int,
     retraites_liquidees: List[str],
     retraites_non_liquidees: List[str],
-    regimes_ages_ouverture: Dict[str, int]
+    regimes_ages_ouverture: Dict[str, int],
+    bareme: list = None
 ) -> Tuple[str, Optional[str]]:
     """
     Détermine si CER TOTAL ou CER PLAFONNÉ
-    
+
     Returns:
         (type_cumul, motif_plafonne)
         - type_cumul: "CER_TOTAL" ou "CER_PLAFONNE"
         - motif_plafonne: None si CER_TOTAL, sinon raison du plafonnement
     """
-    
+
     age_a_depart = calculer_age(date_naissance, date_effet_retraite)
-    duree_requise = obtenir_duree_taux_plein(date_naissance.year)
+    duree_requise = obtenir_duree_taux_plein(date_naissance.year, bareme=bareme)
     
     # Condition 1: Subsidiarité
     subsidiarite_ok, exception_accordee = verifier_subsidiarite(
@@ -246,9 +263,11 @@ def calculer_age(date_naissance: datetime, date_reference: datetime) -> float:
     delta = relativedelta(date_reference, date_naissance)
     return delta.years + delta.months / 12.0
 
-def obtenir_duree_taux_plein(annee_naissance: int) -> int:
+def obtenir_duree_taux_plein(annee_naissance: int, mois_naissance: int = None, bareme: list = None) -> int:
     """Retourne la durée d'assurance requise pour le taux plein"""
-    
+    if bareme:
+        return _duree_from_bareme(annee_naissance, mois_naissance or 12, bareme)
+
     for cle, duree in DUREES_TAUX_PLEIN.items():
         if len(cle) == 2:  # Plage d'années
             debut, fin = cle
@@ -556,16 +575,16 @@ def generer_resume_cer_plafonne(
 # CONTRÔLES DE COHÉRENCE
 # ============================================================================
 
-def executer_controles_coherence(params: Dict, type_cumul: str) -> List[Dict]:
+def executer_controles_coherence(params: Dict, type_cumul: str, bareme: list = None) -> List[Dict]:
     """Exécute tous les contrôles de cohérence"""
-    
+
     controles_resultats = []
-    
+
     date_naissance = datetime.fromisoformat(params['date_naissance'])
     date_effet = datetime.fromisoformat(params['date_effet_retraite'])
     age = calculer_age(date_naissance, date_effet)
     duree = params['duree_assurance_trimestres']
-    duree_requise = obtenir_duree_taux_plein(date_naissance.year)
+    duree_requise = obtenir_duree_taux_plein(date_naissance.year, bareme=bareme)
     retraites_non_liquidees = params.get('retraites_non_liquidees', [])
     
     # CER_C01: Âge légal
