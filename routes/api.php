@@ -210,6 +210,14 @@ Route::
                 Route::patch('simulation-retraite/{clientId}/html', 'Api\SimulationRetraiteController@updateHtml');
                 Route::delete('simulation-retraite/{clientId}', 'Api\SimulationRetraiteController@destroy');
 
+                // departure-rules (barème retraite admin)
+                // ATTENTION : departure-rules/history DOIT être avant departure-rules/restore/{historyId}
+                Route::get('departure-rules', 'Api\DepartureRulesController@index');
+                Route::put('departure-rules', 'Api\DepartureRulesController@update');
+                Route::get('departure-rules/history', 'Api\DepartureRulesController@history');
+                Route::post('departure-rules/import-pdf', 'Api\DepartureRulesController@importPdf');
+                Route::post('departure-rules/restore/{historyId}', 'Api\DepartureRulesController@restore');
+
                 // system-prompt
                 Route::get('system-prompt/latest', 'Api\SystemPromptController@latest');
 
