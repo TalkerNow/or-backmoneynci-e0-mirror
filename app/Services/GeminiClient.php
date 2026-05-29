@@ -104,7 +104,7 @@ class GeminiClient
 
     /**
      * POST bas niveau vers generateContent avec retry sur erreurs transitoires
-     * (503 overloaded, 429 quota, 5xx) — 3 tentatives, backoff 2s/4s/8s.
+     * (503 overloaded, 429 quota, 5xx) — 5 tentatives, backoff 2/4/8/16s + jitter.
      * Retourne le texte du premier candidat.
      *
      * @param int|null $timeout timeout HTTP en secondes ; null = config par défaut.
@@ -122,7 +122,10 @@ class GeminiClient
 
         $url = "{$baseUrl}/models/{$model}:generateContent?key={$apiKey}";
 
-        $maxAttempts = 3;
+        // 5 tentatives max avec backoff exponentiel 2/4/8/16 s + jitter (0-1000 ms).
+        // Absorbe les pics de surcharge Gemini (HTTP 503 "model is overloaded"),
+        // fréquents même sur les modèles GA aux heures de pointe.
+        $maxAttempts = 5;
         $response = null;
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
             $response = Http::timeout($timeout)
@@ -146,12 +149,13 @@ class GeminiClient
             }
 
             $delaySeconds = (int) pow(2, $attempt);
+            $jitterMs     = random_int(0, 1000);
             Log::warning('Gemini API transient error, retrying', [
                 'status'   => $status,
                 'attempt'  => $attempt,
-                'next_in'  => $delaySeconds . 's',
+                'next_in'  => $delaySeconds . 's (+' . $jitterMs . 'ms)',
             ]);
-            sleep($delaySeconds);
+            usleep($delaySeconds * 1_000_000 + $jitterMs * 1000);
         }
 
         $json = $response->json();
