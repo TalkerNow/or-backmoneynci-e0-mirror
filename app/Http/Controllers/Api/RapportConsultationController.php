@@ -121,6 +121,24 @@ class RapportConsultationController extends Controller
                 );
             }
 
+            // Circulaires : routage DÉTERMINISTE (zéro Gemini côté Laravel). On embarque
+            // les agents sélectionnés (prompt + corps de circulaire) en multipart. n8n lit
+            // body.circulaires, appelle Gemini par agent (node AGENT CIRCULAIRE) et ajoute
+            // la section "Cadre réglementaire" au rapport. Tolérant aux erreurs.
+            try {
+                $circulaires = app(\App\Services\Circulaires\Selector::class)
+                    ->selectAgents($simulateurContext, $request->input('user_context'));
+                if (!empty($circulaires)) {
+                    $n8nRequest = $n8nRequest->attach(
+                        'circulaires',
+                        json_encode($circulaires, JSON_UNESCAPED_UNICODE),
+                        null
+                    );
+                }
+            } catch (\Throwable $e) {
+                Log::warning('rapport_consultation: circulaires routing skipped', ['err' => $e->getMessage()]);
+            }
+
             $n8nResponse = $n8nRequest->post(self::N8N_WEBHOOK);
             $elapsed = round(microtime(true) - $startedAt, 1);
 

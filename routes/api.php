@@ -213,6 +213,11 @@ Route::
                 // system-prompt
                 Route::get('system-prompt/latest', 'Api\SystemPromptController@latest');
 
+                // circulaires (règles métier — knowledge base + routing déterministe servis à n8n)
+                Route::get('circulaires/manifest',       'Api\CirculaireController@manifest');
+                Route::get('circulaires/agent/{slug}',   'Api\CirculaireController@agent');
+                Route::post('circulaires/select',        'Api\CirculaireController@select');
+
                 // admin-engine-chat
                 Route::prefix('admin-chat')->group(function () {
                     Route::get('sessions',                      'Api\AdminEngineChatController@listSessions');
