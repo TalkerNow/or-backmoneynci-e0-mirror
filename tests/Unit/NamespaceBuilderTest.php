@@ -56,6 +56,30 @@ class NamespaceBuilderTest extends TestCase
     }
 
     /** @test */
+    public function it_builds_from_frozen_data_meta_and_totaux(): void
+    {
+        // Consultation Retraite : la donnée vient de frozen_data.meta + frozen_data.totaux
+        $ns = NamespaceBuilder::fromFrozenData(
+            ['sexe' => 'F', 'enfants' => 3, 'date_naissance' => '1965-02-10'],
+            ['trimestres_total' => 172, 'sam' => 41000]
+        );
+        $this->assertSame('F', $ns['sexe']);
+        $this->assertSame(3, $ns['nombre_enfants']);
+        $this->assertSame('1965-02-10', $ns['date_naissance_client']);
+        $this->assertSame(172, $ns['trimestres_total']);
+        $this->assertSame(41000, $ns['salaire_annuel_moyen']);
+        $this->assertSame(20.1877, $ns['PRIX_ACHAT_POINT_AA_2025']);
+    }
+
+    /** @test */
+    public function from_frozen_data_tolerates_nulls(): void
+    {
+        $ns = NamespaceBuilder::fromFrozenData(null, null);
+        $this->assertArrayNotHasKey('sexe', $ns);
+        $this->assertArrayHasKey('PRIX_ACHAT_POINT_AA_2025', $ns);
+    }
+
+    /** @test */
     public function it_feeds_rule_evaluator_for_R003(): void
     {
         $ns = NamespaceBuilder::fromPayload([

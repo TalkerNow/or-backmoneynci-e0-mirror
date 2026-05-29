@@ -17,6 +17,19 @@ class NamespaceBuilder
 {
     public const PRIX_ACHAT_POINT_AA_2025 = 20.1877;
 
+    /**
+     * Variante Consultation Retraite : la donnée vient de frozen_data.meta
+     * (sexe, enfants, date_naissance) + frozen_data.totaux (trimestres_total, sam).
+     * Réutilise le mapping de fromPayload (mêmes clés).
+     */
+    public static function fromFrozenData(?array $meta, ?array $totaux): array
+    {
+        return self::fromPayload([
+            'client' => $meta ?? [],
+            'totaux' => $totaux ?? [],
+        ]);
+    }
+
     public static function fromPayload(array $payload): array
     {
         $client = is_array($payload['client'] ?? null) ? $payload['client'] : [];
