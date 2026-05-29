@@ -9,6 +9,7 @@ class DepartureRule extends Model
     protected $table = 'departure_rules';
 
     protected $fillable = [
+        'territoire',
         'key_max',
         'age_months',
         'trim',

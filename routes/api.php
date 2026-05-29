@@ -215,6 +215,7 @@ Route::
                 Route::get('departure-rules', 'Api\DepartureRulesController@index');
                 Route::put('departure-rules', 'Api\DepartureRulesController@update');
                 Route::get('departure-rules/history', 'Api\DepartureRulesController@history');
+                Route::post('departure-rules/import-pdf', 'Api\DepartureRulesController@importPdf');
                 Route::post('departure-rules/restore/{historyId}', 'Api\DepartureRulesController@restore');
 
                 // system-prompt
