@@ -31,6 +31,25 @@ class AnalysisReport extends Model
         'validated_at'        => 'datetime',
     ];
 
+    /** Statuts qui correspondent à une livraison/validation du rapport. */
+    public const DELIVERY_STATUTS = ['valide', 'validé', 'livre', 'livré'];
+
+    /**
+     * Garde-fou central : un rapport avec arrêt critique (règle Gate #2
+     * déclenchée) ne peut pas passer à un statut de livraison.
+     */
+    protected static function booted()
+    {
+        static::saving(function (self $report) {
+            if (self::isDeliveryStatut($report->statut) && $report->hasArretCritique()) {
+                throw new \RuntimeException(
+                    "Livraison bloquée : ce rapport contient un arrêt critique (règle Gate #2). "
+                    . "Corrigez l'incohérence avant de valider/livrer."
+                );
+            }
+        });
+    }
+
     /**
      * Client associé
      */
@@ -85,6 +104,22 @@ class AnalysisReport extends Model
     public function hasArretCritique(): bool
     {
         return !empty($this->arret_critique_json);
+    }
+
+    /**
+     * Un statut donné correspond-il à une livraison/validation ?
+     */
+    public static function isDeliveryStatut(?string $statut): bool
+    {
+        return in_array((string) $statut, self::DELIVERY_STATUTS, true);
+    }
+
+    /**
+     * Le rapport peut-il être livré/validé ? Faux s'il a un arrêt critique.
+     */
+    public function canBeDelivered(): bool
+    {
+        return !$this->hasArretCritique();
     }
 
     /**

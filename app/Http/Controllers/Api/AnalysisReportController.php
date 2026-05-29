@@ -136,6 +136,14 @@ class AnalysisReportController extends Controller
     {
         $auth = auth()->user();
 
+        // Gate #2 : un rapport avec arrêt critique ne peut pas être validé/livré.
+        if (! $analysisReport->canBeDelivered()) {
+            return response()->json([
+                'error'          => "Livraison bloquée : ce rapport contient un arrêt critique (règle Gate #2). Corrigez l'incohérence avant de valider.",
+                'arret_critique' => $analysisReport->arret_critique_json,
+            ], 422);
+        }
+
         $analysisReport->update([
             'statut'       => 'valide',
             'validated_by' => $auth->id,

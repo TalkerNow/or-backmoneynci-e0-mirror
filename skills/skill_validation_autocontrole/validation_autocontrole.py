@@ -652,6 +652,248 @@ def afficher_checklist_validation(donnees_base: DonneesObligatoires) -> str:
 
 
 # ============================================================================
+# ENFORCEMENT PILOTÉ PAR LE REGISTRE (Gate #2) — évaluateur d'expressions sûr
+# ============================================================================
+# Source de vérité = le registre éditable (prompts.REGISTRE_ERREURS_COHERENCE).
+# Laravel parse le markdown et envoie les règles ACTIVES dans le payload n8n :
+#   [{ "code", "condition", "message", "niveau" }]
+# La condition est une CHAÎNE évaluée ici par un évaluateur AST RESTREINT
+# (jamais eval()/exec()) : comparaisons, and/or/not, + - * / % //, min/max/abs/
+# round/len, accès variables et indexation uniquement. Tout le reste est rejeté.
+
+import ast as _ast
+import operator as _op
+
+_SAFE_BINOPS = {
+    _ast.Add: _op.add, _ast.Sub: _op.sub, _ast.Mult: _op.mul,
+    _ast.Div: _op.truediv, _ast.Mod: _op.mod, _ast.FloorDiv: _op.floordiv,
+    _ast.Pow: _op.pow,
+}
+_SAFE_CMPOPS = {
+    _ast.Eq: _op.eq, _ast.NotEq: _op.ne, _ast.Lt: _op.lt, _ast.LtE: _op.le,
+    _ast.Gt: _op.gt, _ast.GtE: _op.ge,
+    _ast.In: lambda a, b: a in b, _ast.NotIn: lambda a, b: a not in b,
+}
+_SAFE_FUNCS = {"min": min, "max": max, "abs": abs, "round": round, "len": len}
+
+
+class UnsafeExpression(Exception):
+    """L'expression contient une construction non autorisée."""
+
+
+class MissingVariable(Exception):
+    """Une variable de la condition est absente du namespace."""
+
+
+def _eval_node(node, ns):
+    if isinstance(node, _ast.Expression):
+        return _eval_node(node.body, ns)
+
+    if isinstance(node, _ast.BoolOp):
+        if isinstance(node.op, _ast.And):
+            result = True
+            for v in node.values:
+                result = _eval_node(v, ns)
+                if not result:
+                    return result
+            return result
+        if isinstance(node.op, _ast.Or):
+            result = False
+            for v in node.values:
+                result = _eval_node(v, ns)
+                if result:
+                    return result
+            return result
+        raise UnsafeExpression("opérateur booléen non supporté")
+
+    if isinstance(node, _ast.UnaryOp):
+        if isinstance(node.op, _ast.Not):
+            return not _eval_node(node.operand, ns)
+        if isinstance(node.op, _ast.USub):
+            return -_eval_node(node.operand, ns)
+        if isinstance(node.op, _ast.UAdd):
+            return +_eval_node(node.operand, ns)
+        raise UnsafeExpression("opérateur unaire non supporté")
+
+    if isinstance(node, _ast.BinOp):
+        op = _SAFE_BINOPS.get(type(node.op))
+        if op is None:
+            raise UnsafeExpression("opérateur binaire non supporté")
+        return op(_eval_node(node.left, ns), _eval_node(node.right, ns))
+
+    if isinstance(node, _ast.Compare):
+        left = _eval_node(node.left, ns)
+        for op_node, comparator in zip(node.ops, node.comparators):
+            op = _SAFE_CMPOPS.get(type(op_node))
+            if op is None:
+                raise UnsafeExpression("comparateur non supporté")
+            right = _eval_node(comparator, ns)
+            if not op(left, right):
+                return False
+            left = right
+        return True
+
+    if isinstance(node, _ast.Call):
+        if not isinstance(node.func, _ast.Name) or node.func.id not in _SAFE_FUNCS:
+            raise UnsafeExpression("appel de fonction non autorisé")
+        if node.keywords:
+            raise UnsafeExpression("arguments nommés non autorisés")
+        args = [_eval_node(a, ns) for a in node.args]
+        return _SAFE_FUNCS[node.func.id](*args)
+
+    if isinstance(node, _ast.Name):
+        if node.id in ns:
+            return ns[node.id]
+        raise MissingVariable(node.id)
+
+    if isinstance(node, _ast.Constant):
+        return node.value
+
+    if isinstance(node, (_ast.List, _ast.Tuple)):
+        return [_eval_node(e, ns) for e in node.elts]
+
+    if isinstance(node, _ast.Subscript):
+        container = _eval_node(node.value, ns)
+        key = _eval_node(node.slice, ns)
+        return container[key]
+
+    raise UnsafeExpression("construction non autorisée: " + type(node).__name__)
+
+
+def safe_eval_condition(expr: str, namespace: dict) -> bool:
+    """Évalue une condition booléenne avec l'évaluateur restreint.
+
+    Lève SyntaxError / UnsafeExpression / MissingVariable ; ne fait JAMAIS eval().
+    """
+    tree = _ast.parse(expr, mode="eval")
+    return bool(_eval_node(tree, namespace))
+
+
+def evaluate_rules(rules, namespace):
+    """Évalue les règles actives du registre contre un namespace de variables.
+
+    Args:
+        rules: liste de {code, condition, message, niveau}
+        namespace: dict des variables (issu de build_namespace)
+
+    Returns:
+        {
+          "alertes": [{code, message, niveau}, ...],   # règles déclenchées
+          "arret_critique": {raison, codes:[...]} | None,
+          "skipped": [{code, reason}, ...]
+        }
+    """
+    alertes = []
+    critique_codes = []
+    skipped = []
+
+    for rule in (rules or []):
+        code = rule.get("code", "?")
+        condition = (rule.get("condition") or "").strip()
+        is_critique = "CRITIQUE" in (rule.get("niveau") or "").upper()
+
+        if not condition or condition.startswith("#"):
+            skipped.append({"code": code, "reason": "condition vide ou placeholder"})
+            continue
+
+        try:
+            fired = safe_eval_condition(condition, namespace)
+        except MissingVariable as e:
+            skipped.append({"code": code, "reason": f"variable manquante: {e}"})
+            continue
+        except UnsafeExpression as e:
+            skipped.append({"code": code, "reason": f"expression non autorisée: {e}"})
+            continue
+        except SyntaxError as e:
+            skipped.append({"code": code, "reason": f"syntaxe invalide: {e}"})
+            continue
+        except Exception as e:  # garde-fou : une règle ne doit jamais casser le run
+            skipped.append({"code": code, "reason": f"erreur évaluation: {e}"})
+            continue
+
+        if fired:
+            alertes.append({
+                "code": code,
+                "message": rule.get("message", ""),
+                "niveau": "CRITIQUE" if is_critique else "AVERTISSEMENT",
+            })
+            if is_critique:
+                critique_codes.append(code)
+
+    arret_critique = None
+    if critique_codes:
+        arret_critique = {
+            "raison": "Incohérences critiques détectées : " + ", ".join(critique_codes),
+            "codes": critique_codes,
+        }
+
+    return {"alertes": alertes, "arret_critique": arret_critique, "skipped": skipped}
+
+
+def _parse_date_safe(value):
+    """Parse "YYYY-MM-DD" ou "DD/MM/YYYY" en date ; None si impossible."""
+    if value is None or isinstance(value, date):
+        return value
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(value, fmt).date()
+        except (ValueError, TypeError):
+            continue
+    return None
+
+
+def build_namespace(calc_input, calc_result, frozen=None, scenario_code="H1"):
+    """Construit le namespace de variables pour evaluate_rules.
+
+    Args:
+        calc_input:   params envoyés à api_handler (date_naissance, sam, trimestres_*)
+        calc_result:  sortie api_handler (scenarios, duree_requise, ...)
+        frozen:       dict de champs frozen_data à exposer tels quels
+                      (sexe, trimestres_enfants, dates_naissance_enfants, ...)
+        scenario_code: scénario de référence pour les variables par-scénario (H1 par défaut)
+
+    Returns:
+        dict de variables ; les variables non dérivables sont simplement absentes.
+    """
+    calc_input = calc_input or {}
+    calc_result = calc_result or {}
+    ns = {}
+
+    # Constantes réglementaires
+    ns["PRIX_ACHAT_POINT_AA_2025"] = PRIX_ACHAT_POINT_AA_2025
+    ns["HISTORIQUE_PASS"] = HISTORIQUE_PASS
+
+    # Params d'entrée
+    if "trimestres_valides_tous_regimes" in calc_input:
+        ns["trimestres_total"] = calc_input["trimestres_valides_tous_regimes"]
+    if "sam" in calc_input:
+        ns["salaire_annuel_moyen"] = calc_input["sam"]
+    dnc = _parse_date_safe(calc_input.get("date_naissance"))
+    if dnc is not None:
+        ns["date_naissance_client"] = dnc
+
+    # Variables dérivées du scénario de référence
+    scenarios = calc_result.get("scenarios") or {}
+    sc = scenarios.get(scenario_code)
+    if isinstance(sc, dict):
+        if "age_depart_annees" in sc:
+            ns["age_depart_ans"] = sc["age_depart_annees"]
+        duree = sc.get("duree_requise", calc_result.get("duree_requise"))
+        trim_dep = sc.get("trimestres_tous_at_depart")
+        if duree is not None and trim_dep is not None:
+            ns["manquants_duree"] = max(0, duree - trim_dep)
+        if "pension_totale_nette_mensuelle" in sc:
+            ns["pension_nette_mensuelle"] = sc["pension_totale_nette_mensuelle"]
+
+    # Passthrough frozen_data (sexe, enfants, etc.) — autoritaire pour ses champs
+    if isinstance(frozen, dict):
+        for k, v in frozen.items():
+            ns[k] = v
+
+    return ns
+
+
+# ============================================================================
 # EXEMPLE D'UTILISATION
 # ============================================================================
 

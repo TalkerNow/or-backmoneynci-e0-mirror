@@ -70,10 +70,31 @@ class SimulationRetraiteController extends Controller
             $payload['user_context'] = $userContext;
         }
 
+        // Routage DÉTERMINISTE des circulaires (aucun appel Gemini ici) : on sélectionne
+        // les agents pertinents et on embarque leur prompt + corps de circulaire DANS le
+        // payload. Les appels Gemini sont faits par le workflow n8n (nodes AGENT CIRCULAIRE),
+        // pas par Laravel. n8n lit body.circulaires, route via le node IF, applique au HTML.
+        $payload['circulaires'] = self::buildCirculairesForPayload($payload, $userContext);
+
         try {
             $n8nResponse = Http::timeout(900)->post(self::N8N_WEBHOOK, $payload);
 
             $body = $n8nResponse->json() ?? [];
+
+            // L'enrichissement réglementaire (agents Circulaires) est effectué DANS le
+            // workflow n8n simulation_retraite — le HTML reçu est déjà enrichi (section
+            // "Cadre réglementaire" + corrections). Le contrôleur se contente de stocker.
+            // Enforcement Gate #2 — DÉTERMINISTE côté Laravel : on évalue les règles
+            // ACTIVES du registre éditable (source unique de vérité =
+            // prompts.REGISTRE_ERREURS_COHERENCE) contre un namespace construit depuis
+            // le payload. Pas de dépendance n8n (qui ne renvoie pas calcul_json).
+            // Une règle CRITIQUE déclenchée => arrêt critique => livraison bloquée.
+            $enforcement = (new \App\Services\Registre\RuleEvaluator())->evaluate(
+                (new \App\Services\Registre\RegistreRules())->selectActiveRules(),
+                \App\Services\Registre\NamespaceBuilder::fromPayload($payload)
+            );
+            $alertes       = $enforcement['alertes'];
+            $arretCritique = $enforcement['arret_critique'];
 
             if (! empty($body['html_report'])) {
                 AnalysisReport::updateOrCreate(
@@ -87,17 +108,19 @@ class SimulationRetraiteController extends Controller
                         'result_json'         => $body['html_report'],
                         'calcul_json'         => $body['calcul_json'] ?? [],
                         'restitution_json'    => [],
-                        'alertes_json'        => [],
-                        'arret_critique_json' => [],
+                        'alertes_json'        => $alertes,
+                        'arret_critique_json' => is_array($arretCritique) ? $arretCritique : [],
                         'statut'              => 'brouillon',
                     ]
                 );
             }
 
             return response()->json([
-                'success'     => $n8nResponse->successful(),
-                'html_report' => $body['html_report'] ?? null,
-                'client_id'   => $clientId,
+                'success'        => $n8nResponse->successful(),
+                'html_report'    => $body['html_report'] ?? null,
+                'client_id'      => $clientId,
+                'alertes'        => $alertes,
+                'arret_critique' => $arretCritique,
             ], $n8nResponse->successful() ? 200 : 502);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -181,6 +204,39 @@ class SimulationRetraiteController extends Controller
                 'locked'   => $frozen->isLocked(),
             ],
         ];
+    }
+
+    /**
+     * Routage déterministe des agents Circulaires (zéro appel Gemini).
+     * Retourne [ { slug, name, prompt, circulaire_md }, ... ] à embarquer dans le
+     * payload n8n. n8n exécutera un agent Gemini par entrée.
+     * Tolérant aux erreurs : en cas de souci, renvoie [] (n8n bascule sur la branche
+     * "false" du node IF et livre le rapport sans enrichissement).
+     */
+    private static function buildCirculairesForPayload(array $payload, ?string $userContext): array
+    {
+        try {
+            $router = app(\App\Services\Circulaires\Router::class);
+            $loader = app(\App\Services\Circulaires\AgentLoader::class);
+            $routing = $router->decide($payload, $userContext, false); // false = pas de fallback LLM
+            $out = [];
+            foreach ($routing['active'] as $slug) {
+                $agent = $loader->loadOne($slug);
+                if (!$agent) continue;
+                $body = $loader->loadCirculaireBody($agent['circulaire']);
+                if ($body === null) continue;
+                $out[] = [
+                    'slug'          => $agent['slug'],
+                    'name'          => $agent['name'],
+                    'prompt'        => $agent['body'],
+                    'circulaire_md' => $body,
+                ];
+            }
+            return $out;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Circulaires routing skipped', ['err' => $e->getMessage()]);
+            return [];
+        }
     }
 
     /**
@@ -319,12 +375,14 @@ class SimulationRetraiteController extends Controller
         }
 
         return response()->json([
-            'id'          => $report->id,
-            'client_id'   => $clientId,
-            'html_report' => $report->result_json,
-            'calcul_json' => $report->calcul_json,
-            'statut'      => $report->statut,
-            'created_at'  => $report->created_at,
+            'id'             => $report->id,
+            'client_id'      => $clientId,
+            'html_report'    => $report->result_json,
+            'calcul_json'    => $report->calcul_json,
+            'statut'         => $report->statut,
+            'created_at'     => $report->created_at,
+            'alertes'        => $report->alertes_json ?? [],
+            'arret_critique' => $report->hasArretCritique() ? $report->arret_critique_json : null,
         ]);
     }
 
