@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AnalysisReport;
+use App\Models\DepartureRule;
 use App\Models\FrozenData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -57,12 +58,20 @@ class SimulationRetraiteController extends Controller
             ->values()
             ->toArray();
 
+        $baremeDepart = DepartureRule::ordered()->get()->map(fn ($r) => [
+            'key_max'    => $r->key_max,
+            'age_months' => $r->age_months,
+            'trim'       => $r->trim,
+            'is_default' => (bool) $r->is_default,
+        ])->toArray();
+
         $payload = self::buildN8nPayload(
             $frozen,
             $clientId,
             $revenuSouhaite,
             $resolvedMeta,
-            $calculsSkills
+            $calculsSkills,
+            $baremeDepart
         );
 
         $userContext = $request->input('user_context');
@@ -136,7 +145,8 @@ class SimulationRetraiteController extends Controller
         int $clientId,
         float $revenuSouhaite,
         array $resolvedMeta,
-        array $calculsSkills
+        array $calculsSkills,
+        array $baremeDepart = []
     ): array {
         $carriere = $frozen->carriere ?? [];
         $totaux   = self::enrichTotaux($frozen->totaux ?? [], $carriere);
@@ -190,6 +200,7 @@ class SimulationRetraiteController extends Controller
             'dates_retenues'    => $datesRetenues,
             'calculs_skills'    => $calculsSkills,
             'alertes'           => $frozen->alertes ?? [],
+            'bareme_depart'     => $baremeDepart,
 
             // Bloc legacy : conservé tant que le workflow n8n n'a pas migré
             // vers la lecture des champs v2 racine. À supprimer une fois le

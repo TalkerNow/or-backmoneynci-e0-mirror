@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AnalysisReport;
+use App\Models\DepartureRule;
 use App\Models\FrozenData;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
@@ -120,6 +121,19 @@ class RapportConsultationController extends Controller
                     null
                 );
             }
+
+            // Barème de départ (EOR-80) — injecté pour que AGREGATION FINALE puisse lire les valeurs DB
+            $baremeDepart = DepartureRule::ordered()->get()->map(fn ($r) => [
+                'key_max'    => $r->key_max,
+                'age_months' => $r->age_months,
+                'trim'       => $r->trim,
+                'is_default' => (bool) $r->is_default,
+            ])->toArray();
+            $n8nRequest = $n8nRequest->attach(
+                'bareme_depart',
+                json_encode($baremeDepart, JSON_UNESCAPED_UNICODE),
+                null
+            );
 
             // Circulaires : routage DÉTERMINISTE (zéro Gemini côté Laravel). On embarque
             // les agents sélectionnés (prompt + corps de circulaire) en multipart. n8n lit
