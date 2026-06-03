@@ -42,13 +42,14 @@ class AddR010TrancheCToRegistreErreurs extends Migration
 
         // Versioning manuel (Prompt::boot() ne se déclenche pas en migration).
         $latest = DB::table('prompt_history')->where('prompt_id', $row->id)->max('version') ?? 0;
+        // NB: prompt_history n'a PAS de colonne updated_at (cf. migration
+        // 2026_02_05_100001_create_prompt_history_table) — ne pas l'insérer.
         DB::table('prompt_history')->insert([
             'prompt_id'   => $row->id,
             'version'     => $latest + 1,
             'prompt_text' => $row->prompt_text,
             'created_by'  => self::ADMIN_USER_ID,
             'created_at'  => now(),
-            'updated_at'  => now(),
         ]);
 
         DB::table('prompts')->where('id', $row->id)->update([
