@@ -11,11 +11,15 @@ namespace App\Services\Registre;
  * ignorées proprement par RuleEvaluator (liste "skipped").
  *
  * Variables produites : sexe, nombre_enfants, trimestres_total,
- * salaire_annuel_moyen, date_naissance_client, + PRIX_ACHAT_POINT_AA_2025.
+ * salaire_annuel_moyen, date_naissance_client, salaire_brut_max,
+ * + PRIX_ACHAT_POINT_AA_2025, PASS_2025.
  */
 class NamespaceBuilder
 {
     public const PRIX_ACHAT_POINT_AA_2025 = 20.1877;
+
+    /** Plafond annuel de la Sécurité sociale 2025 (€/an). Sert au seuil tranche C (4 × PASS). */
+    public const PASS_2025 = 47100;
 
     /**
      * Variante Consultation Retraite : la donnée vient de frozen_data.meta
@@ -36,8 +40,9 @@ class NamespaceBuilder
         $totaux = is_array($payload['totaux'] ?? null) ? $payload['totaux'] : [];
 
         $ns = [
-            // Constante réglementaire (source AGIRC-ARRCO 2025)
+            // Constantes réglementaires (sources AGIRC-ARRCO / Sécurité sociale 2025)
             'PRIX_ACHAT_POINT_AA_2025' => self::PRIX_ACHAT_POINT_AA_2025,
+            'PASS_2025'                => self::PASS_2025,
         ];
 
         if (array_key_exists('sexe', $client) && $client['sexe'] !== null) {
@@ -54,6 +59,21 @@ class NamespaceBuilder
         }
         if (array_key_exists('sam', $totaux) && $totaux['sam'] !== null) {
             $ns['salaire_annuel_moyen'] = $totaux['sam'];
+        }
+
+        // Salaire brut annuel max de la carrière (revenu_brut NON plafonné) — sert à
+        // détecter les hauts revenus en tranche C (salaire > 4 PASS). Le SAM ne convient
+        // pas : il est plafonné à 1 PASS. Consommé par la règle R010 (Gate #2).
+        $carriere = is_array($payload['carriere'] ?? null) ? $payload['carriere'] : [];
+        $salaires = [];
+        foreach ($carriere as $entry) {
+            if (is_array($entry) && isset($entry['revenu_brut']) && is_numeric($entry['revenu_brut'])) {
+                $salaires[] = (float) $entry['revenu_brut'];
+            }
+        }
+        if (!empty($salaires)) {
+            $max = max($salaires);
+            $ns['salaire_brut_max'] = (fmod($max, 1.0) === 0.0) ? (int) $max : $max;
         }
 
         return $ns;

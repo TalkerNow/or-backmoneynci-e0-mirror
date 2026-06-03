@@ -67,4 +67,29 @@ MD;
 
         $this->assertSame('AVERTISSEMENT', $byCode['R050']['niveau']);
     }
+
+    /** @test */
+    public function it_loads_active_r010_tranche_c_rule_from_the_real_registry_doc(): void
+    {
+        // Teste le VRAI texte de la règle dans le doc source (attrape une faute
+        // de frappe dans la condition, le niveau, etc.).
+        $md = file_get_contents(base_path('docs/REGISTRE_ERREURS_COHERENCE.md'));
+        $this->assertNotFalse($md);
+
+        $rules  = (new RegistreRules())->activeRulesFromMarkdown($md);
+        $byCode = collect($rules)->keyBy('code');
+
+        $this->assertArrayHasKey('R010', $byCode->all());
+        $this->assertSame('salaire_brut_max > 4 * PASS_2025', $byCode['R010']['condition']);
+        $this->assertSame('AVERTISSEMENT', $byCode['R010']['niveau']);
+
+        // Bout-en-bout : la vraie règle se déclenche pour un haut revenu, sans bloquer.
+        $ns = \App\Services\Registre\NamespaceBuilder::fromPayload([
+            'carriere' => [['annee' => 2025, 'revenu_brut' => 208245]],
+        ]);
+        $res   = (new \App\Services\Registre\RuleEvaluator())->evaluate($rules, $ns);
+        $codes = array_column($res['alertes'], 'code');
+        $this->assertContains('R010', $codes);
+        $this->assertNull($res['arret_critique']); // avertissement, jamais bloquant
+    }
 }
