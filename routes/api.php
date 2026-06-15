@@ -207,6 +207,7 @@ Route::
                 Route::post('simulation-retraite/generate', 'Api\SimulationRetraiteController@generate');
                 Route::post('simulation-retraite-store', 'Api\SimulationRetraiteController@store');
                 Route::get('simulation-retraite/{clientId}', 'Api\SimulationRetraiteController@getByClient');
+                Route::get('simulation-retraite/{clientId}/payload-preview', 'Api\SimulationRetraiteController@previewPayload');
                 Route::patch('simulation-retraite/{clientId}/html', 'Api\SimulationRetraiteController@updateHtml');
                 Route::delete('simulation-retraite/{clientId}', 'Api\SimulationRetraiteController@destroy');
 

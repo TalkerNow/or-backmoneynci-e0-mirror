@@ -86,7 +86,10 @@ class SimulationRetraiteController extends Controller
         $payload['circulaires'] = self::buildCirculairesForPayload($payload, $userContext);
 
         try {
-            $n8nResponse = Http::timeout(900)->post(self::N8N_WEBHOOK, $payload);
+            // Webhook surchargeable par env (test local du port Python sans toucher la prod).
+            // Défaut = const live. cf. SIMULATION_RETRAITE_WEBHOOK dans .env
+            $webhookUrl = env('SIMULATION_RETRAITE_WEBHOOK') ?: self::N8N_WEBHOOK;
+            $n8nResponse = Http::timeout(900)->post($webhookUrl, $payload);
 
             $body = $n8nResponse->json() ?? [];
 
@@ -134,6 +137,52 @@ class SimulationRetraiteController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * GET /api/v1/simulation-retraite/{clientId}/payload-preview
+     * Renvoie EXACTEMENT les trimestres (et le payload) envoyés à n8n, SANS appeler n8n ni Gemini.
+     * Outil de debug : vérifier ce qui part vers le workflow sans déclencher d'exécution.
+     * ?full=1 → payload complet ; sinon résumé trimestres + grille carrière.
+     * (calculs_skills non chargés ici : aucun effet sur les trimestres.)
+     */
+    public function previewPayload(Request $request, int $clientId): JsonResponse
+    {
+        $revenuSouhaite = (float) $request->input('revenu_souhaite', 0);
+        $frozen = FrozenData::where('user_id', $clientId)->latest()->first();
+        if (! $frozen) {
+            return response()->json(['error' => "Aucune frozen_data pour le client {$clientId}."], 404);
+        }
+        $resolvedMeta = self::resolveMeta($frozen->meta ?? [], $clientId);
+        $baremeDepart = DepartureRule::ordered()->get()->map(fn ($r) => [
+            'key_max'    => $r->key_max,
+            'age_months' => $r->age_months,
+            'trim'       => $r->trim,
+            'is_default' => (bool) $r->is_default,
+        ])->toArray();
+        $payload = self::buildN8nPayload($frozen, $clientId, $revenuSouhaite, $resolvedMeta, [], $baremeDepart);
+
+        $totaux = $payload['totaux'] ?? [];
+        $out = [
+            'client_id'          => $clientId,
+            'frozen_data_id'     => $frozen->id,
+            'trimestres_envoyes' => [
+                'total_valides' => $totaux['trimestres_total'] ?? ($totaux['trimestres_tous_regimes'] ?? null),
+                'cotises'       => $totaux['trimestres_cotises'] ?? null,
+                'assimiles'     => $totaux['trimestres_assimiles'] ?? null,
+                'cotises_rg'    => $totaux['trimestres_cotises_rg'] ?? null,
+                'requis'        => $totaux['trimestres_requis'] ?? null,
+                'par_regime'    => $totaux['trimestres_par_regime'] ?? null,
+            ],
+            'sam_envoye'         => $totaux['sam'] ?? null,
+            'nb_annees_carriere' => is_array($payload['carriere'] ?? null) ? count($payload['carriere']) : 0,
+            'dates_retenues'     => $payload['dates_retenues'] ?? [],
+            'carriere'           => $payload['carriere'] ?? [],
+        ];
+        if ($request->boolean('full')) {
+            $out['payload_complet'] = $payload;
+        }
+        return response()->json($out);
     }
 
     /**
