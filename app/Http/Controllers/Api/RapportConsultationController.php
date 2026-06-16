@@ -16,11 +16,115 @@ class RapportConsultationController extends Controller
 {
     const N8N_WEBHOOK = 'https://n8n.srv796541.hstgr.cloud/webhook/f012dfc7-8b2c-479f-af1f-20dcd44cda02';
     const SKILL_ID    = 'rapport_consultation';
+    // Webhook "léger" (PREP -> /simulate -> calcul, SANS Gemini) : projette les trimestres PAR
+    // DATE depuis la carrière gelée. Source unique du calcul par date = moteur Python /simulate.
+    const SIMULATE_MULTIDATE_WEBHOOK = 'https://n8n.srv796541.hstgr.cloud/webhook/simulate-multidate-calc';
 
     // Timeout du POST vers n8n. Doit rester < (php max_execution_time, nginx fastcgi_read_timeout)
     // sinon la requête est tuée AVANT que Guzzle ne lâche prise et on perd la réponse n8n.
     // Cf docker/php/custom.ini (max_execution_time=360) et docker/nginx/prod.conf (fastcgi_read_timeout 360).
     const N8N_TIMEOUT_SECONDS = 340;
+
+    /**
+     * Projection PAR DATE recalculée depuis la carrière GELÉE via le moteur Python /simulate
+     * (webhook léger sans Gemini). Retourne le tableau `par_date` au format attendu par
+     * AGREGATION FINALE.buildProjectionFromPython, ou null si indisponible. Jamais bloquant.
+     */
+    private function computeFreshParDate(int $clientId, FrozenData $frozenData): ?array
+    {
+        try {
+            $dates = $frozenData->dates_retenues;
+            if (is_string($dates)) {
+                $dates = json_decode($dates, true);
+            }
+            if (!is_array($dates) || count($dates) === 0) {
+                return null;
+            }
+
+            $payload = [
+                'client_id'         => $clientId,
+                'carriere'          => $frozenData->carriere,
+                'totaux'            => $frozenData->totaux,
+                'dates_retenues'    => array_map(fn ($d) => [
+                    'date'  => $d['date']  ?? null,
+                    'type'  => $d['type']  ?? null,
+                    'label' => $d['label'] ?? null,
+                ], array_values($dates)),
+                'scenarios_retenus' => [],
+                'regimes'           => [
+                    'cipav'          => $frozenData->cipav,
+                    'carpimko'       => $frozenData->carpimko,
+                    'regimes_points' => $frozenData->regimes_points,
+                ],
+                'frozen_data'       => [
+                    'meta'           => $frozenData->meta,
+                    'totaux'         => $frozenData->totaux,
+                    'carriere'       => $frozenData->carriere,
+                    'cipav'          => $frozenData->cipav,
+                    'carpimko'       => $frozenData->carpimko,
+                    'regimes_points' => $frozenData->regimes_points,
+                    'user_id'        => $clientId,
+                ],
+            ];
+
+            $resp = Http::timeout(120)->post(self::SIMULATE_MULTIDATE_WEBHOOK, $payload);
+            if (!$resp->successful()) {
+                Log::warning('computeFreshParDate: /simulate webhook a échoué', ['status' => $resp->status()]);
+                return null;
+            }
+            $scenarios = $resp->json('scenarios') ?? [];
+            if (!is_array($scenarios) || count($scenarios) === 0) {
+                return null;
+            }
+
+            // Index des dates choisies pour récupérer le label par date_depart.
+            $byDate = [];
+            foreach ($dates as $d) {
+                if (!empty($d['date'])) {
+                    $byDate[(string) $d['date']] = $d;
+                }
+            }
+
+            // Mapping scénario /simulate -> format par_date (identique au front runMultiDateScenarios).
+            $parDate = [];
+            foreach ($scenarios as $s) {
+                if (!is_array($s)) {
+                    continue;
+                }
+                $dd  = $s['date_depart'] ?? null;
+                $src = $byDate[(string) $dd] ?? [];
+                $parDate[] = [
+                    'date_depart'     => $dd,
+                    'label'           => $src['label'] ?? null,
+                    'age_depart_mois' => (int) (($s['age_depart_annees'] ?? 0) * 12) + (int) ($s['age_depart_mois'] ?? 0),
+                    'regimes'         => [
+                        'CNAV' => [
+                            'trimestres_valides_tous_regimes' => $s['trimestres_acquis_tous']  ?? null,
+                            'trimestres_cotises_rg'           => $s['trimestres_rg_at_depart'] ?? null,
+                            'taux_liquidation'                => isset($s['taux_cnav']) ? $s['taux_cnav'] / 100 : null,
+                            'pension_mensuelle_brute'         => $s['pension_cnav_mensuelle']  ?? null,
+                        ],
+                        'AGIRC_ARRCO' => ['pension_mensuelle_brute' => $s['pension_agirc_mensuelle']    ?? null],
+                        'IRCANTEC'    => ['pension_mensuelle_brute' => $s['pension_ircantec_mensuelle'] ?? null],
+                        'RCI'         => ['pension_mensuelle_brute' => $s['pension_rci_mensuelle']      ?? null],
+                        'CIPAV'       => ['pension_mensuelle_brute' => ($s['pension_cipav_base_mensuelle'] ?? 0) + ($s['pension_cipav_compl_mensuelle'] ?? 0)],
+                    ],
+                    'total_mensuel_brut'   => $s['pension_totale_brute'] ?? null,
+                    'pension_totale_nette' => $s['pension_totale_nette'] ?? null,
+                    'regimes_en_erreur'    => [],
+                ];
+            }
+            if (count($parDate) === 0) {
+                return null;
+            }
+            usort($parDate, fn ($a, $b) => strcmp((string) $a['date_depart'], (string) $b['date_depart']));
+
+            return $parDate;
+        } catch (\Throwable $e) {
+            Log::warning('computeFreshParDate: exception', ['msg' => $e->getMessage()]);
+            return null;
+        }
+    }
 
     /**
      * POST /api/v1/rapports/consultation
@@ -79,6 +183,40 @@ class RapportConsultationController extends Controller
                 'arret_critique_json' => $r->arret_critique_json,
                 'updated_at'          => $r->updated_at?->toIso8601String(),
             ])->values()->toArray();
+        }
+
+        // FIX "trimestres identiques sur toutes les dates" : le tableau multi-dates de la
+        // consultation (AGREGATION FINALE -> buildProjectionFromPython) lit le rapport_dates
+        // produit par le FRONT, souvent périmé (bundle non recompilé) ou figé au total gelé.
+        // On recalcule ici la projection PAR DATE depuis la carrière GELÉE via /simulate (le
+        // même moteur Python que le livrable simulation) et on l'injecte, en remplaçant tout
+        // rapport_dates périmé. Tolérant : si /simulate échoue, on garde l'existant.
+        if ($frozenData) {
+            $freshParDate = $this->computeFreshParDate($clientId, $frozenData);
+            if (is_array($freshParDate) && count($freshParDate) > 0) {
+                $calculs = array_values(array_filter(
+                    $simulateurContext['calculs'] ?? [],
+                    fn ($c) => strtolower($c['skill_id'] ?? '') !== 'rapport_dates'
+                ));
+                $calculs[] = [
+                    'skill_id'            => 'rapport_dates',
+                    'result_json'         => [
+                        'par_date'       => $freshParDate,
+                        'mode'           => 'simulate_engine_v2_backend',
+                        'frozen_data_id' => $frozenData->id,
+                    ],
+                    'calcul_json'         => null,
+                    'alertes_json'        => null,
+                    'arret_critique_json' => null,
+                    'updated_at'          => now()->toIso8601String(),
+                ];
+                $simulateurContext['calculs'] = $calculs;
+                Log::info('rapport_consultation: par_date rafraîchi via /simulate', [
+                    'client_id' => $clientId,
+                    'nb_dates'  => count($freshParDate),
+                    'trims'     => array_map(fn ($p) => $p['regimes']['CNAV']['trimestres_valides_tous_regimes'] ?? null, $freshParDate),
+                ]);
+            }
         }
 
         Log::info('rapport_consultation: start', [
