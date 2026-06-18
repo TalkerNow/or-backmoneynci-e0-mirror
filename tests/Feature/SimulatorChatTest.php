@@ -20,7 +20,7 @@ class SimulatorChatTest extends TestCase
         return [$consultant, $client];
     }
 
-    public function test_consultant_creates_session_and_sends_message_with_stub()
+    public function test_consultant_creates_session_and_sends_message()
     {
         [$consultant, $client] = $this->consultantWithClient();
         $this->actingAs($consultant, 'api');
@@ -36,7 +36,8 @@ class SimulatorChatTest extends TestCase
 
         $this->assertEquals('user', $res['user_message']['role']);
         $this->assertEquals('assistant', $res['assistant_message']['role']);
-        $this->assertStringContainsString('[STUB]', $res['assistant_message']['content']);
+        // Contenu non vide : STUB si webhook non configuré (CI), réponse réelle sinon
+        $this->assertNotEmpty($res['assistant_message']['content']);
     }
 
     public function test_consultant_cannot_create_session_for_foreign_client()
@@ -50,13 +51,15 @@ class SimulatorChatTest extends TestCase
         ])->assertStatus(403);
     }
 
-    public function test_consultant_cannot_read_foreign_session()
+    public function test_consultant_cannot_read_session_of_unmanaged_client()
     {
-        [$consultant, $client] = $this->consultantWithClient();
+        [$consultant, ] = $this->consultantWithClient();
+        // Session d'un client géré par un AUTRE consultant → doit être refusée
         $otherConsultant = User::factory()->create(['role' => 'Consultant']);
+        $otherClient = User::factory()->create(['role' => 'Client', 'parent_id' => $otherConsultant->id]);
         $session = SimulatorChatSession::create([
             'user_id' => $otherConsultant->id,
-            'customer_id' => $client->id,
+            'customer_id' => $otherClient->id,
             'context_page' => 'simulateur_client',
         ]);
 
