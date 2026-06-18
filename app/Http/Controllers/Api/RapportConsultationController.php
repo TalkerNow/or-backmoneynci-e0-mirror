@@ -41,6 +41,21 @@ class RapportConsultationController extends Controller
                 return null;
             }
 
+            // Scénarios retenus (dont le rachat VPLR avec params.dates_cibles) : sans eux le moteur
+            // ignore le VPLR et la consultation n'affiche jamais l'effet du rachat. Même normalisation
+            // que SimulationRetraiteController (pluriel scenarios_choisis, fallback singulier scenario_choisi).
+            $scenariosRetenus = $frozenData->scenarios_choisis;
+            if (is_string($scenariosRetenus)) {
+                $scenariosRetenus = json_decode($scenariosRetenus, true);
+            }
+            if (!is_array($scenariosRetenus) || count($scenariosRetenus) === 0) {
+                $single = $frozenData->scenario_choisi;
+                if (is_string($single)) {
+                    $single = json_decode($single, true);
+                }
+                $scenariosRetenus = (is_array($single) && count($single) > 0) ? [$single] : [];
+            }
+
             $payload = [
                 'client_id'         => $clientId,
                 'carriere'          => $frozenData->carriere,
@@ -50,7 +65,7 @@ class RapportConsultationController extends Controller
                     'type'  => $d['type']  ?? null,
                     'label' => $d['label'] ?? null,
                 ], array_values($dates)),
-                'scenarios_retenus' => [],
+                'scenarios_retenus' => $scenariosRetenus,
                 'regimes'           => [
                     'cipav'          => $frozenData->cipav,
                     'carpimko'       => $frozenData->carpimko,
@@ -111,6 +126,11 @@ class RapportConsultationController extends Controller
                     ],
                     'total_mensuel_brut'   => $s['pension_totale_brute'] ?? null,
                     'pension_totale_nette' => $s['pension_totale_nette'] ?? null,
+                    // Rachat VPLR appliqué à CETTE date (null/utile=false si non ciblée) + trimestres
+                    // bruts (avant rachat) pour permettre l'annotation explicite côté rendu n8n.
+                    'vplr_applique'        => $s['vplr_rachat_applique'] ?? null,
+                    'trimestres_tous_brut' => $s['trimestres_tous_brut'] ?? null,
+                    'trimestres_rg_brut'   => $s['trimestres_rg_brut'] ?? null,
                     'regimes_en_erreur'    => [],
                 ];
             }
@@ -291,7 +311,10 @@ class RapportConsultationController extends Controller
                 Log::warning('rapport_consultation: circulaires routing skipped', ['err' => $e->getMessage()]);
             }
 
-            $n8nResponse = $n8nRequest->post(self::N8N_WEBHOOK);
+            // Override possible via .env (RAPPORT_CONSULTATION_WEBHOOK) pour router vers une COPIE
+            // du workflow n8n (test), sans toucher le live. Défaut = const = workflow de prod.
+            $consultationWebhook = env('RAPPORT_CONSULTATION_WEBHOOK') ?: self::N8N_WEBHOOK;
+            $n8nResponse = $n8nRequest->post($consultationWebhook);
             $elapsed = round(microtime(true) - $startedAt, 1);
 
             // Cas 1 : n8n a renvoyé un code d'erreur HTTP
