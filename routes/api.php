@@ -248,6 +248,14 @@ Route::
                     // trigger detection
                     Route::post('chat/detect-trigger',          'Api\AdminEngineChatController@detectTrigger');
                 });
+
+                Route::prefix('simulator-chat')->group(function () {
+                    Route::get('sessions',               'Api\SimulatorChatController@listSessions');
+                    Route::post('sessions',              'Api\SimulatorChatController@createSession');
+                    Route::get('sessions/{id}',          'Api\SimulatorChatController@getSession');
+                    Route::delete('sessions/{id}',       'Api\SimulatorChatController@deleteSession');
+                    Route::post('sessions/{id}/message', 'Api\SimulatorChatController@sendMessage');
+                });
             });
 
 
