@@ -1,0 +1,116 @@
+{
+  "_meta_generation": {
+    "structure": "regles_json structuré à partir de SKILL_chomage.md (rédigé par JF). Le fichier d'origine annoncé dans la livraison du 07/04/2026 n'a pas été fourni — reconstruit en respectant le format des skills existants (cf. reversion_regles.json).",
+    "regle": "Aucun seuil/chiffre inventé : tout provient du skill_md. Les éléments nommés mais non détaillés dans le skill_md sont marqués 'a_valider'.",
+    "a_valider": [
+      "Références réglementaires précises (articles CSS) — non citées dans le skill_md",
+      "Conditions exactes de l'exception senior (âge + carrière) ouvrant les 5 ans",
+      "Contenu détaillé des contrôles CHO_C01 à CHO_C09 (nommés mais non spécifiés dans le skill_md)"
+    ]
+  },
+  "skill_info": {
+    "skill_id": "SKILL_CHOMAGE_v1",
+    "nom": "Chômage",
+    "version": "1.0",
+    "date": "2026-04-07",
+    "script_python": "calcul_chomage_retraite.py",
+    "base_reglementaire": ["a_valider — non précisée dans le skill_md"]
+  },
+
+  "categories_periodes": {
+    "chomage_indemnise": {
+      "label": "Chômage indemnisé",
+      "trimestre_assimile_jours": 50,
+      "max_trimestres_par_an": 4,
+      "points_complementaires": "potentiels",
+      "impact_sam": "aucun"
+    },
+    "chomage_non_indemnise_apres_indemnise": {
+      "label": "Chômage non indemnisé suite à une période indemnisée",
+      "validation": "sous_conditions",
+      "limite_standard_ans": 1,
+      "exception_senior_ans": 5,
+      "condition_exception_senior": "a_valider — âge et carrière remplies (détail non spécifié dans le skill_md)"
+    },
+    "premiere_periode_non_indemnise_autonome": {
+      "label": "Première période de chômage non indemnisé autonome",
+      "plafond_avant_2011_trimestres": 4,
+      "plafond_depuis_2011_trimestres": 6,
+      "annee_bascule": 2011
+    },
+    "chomage_non_indemnise_non_qualifie": {
+      "label": "Chômage non indemnisé non qualifié",
+      "retenir_automatiquement": false,
+      "controle_manuel_requis": true
+    }
+  },
+
+  "controles": [
+    {
+      "code": "CHO_C01",
+      "regle": "Qualification : chaque période de chômage doit être classée dans une des 4 catégories avant tout calcul",
+      "gravite": "CRITIQUE"
+    },
+    {
+      "code": "CHO_C02",
+      "regle": "Dates : date de début et date de fin présentes et cohérentes (début <= fin)",
+      "gravite": "CRITIQUE"
+    },
+    {
+      "code": "CHO_C03",
+      "regle": "Conversion : 1 trimestre assimilé pour 50 jours de chômage indemnisé",
+      "gravite": "CRITIQUE",
+      "scope": "chomage_indemnise"
+    },
+    {
+      "code": "CHO_C04",
+      "regle": "Plafond annuel : maximum 4 trimestres assimilés par année civile (chômage indemnisé)",
+      "gravite": "CRITIQUE",
+      "scope": "chomage_indemnise"
+    },
+    {
+      "code": "CHO_C05",
+      "regle": "Non indemnisé après indemnisé : limite standard 1 an, exception senior jusqu'à 5 ans (conditions a_valider)",
+      "gravite": "IMPORTANT",
+      "scope": "chomage_non_indemnise_apres_indemnise"
+    },
+    {
+      "code": "CHO_C06",
+      "regle": "Première période non indemnisé autonome : plafond 4 trimestres avant 2011, 6 trimestres depuis 2011",
+      "gravite": "IMPORTANT",
+      "scope": "premiere_periode_non_indemnise_autonome"
+    },
+    {
+      "code": "CHO_C07",
+      "regle": "Non qualifié : ne pas retenir automatiquement — contrôle manuel requis",
+      "gravite": "IMPORTANT",
+      "scope": "chomage_non_indemnise_non_qualifie"
+    },
+    {
+      "code": "CHO_C08",
+      "regle": "Carrière longue : les trimestres de chômage sont assimilés — vérifier l'impact sur l'éligibilité RACL (détail a_valider)",
+      "gravite": "IMPORTANT",
+      "lien_skill": "skill_racl"
+    },
+    {
+      "code": "CHO_C09",
+      "regle": "Complémentaire : points AGIRC-ARRCO potentiels sur les périodes indemnisées — à estimer via le skill complémentaires",
+      "gravite": "IMPORTANT",
+      "lien_skill": "skill_complementaires"
+    }
+  ],
+
+  "actions_api": [
+    "qualifier_periode",
+    "calculer_trimestres",
+    "analyser_impact",
+    "estimer_points"
+  ],
+
+  "integration_skills": [
+    "skill_racl",
+    "skill_complementaires",
+    "skill_validation_autocontrole",
+    "skill_analyse_releve"
+  ]
+}
