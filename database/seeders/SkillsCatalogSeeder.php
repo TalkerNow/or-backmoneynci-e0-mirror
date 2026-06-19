@@ -198,6 +198,20 @@ class SkillsCatalogSeeder extends Seeder
                 'tags'           => ['reversion', 'conjoint', 'deces'],
                 'priority'       => 4,
             ],
+            [
+                'folder'         => 'skill_chomage',
+                'skill_id'       => 'SKILL_chomage_v1',
+                'nom'            => 'Chômage',
+                'code'           => 'CHOMAGE',
+                'version'        => '1.0',
+                'type'           => 'skill_dispositif',
+                'description'    => 'Analyse des périodes de chômage et leur impact sur la retraite : trimestres assimilés, chômage indemnisé / non indemnisé, plafonds.',
+                'skill_md_file'  => 'SKILL_chomage.md',
+                'regles_file'    => 'chomage_retraite_regles.json',
+                'calcul_file'    => 'calcul_chomage_retraite.py',
+                'tags'           => ['chomage', 'trimestres_assimiles', 'periode_assimilee'],
+                'priority'       => 4,
+            ],
         ];
 
         foreach ($skills as $config) {
