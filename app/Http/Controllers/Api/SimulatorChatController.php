@@ -19,11 +19,24 @@ class SimulatorChatController extends Controller
         }
     }
 
-    // Un admin voit tout ; un consultant/expert ne voit que ses clients (parent_id)
-    // ou les sessions qu'il a lui-même créées.
+    // admin + consultant : accès complet à l'assistant retraite quel que soit le
+    // client — aligné sur le chat rapport (aucune restriction) et sur l'affichage
+    // de la barre côté front. Insensible à la casse (les rôles en base mélangent
+    // admin/Admin, Consultant…). Les autres rôles (expert…) restent limités à
+    // leurs clients assignés via le fallback parent_id ci-dessous.
+    private function hasFullAssistantAccess($user): bool
+    {
+        return in_array(
+            strtolower(trim((string) $user->role)),
+            ['admin', 'consultant'],
+            true
+        );
+    }
+
     private function canAccessCustomer($user, int $customerId): bool
     {
-        if (in_array($user->role, ['admin', 'Admin'])) return true;
+        if ($this->hasFullAssistantAccess($user)) return true;
+        // sinon (expert, client…) : uniquement ses propres clients assignés
         $client = User::find($customerId);
         if (!$client) return false;
         return (int) $client->parent_id === (int) $user->id;
@@ -31,7 +44,7 @@ class SimulatorChatController extends Controller
 
     private function canAccessSession($user, SimulatorChatSession $session): bool
     {
-        if (in_array($user->role, ['admin', 'Admin'])) return true;
+        if ($this->hasFullAssistantAccess($user)) return true;
         if ((int) $session->user_id === (int) $user->id) return true;
         return $this->canAccessCustomer($user, (int) $session->customer_id);
     }
