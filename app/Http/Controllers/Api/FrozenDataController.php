@@ -106,8 +106,13 @@ class FrozenDataController extends Controller
             'meta'     => 'nullable|array',
             'carriere' => 'nullable|array',
             'cipav'    => 'nullable|array',
+            'carpimko'       => 'nullable|array',
+            'regimes_points' => 'nullable|array',
             'alertes'  => 'nullable|array',
             'totaux'   => 'nullable|array',
+            // Choix consultant — doivent survivre au verrouillage (sinon le livrable perd les scénarios)
+            'dates_retenues'    => 'nullable|array',
+            'scenarios_choisis' => 'nullable|array',
         ]);
 
         try {

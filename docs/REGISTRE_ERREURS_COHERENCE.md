@@ -5,10 +5,10 @@
 
 ## 📊 STATISTIQUES
 
-- **Total erreurs capturées** : 9
-- **Règles actives** : 9
+- **Total erreurs capturées** : 10
+- **Règles actives** : 10
 - **Règles archivées** : 0
-- **Dernière mise à jour** : 06/04/2026
+- **Dernière mise à jour** : 03/06/2026
 
 ---
 
@@ -148,6 +148,21 @@
 **Statut** : ✅ ACTIF
 
 **Impact** : Nombre de points surestimé → pension AGIRC-ARRCO gonflée → promesse client non tenue.
+
+---
+
+### R010 | Complémentaire AGIRC-ARRCO surestimée — minoration tranche C non modélisée
+**Date d'ajout** : 03/06/2026
+**Cas origine** : M. Pagès (haut revenu cadre, ~208 k€)
+**Prompt concerné** : SIMULATION RETRAITE
+**Consultant** : Système
+**Erreur détectée** : Pour un haut revenu cadre (un salaire annuel > 4 PASS), le moteur applique le coefficient AGIRC-ARRCO standard sans la minoration spécifique de la tranche C (points acquis avant 2016 sur la part de salaire entre 4 et 8 PASS), qui ne disparaît qu'à 67 ans → la complémentaire d'un départ avant 67 ans peut être surestimée.
+**Condition Python** : `salaire_brut_max > 4 * PASS_2025`
+**Message d'erreur** : "⚠️ AVERTISSEMENT : Haut revenu cadre (salaire > 4 PASS). Pour un départ avant 67 ans, la retraite complémentaire AGIRC-ARRCO peut être surestimée — la minoration spécifique de la tranche C (points acquis avant 2016 sur la part 4–8 PASS) n'est pas modélisée par le moteur. À vérifier manuellement."
+**Niveau** : 🟠 AVERTISSEMENT
+**Statut** : ✅ ACTIF
+
+**Impact** : Alerte le consultant sur une possible surestimation de la retraite complémentaire pour les hauts revenus partant avant 67 ans (tranche C). Non bloquant.
 
 ---
 

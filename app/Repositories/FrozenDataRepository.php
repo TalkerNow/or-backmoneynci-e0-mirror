@@ -37,10 +37,13 @@ class FrozenDataRepository
             'meta'     => $data['meta'] ?? null,
             'carriere' => $data['carriere'] ?? null,
             'cipav'          => $data['cipav'] ?? null,
-            'carpimko'       => $data['carpimko'] ?? null,
-            'regimes_points' => $data['regimes_points'] ?? null,
+            'carpimko'       => $data['carpimko'] ?? $existing?->carpimko,
+            'regimes_points' => $data['regimes_points'] ?? $existing?->regimes_points,
             'alertes'        => $data['alertes'] ?? null,
             'totaux'   => $data['totaux'] ?? null,
+            // Choix consultant : repli sur l'existant pour ne JAMAIS les écraser au verrouillage
+            'dates_retenues'    => $data['dates_retenues'] ?? $existing?->dates_retenues,
+            'scenarios_choisis' => $data['scenarios_choisis'] ?? $existing?->scenarios_choisis,
         ];
 
         if ($existing) {

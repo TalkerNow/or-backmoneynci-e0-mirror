@@ -207,6 +207,7 @@ Route::
                 Route::post('simulation-retraite/generate', 'Api\SimulationRetraiteController@generate');
                 Route::post('simulation-retraite-store', 'Api\SimulationRetraiteController@store');
                 Route::get('simulation-retraite/{clientId}', 'Api\SimulationRetraiteController@getByClient');
+                Route::get('simulation-retraite/{clientId}/payload-preview', 'Api\SimulationRetraiteController@previewPayload');
                 Route::patch('simulation-retraite/{clientId}/html', 'Api\SimulationRetraiteController@updateHtml');
                 Route::delete('simulation-retraite/{clientId}', 'Api\SimulationRetraiteController@destroy');
 
@@ -220,6 +221,11 @@ Route::
 
                 // system-prompt
                 Route::get('system-prompt/latest', 'Api\SystemPromptController@latest');
+
+                // circulaires (règles métier — knowledge base + routing déterministe servis à n8n)
+                Route::get('circulaires/manifest',       'Api\CirculaireController@manifest');
+                Route::get('circulaires/agent/{slug}',   'Api\CirculaireController@agent');
+                Route::post('circulaires/select',        'Api\CirculaireController@select');
 
                 // admin-engine-chat
                 Route::prefix('admin-chat')->group(function () {
@@ -241,6 +247,14 @@ Route::
                     Route::delete('registry/rules/{code}',      'Api\AdminEngineChatController@deleteRule');
                     // trigger detection
                     Route::post('chat/detect-trigger',          'Api\AdminEngineChatController@detectTrigger');
+                });
+
+                Route::prefix('simulator-chat')->group(function () {
+                    Route::get('sessions',               'Api\SimulatorChatController@listSessions');
+                    Route::post('sessions',              'Api\SimulatorChatController@createSession');
+                    Route::get('sessions/{id}',          'Api\SimulatorChatController@getSession');
+                    Route::delete('sessions/{id}',       'Api\SimulatorChatController@deleteSession');
+                    Route::post('sessions/{id}/message', 'Api\SimulatorChatController@sendMessage');
                 });
             });
 
