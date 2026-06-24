@@ -1,0 +1,335 @@
+{
+  "_meta": {
+    "titre": "Référentiel des régimes de retraite obligatoires — France",
+    "mise_a_jour": "juin 2026",
+    "usage": "interne EOR",
+    "notes_methodo": [
+      "Notes méthodologiques & sources",
+      "• Le chiffre de « 42 régimes » est un ordre de grandeur historique grand public, pas un compte figé.",
+      "Selon que l'on compte ou non séparément les sections de la CNAVPL et les caisses fusionnées,",
+      "le total réel oscille entre ~35 et ~42 régimes obligatoires (base + complémentaires).",
+      "• Ne pas confondre « régimes de retraite » (42) et « régimes spéciaux » : on estime aujourd'hui",
+      "~27 régimes spéciaux, dont une quinzaine couvrant le risque vieillesse (régimes spéciaux de retraite).",
+      "• Réforme des retraites 2023 : fermeture de 4 régimes spéciaux aux nouveaux entrants depuis le",
+      "01/09/2023 (RATP, IEG, CRPCEN, Banque de France) + CESE → bascule vers le régime général.",
+      "« Clause du grand-père » : les affiliés déjà en poste conservent leur régime (extinction progressive).",
+      "• Régimes spéciaux = généralement « intégrés » : une seule pension, pas de séparation base/complémentaire.",
+      "• Simulateur officiel tous régimes : M@rel (info-retraite.fr).",
+      "• Artistes-auteurs — l'IRCEC (caisse de retraite complémentaire) gère 3 régimes en points :",
+      "- RAAP : Régime des Artistes et Auteurs Professionnels — obligatoire pour tous (seuil 10 692 € en 2026).",
+      "- RACD : auteurs et compositeurs dramatiques (spectacle vivant, films).",
+      "- RACL : auteurs et compositeurs lyriques, dialoguistes de doublage.",
+      "La retraite de base relève de la Sécurité sociale des artistes-auteurs (ex-AGESSA/MDA, URSSAF-AA).",
+      "Sources principales :",
+      "- Union Retraite / info-retraite.fr — « Les régimes de retraite en France »",
+      "- Previssima — régimes spéciaux de retraite (2026)",
+      "- DREES — Les retraités et les retraites (édition 2025)",
+      "- Service des Retraites de l'État ; CNAVPL ; Agirc-Arrco"
+    ]
+  },
+  "regimes": [
+    {
+      "categorie": "Régime général — salariés du privé",
+      "population": "Salariés du privé (industrie, commerce, services)",
+      "base_caisse": "CNAV / CARSAT (l'Assurance retraite)",
+      "complementaire_caisse": "Agirc-Arrco",
+      "mode_calcul": "Base : annuités · Compl. : points",
+      "statut_2026": "Actif",
+      "notes": "Régime le plus important (~majorité des actifs)"
+    },
+    {
+      "categorie": "Régimes agricoles (MSA)",
+      "population": "Salariés agricoles",
+      "base_caisse": "MSA",
+      "complementaire_caisse": "Agirc-Arrco",
+      "mode_calcul": "Annuités / points",
+      "statut_2026": "Actif",
+      "notes": "Compl. gérée par Agirc-Arrco depuis 2021"
+    },
+    {
+      "categorie": "Régimes agricoles (MSA)",
+      "population": "Exploitants agricoles (non-salariés)",
+      "base_caisse": "MSA",
+      "complementaire_caisse": "RCO non-salariés agricoles",
+      "mode_calcul": "Annuités / points",
+      "statut_2026": "Actif",
+      "notes": "RCO = retraite complémentaire obligatoire"
+    },
+    {
+      "categorie": "Indépendants — artisans & commerçants",
+      "population": "Artisans, commerçants, industriels",
+      "base_caisse": "SSI — intégrée au régime général (Assurance retraite)",
+      "complementaire_caisse": "RCI (régime complémentaire des indépendants)",
+      "mode_calcul": "Annuités / points",
+      "statut_2026": "Actif",
+      "notes": "Ex-RSI, adossé au régime général depuis 2018-2020"
+    },
+    {
+      "categorie": "Professions libérales",
+      "population": "Libéraux hors avocats (10 sections)",
+      "base_caisse": "CNAVPL (base commune)",
+      "complementaire_caisse": "10 sections — voir onglet « Sections CNAVPL »",
+      "mode_calcul": "Base : points · Compl. : points",
+      "statut_2026": "Actif",
+      "notes": "Chaque section gère sa complémentaire"
+    },
+    {
+      "categorie": "Professions libérales",
+      "population": "Avocats",
+      "base_caisse": "CNBF",
+      "complementaire_caisse": "CNBF (régime complémentaire propre)",
+      "mode_calcul": "Annuités / points",
+      "statut_2026": "Actif",
+      "notes": "Caisse autonome, hors CNAVPL"
+    },
+    {
+      "categorie": "Artistes-auteurs",
+      "population": "Artistes-auteurs (écrivains, plasticiens, photographes, compositeurs, scénaristes…)",
+      "base_caisse": "Sécurité sociale des artistes-auteurs (ex-AGESSA / MDA) — URSSAF Artistes-auteurs",
+      "complementaire_caisse": "IRCEC — RAAP (commun à tous) + RACD et/ou RACL selon l'activité",
+      "mode_calcul": "Base : annuités · Compl. : points",
+      "statut_2026": "Actif",
+      "notes": "Base rattachée au régime général ; l'IRCEC gère 3 régimes complémentaires (voir Notes)"
+    },
+    {
+      "categorie": "Fonction publique",
+      "population": "Fonctionnaires d'État, magistrats, militaires",
+      "base_caisse": "SRE — Service des Retraites de l'État (CPCMR)",
+      "complementaire_caisse": "RAFP",
+      "mode_calcul": "Régime intégré (annuités) + RAFP en points",
+      "statut_2026": "Actif",
+      "notes": "Calcul sur traitement des 6 derniers mois"
+    },
+    {
+      "categorie": "Fonction publique",
+      "population": "Fonctionnaires territoriaux & hospitaliers",
+      "base_caisse": "CNRACL",
+      "complementaire_caisse": "RAFP",
+      "mode_calcul": "Annuités + RAFP en points",
+      "statut_2026": "Actif",
+      "notes": "Géré par la Caisse des dépôts"
+    },
+    {
+      "categorie": "Fonction publique",
+      "population": "Contractuels / non-titulaires publics",
+      "base_caisse": "Régime général (CNAV)",
+      "complementaire_caisse": "IRCANTEC",
+      "mode_calcul": "Annuités / points",
+      "statut_2026": "Actif",
+      "notes": "Base privée + compl. publique spécifique"
+    },
+    {
+      "categorie": "Régimes spéciaux",
+      "population": "SNCF",
+      "base_caisse": "CPRPSNCF",
+      "complementaire_caisse": "Régime intégré",
+      "mode_calcul": "Annuités",
+      "statut_2026": "Fermé aux nouveaux entrants",
+      "notes": "Nouveaux embauchés depuis 2020 → régime général"
+    },
+    {
+      "categorie": "Régimes spéciaux",
+      "population": "RATP",
+      "base_caisse": "CRP RATP",
+      "complementaire_caisse": "Régime intégré",
+      "mode_calcul": "Annuités",
+      "statut_2026": "Fermé aux nouveaux entrants",
+      "notes": "Fermé depuis le 01/09/2023 (réforme 2023)"
+    },
+    {
+      "categorie": "Régimes spéciaux",
+      "population": "Industries électriques & gazières (EDF-GDF)",
+      "base_caisse": "CNIEG",
+      "complementaire_caisse": "Régime intégré",
+      "mode_calcul": "Annuités",
+      "statut_2026": "Fermé aux nouveaux entrants",
+      "notes": "Fermé depuis le 01/09/2023"
+    },
+    {
+      "categorie": "Régimes spéciaux",
+      "population": "Clercs & employés de notaires",
+      "base_caisse": "CRPCEN",
+      "complementaire_caisse": "Régime intégré",
+      "mode_calcul": "Annuités",
+      "statut_2026": "Fermé aux nouveaux entrants",
+      "notes": "Fermé depuis le 01/09/2023"
+    },
+    {
+      "categorie": "Régimes spéciaux",
+      "population": "Banque de France",
+      "base_caisse": "Caisse de réserve des employés de la BdF",
+      "complementaire_caisse": "Régime intégré",
+      "mode_calcul": "Annuités",
+      "statut_2026": "Fermé aux nouveaux entrants",
+      "notes": "Fermé depuis le 01/09/2023"
+    },
+    {
+      "categorie": "Régimes spéciaux",
+      "population": "Marins",
+      "base_caisse": "ENIM",
+      "complementaire_caisse": "Régime intégré",
+      "mode_calcul": "Annuités",
+      "statut_2026": "Maintenu",
+      "notes": "Établissement national des invalides de la marine"
+    },
+    {
+      "categorie": "Régimes spéciaux",
+      "population": "Mines",
+      "base_caisse": "CANSSM (gérée par la CDC)",
+      "complementaire_caisse": "Régime intégré",
+      "mode_calcul": "Annuités",
+      "statut_2026": "En extinction",
+      "notes": "Quasi plus de cotisants"
+    },
+    {
+      "categorie": "Régimes spéciaux",
+      "population": "Opéra national de Paris",
+      "base_caisse": "CROPERA",
+      "complementaire_caisse": "Régime intégré",
+      "mode_calcul": "Annuités",
+      "statut_2026": "Maintenu",
+      "notes": "Non concerné par la fermeture 2023"
+    },
+    {
+      "categorie": "Régimes spéciaux",
+      "population": "Comédie-Française",
+      "base_caisse": "Régime spécial Comédie-Française",
+      "complementaire_caisse": "Régime intégré",
+      "mode_calcul": "Annuités",
+      "statut_2026": "Maintenu",
+      "notes": "Non concerné par la fermeture 2023"
+    },
+    {
+      "categorie": "Régimes spéciaux",
+      "population": "Ouvriers de l'État",
+      "base_caisse": "FSPOEIE",
+      "complementaire_caisse": "RAFP",
+      "mode_calcul": "Annuités",
+      "statut_2026": "Maintenu",
+      "notes": "Fonds spécial des pensions des ouvriers de l'État"
+    },
+    {
+      "categorie": "Régimes spéciaux",
+      "population": "Cultes (ministres du culte, religieux)",
+      "base_caisse": "CAVIMAC",
+      "complementaire_caisse": "Régime général (compl.)",
+      "mode_calcul": "Annuités",
+      "statut_2026": "Maintenu",
+      "notes": "Caisse d'assurance vieillesse, invalidité, maladie des cultes"
+    },
+    {
+      "categorie": "Régimes spéciaux",
+      "population": "Port autonome de Strasbourg",
+      "base_caisse": "Régime spécial PAS",
+      "complementaire_caisse": "Régime intégré",
+      "mode_calcul": "Annuités",
+      "statut_2026": "Maintenu",
+      "notes": "Très faible effectif"
+    },
+    {
+      "categorie": "Régimes spéciaux",
+      "population": "Parlementaires (Sénat / Assemblée nationale)",
+      "base_caisse": "Caisses autonomes des assemblées",
+      "complementaire_caisse": "Régime intégré",
+      "mode_calcul": "Annuités",
+      "statut_2026": "Maintenu",
+      "notes": "Régimes propres aux assemblées"
+    }
+  ],
+  "cnavpl_sections": [
+    {
+      "sigle": "CARMF",
+      "professions": "Médecins",
+      "libelle": "CARMF"
+    },
+    {
+      "sigle": "CARCDSF",
+      "professions": "Chirurgiens-dentistes et sages-femmes",
+      "libelle": "CARCDSF"
+    },
+    {
+      "sigle": "CAVP",
+      "professions": "Pharmaciens",
+      "libelle": "CAVP"
+    },
+    {
+      "sigle": "CARPIMKO",
+      "professions": "Infirmiers, masseurs-kinésithérapeutes, orthophonistes, orthoptistes, pédicures-podologues",
+      "libelle": "CARPIMKO"
+    },
+    {
+      "sigle": "CARPV",
+      "professions": "Vétérinaires",
+      "libelle": "CARPV"
+    },
+    {
+      "sigle": "CAVAMAC",
+      "professions": "Agents généraux et mandataires d'assurance",
+      "libelle": "CAVAMAC"
+    },
+    {
+      "sigle": "CAVEC",
+      "professions": "Experts-comptables et commissaires aux comptes",
+      "libelle": "CAVEC"
+    },
+    {
+      "sigle": "CIPAV",
+      "professions": "Architectes, ingénieurs-conseil, géomètres, psychologues, ostéopathes et autres libéraux non réglementés",
+      "libelle": "CIPAV"
+    },
+    {
+      "sigle": "CAVOM",
+      "professions": "Officiers ministériels et publics (commissaires de justice, etc.)",
+      "libelle": "CAVOM"
+    },
+    {
+      "sigle": "CPRN / CRN",
+      "professions": "Notaires",
+      "libelle": "CPRN"
+    },
+    {
+      "sigle": "CNBF",
+      "professions": "Avocats (caisse nationale des barreaux français — base + complémentaire propres)",
+      "libelle": "— hors CNAVPL —"
+    }
+  ],
+  "constantes_reglementaires": {
+    "_note": "Constantes chiffrées VÉRIFIÉES contre la source officielle. Le bot ne donne un chiffre que s'il figure ici (sinon: à confirmer/web à valider).",
+    "RAFP": {
+      "2026": {
+        "valeur_acquisition_point_eur": 1.4596,
+        "valeur_service_point_eur": 0.05671,
+        "revalorisation": "+1,4%",
+        "decision": "Conseil d'administration ERAFP du 16/12/2025",
+        "source_url": "https://www.rafp.fr/actualites/rafp-revalorise-valeur-du-point-pour-2026",
+        "verifie_le": "2026-06-23",
+        "verifie_par": "vérifié sur la source officielle rafp.fr (ERAFP)"
+      }
+    },
+    "PASS": {
+      "2026": {
+        "annuel_eur": null,
+        "mensuel_eur": null,
+        "source_url": "",
+        "verifie_le": "",
+        "verifie_par": ""
+      }
+    },
+    "valeur_point": {
+      "AGIRC-ARRCO": {
+        "2026": {
+          "valeur_service_eur": null,
+          "source_url": "",
+          "verifie_le": ""
+        }
+      },
+      "IRCANTEC": {
+        "2026": {
+          "valeur_service_eur": null,
+          "source_url": "",
+          "verifie_le": ""
+        }
+      }
+    }
+  }
+}
