@@ -134,6 +134,15 @@ class SimulatorChatController extends Controller
             ->map(fn($m) => ['role' => $m->role, 'content' => $m->content])
             ->toArray();
 
+        // Référentiel des régimes de retraite obligatoires (couche B, versionné dans resources/).
+        // Donnée de référence vérifiée injectée dans CHAQUE requête n8n → le prompt la lit via
+        // {{ $json.body.referentiel }} et l'agent répond aux questions « régimes » à partir d'elle.
+        $referentiel = [];
+        $refPath = resource_path('referentiels/referentiel_regimes.json');
+        if (is_file($refPath)) {
+            $referentiel = json_decode(file_get_contents($refPath), true) ?: [];
+        }
+
         $payload = [
             'session_id'   => $session->id,
             'context_page' => $session->context_page,
@@ -143,10 +152,11 @@ class SimulatorChatController extends Controller
                 'name' => $user->first_name . ' ' . $user->last_name,
                 'role' => $user->role,
             ],
-            'history'   => $history,
-            'message'   => $data['content'],
-            'context'   => $data['context'] ?? null,
-            'timestamp' => now()->toIso8601String(),
+            'history'     => $history,
+            'message'     => $data['content'],
+            'context'     => $data['context'] ?? null,
+            'referentiel' => $referentiel,
+            'timestamp'   => now()->toIso8601String(),
         ];
 
         $webhookUrl = env('N8N_SIMULATOR_CHAT_WEBHOOK', '');
