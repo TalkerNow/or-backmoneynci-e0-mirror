@@ -310,8 +310,19 @@ class SimulationRetraiteController extends Controller
      */
     private static function enrichTotaux(array $totaux, array $carriere): array
     {
-        if (! empty($carriere)) {
-            $revalos = array_column($carriere, 'salaire_revalo');
+        // SAM : la valeur gelée par le frontend (computeSamCnav — celle affichée
+        // et validée par le consultant) est PRIORITAIRE : le moteur doit recevoir
+        // exactement le chiffre vu à l'écran. Le recalcul ci-dessous n'est qu'un
+        // fallback pour les frozen_data historiques sans totaux.sam.
+        $samFourni = $totaux['sam'] ?? null;
+        if ((! is_numeric($samFourni) || (float) $samFourni <= 0) && ! empty($carriere)) {
+            // Seules les années à salaire revalorisé > 0 comptent : la grille gèle
+            // 65 lignes, les années vides ne doivent pas diluer la moyenne d'une
+            // carrière courte (< 25 années cotisées).
+            $revalos = array_values(array_filter(
+                array_map(static fn ($e) => (float) (is_array($e) ? ($e['salaire_revalo'] ?? 0) : 0), $carriere),
+                static fn ($v) => $v > 0
+            ));
             rsort($revalos);
             $top25 = array_slice($revalos, 0, 25);
             $sam = count($top25) ? (int) round(array_sum($top25) / count($top25)) : 0;
