@@ -99,11 +99,16 @@ class SimulationRetraiteController extends Controller
             // Enforcement Gate #2 — DÉTERMINISTE côté Laravel : on évalue les règles
             // ACTIVES du registre éditable (source unique de vérité =
             // prompts.REGISTRE_ERREURS_COHERENCE) contre un namespace construit depuis
-            // le payload. Pas de dépendance n8n (qui ne renvoie pas calcul_json).
+            // le payload, ENRICHI des variables de calcul quand n8n renvoie calcul_json
+            // (débloque R001/R002/R006 ; sans calcul_json ces règles restent skippées).
             // Une règle CRITIQUE déclenchée => arrêt critique => livraison bloquée.
+            $calculJson  = is_array($body['calcul_json'] ?? null) ? $body['calcul_json'] : null;
             $enforcement = (new \App\Services\Registre\RuleEvaluator())->evaluate(
                 (new \App\Services\Registre\RegistreRules())->selectActiveRules(),
-                \App\Services\Registre\NamespaceBuilder::fromPayload($payload)
+                array_merge(
+                    \App\Services\Registre\NamespaceBuilder::fromPayload($payload),
+                    \App\Services\Registre\NamespaceBuilder::fromCalcul($calculJson)
+                )
             );
             $alertes       = $enforcement['alertes'];
             $arretCritique = $enforcement['arret_critique'];

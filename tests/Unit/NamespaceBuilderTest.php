@@ -127,6 +127,128 @@ class NamespaceBuilderTest extends TestCase
         $this->assertArrayNotHasKey('salaire_brut_max', NamespaceBuilder::fromPayload(['carriere' => [['annee' => 2000]]]));
     }
 
+    // ── fromCalcul : variables dérivées de calcul_json (réponse moteur py-port) ──
+
+    /** Réplique la forme réelle de la réponse api_handler d'eor-simulate (:8002). */
+    private function calculFixture(): array
+    {
+        return [
+            'scenarios' => [
+                'H1' => [
+                    'code'                   => 'H1',
+                    'age_depart_annees'      => 62,
+                    'age_depart_mois'        => 9,
+                    'duree_requise'          => 169,
+                    'trimestres_acquis_tous' => 159,
+                    'decote_pct'             => 12.5, // 10 trimestres × 1,25 %
+                ],
+            ],
+            'enfants' => [
+                'nombre'           => 2,
+                'sexe_parent'      => 'pere',
+                'trim_bonus_total' => 8,
+            ],
+            'source_calcul' => 'py-port-v1',
+        ];
+    }
+
+    /** @test */
+    public function from_calcul_maps_engine_fields(): void
+    {
+        $ns = NamespaceBuilder::fromCalcul($this->calculFixture());
+
+        $this->assertSame(8, $ns['trimestres_enfants']);
+        $this->assertSame(62.75, $ns['age_legal']);      // 62 ans 9 mois
+        $this->assertSame(62, $ns['age_depart_ans']);
+        $this->assertSame(10, $ns['nb_trim_decote']);    // 12,5 % / 1,25
+        $this->assertSame(10, $ns['manquants_duree']);   // 169 − 159
+    }
+
+    /** @test */
+    public function from_calcul_is_empty_for_null_or_empty(): void
+    {
+        $this->assertSame([], NamespaceBuilder::fromCalcul(null));
+        $this->assertSame([], NamespaceBuilder::fromCalcul([]));
+    }
+
+    /** @test */
+    public function from_calcul_omits_missing_sections(): void
+    {
+        // Pas de section enfants ni de scénario H1 => aucune variable produite
+        // => les règles concernées seront "skipped" (jamais un crash).
+        $ns = NamespaceBuilder::fromCalcul(['scenarios' => ['H2' => ['decote_pct' => 5.0]]]);
+        $this->assertArrayNotHasKey('trimestres_enfants', $ns);
+        $this->assertArrayNotHasKey('age_legal', $ns);
+        $this->assertArrayNotHasKey('nb_trim_decote', $ns);
+        $this->assertArrayNotHasKey('manquants_duree', $ns);
+    }
+
+    /** @test */
+    public function r001_fires_when_engine_grants_child_quarters_to_a_man(): void
+    {
+        // Condition réelle du registre. sexe vient du payload, trimestres_enfants du calcul.
+        $rule = ['code' => 'R001', 'condition' => 'sexe == "H" and trimestres_enfants > 0',
+                 'message' => 'MDA homme', 'niveau' => 'CRITIQUE'];
+        $ns = array_merge(
+            NamespaceBuilder::fromPayload($this->payload), // sexe = H
+            NamespaceBuilder::fromCalcul($this->calculFixture()) // trim_bonus_total = 8
+        );
+        $res = (new \App\Services\Registre\RuleEvaluator())->evaluate([$rule], $ns);
+        $this->assertNotNull($res['arret_critique']);
+        $this->assertContains('R001', $res['arret_critique']['codes']);
+
+        // Sans calcul_json : la variable manque => règle skipped, pas d'arrêt.
+        $resSkipped = (new \App\Services\Registre\RuleEvaluator())->evaluate(
+            [$rule], NamespaceBuilder::fromPayload($this->payload)
+        );
+        $this->assertNull($resSkipped['arret_critique']);
+    }
+
+    /** @test */
+    public function r002_fires_on_age_legal_below_62(): void
+    {
+        $rule = ['code' => 'R002', 'condition' => 'age_legal < 62',
+                 'message' => 'âge légal', 'niveau' => 'CRITIQUE'];
+        $evaluator = new \App\Services\Registre\RuleEvaluator();
+
+        $calcul = $this->calculFixture();
+        $calcul['scenarios']['H1']['age_depart_annees'] = 61;
+        $calcul['scenarios']['H1']['age_depart_mois']   = 9; // 61,75 => impossible
+        $res = $evaluator->evaluate([$rule], NamespaceBuilder::fromCalcul($calcul));
+        $this->assertNotNull($res['arret_critique']);
+
+        // 62 ans 9 mois : conforme, ne se déclenche pas.
+        $ok = $evaluator->evaluate([$rule], NamespaceBuilder::fromCalcul($this->calculFixture()));
+        $this->assertNull($ok['arret_critique']);
+    }
+
+    /** @test */
+    public function r006_bouclier_67_fires_on_kreft_case(): void
+    {
+        // Condition réelle du registre (arbitrage Art. R351-27 CSS).
+        $rule = ['code' => 'R006',
+                 'condition' => 'nb_trim_decote != min(manquants_duree, (67 - age_depart_ans) * 4)',
+                 'message' => 'bouclier 67', 'niveau' => 'CRITIQUE'];
+        $evaluator = new \App\Services\Registre\RuleEvaluator();
+
+        // Cas Kreft : 39 trim manquants durée, départ à 64 ans => bouclier = 12 trim.
+        // Moteur fautif qui applique 39 : min(39, 12) = 12 ≠ 39 => arrêt critique.
+        $kreft = $this->calculFixture();
+        $kreft['scenarios']['H1']['age_depart_annees']      = 64;
+        $kreft['scenarios']['H1']['age_depart_mois']        = 0;
+        $kreft['scenarios']['H1']['duree_requise']          = 169;
+        $kreft['scenarios']['H1']['trimestres_acquis_tous'] = 130;      // manquants = 39
+        $kreft['scenarios']['H1']['decote_pct']             = 48.75;    // 39 × 1,25 %
+        $res = $evaluator->evaluate([$rule], NamespaceBuilder::fromCalcul($kreft));
+        $this->assertNotNull($res['arret_critique']);
+        $this->assertContains('R006', $res['arret_critique']['codes']);
+
+        // Moteur correct (10 manquants, départ 62 : min(10, 20) = 10 = décote) : silence.
+        $ok = $evaluator->evaluate([$rule], NamespaceBuilder::fromCalcul($this->calculFixture()));
+        $this->assertNull($ok['arret_critique']);
+        $this->assertCount(0, $ok['alertes']);
+    }
+
     /** @test */
     public function tranche_c_warning_rule_fires_for_high_earner_only(): void
     {

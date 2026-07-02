@@ -34,6 +34,57 @@ class NamespaceBuilder
         ]);
     }
 
+    /**
+     * Variables dérivées de calcul_json (réponse du moteur de simulation,
+     * renvoyée par n8n une fois le Respond node patché — source py-port :8002).
+     * Chaque variable n'est produite que si sa source existe : une variable
+     * absente => la règle qui la référence est proprement "skipped".
+     *
+     * Débloque : R001 (trimestres_enfants), R002 (age_legal),
+     * R006 (nb_trim_decote / manquants_duree / age_depart_ans).
+     * R005 / R007 / R008 / R009 restent skippées : le moteur n'expose pas
+     * (encore) pass_utilise par année, trim décote AGIRC, top-25 SAM,
+     * ni le prix d'achat du point utilisé.
+     */
+    public static function fromCalcul(?array $calcul): array
+    {
+        if (empty($calcul)) {
+            return [];
+        }
+
+        $ns = [];
+
+        // R001 — trimestres pour enfants attribués par le moteur (MDA).
+        $enfants = is_array($calcul['enfants'] ?? null) ? $calcul['enfants'] : [];
+        if (isset($enfants['trim_bonus_total']) && is_numeric($enfants['trim_bonus_total'])) {
+            $ns['trimestres_enfants'] = (int) $enfants['trim_bonus_total'];
+        }
+
+        // Scénario H1 = départ à l'âge légal (ancre des règles R002 / R006).
+        $scenarios = is_array($calcul['scenarios'] ?? null) ? $calcul['scenarios'] : [];
+        $h1 = is_array($scenarios['H1'] ?? null) ? $scenarios['H1'] : [];
+
+        if (isset($h1['age_depart_annees']) && is_numeric($h1['age_depart_annees'])) {
+            $annees = (float) $h1['age_depart_annees'];
+            $mois   = is_numeric($h1['age_depart_mois'] ?? null) ? (float) $h1['age_depart_mois'] : 0.0;
+            // R002 : âge légal en années décimales (61a9m => 61.75 < 62 => alerte).
+            $ns['age_legal']      = $annees + $mois / 12;
+            $ns['age_depart_ans'] = (int) $annees;
+        }
+
+        // R006 : décote en trimestres. Le moteur expose decote_pct = trim × 1,25 %
+        // (DECOTE_PAR_TRIM = 0.0125) — la division est exacte à 2 décimales.
+        if (isset($h1['decote_pct']) && is_numeric($h1['decote_pct'])) {
+            $ns['nb_trim_decote'] = (int) round(((float) $h1['decote_pct']) / 1.25);
+        }
+        if (isset($h1['duree_requise'], $h1['trimestres_acquis_tous'])
+            && is_numeric($h1['duree_requise']) && is_numeric($h1['trimestres_acquis_tous'])) {
+            $ns['manquants_duree'] = max(0, (int) $h1['duree_requise'] - (int) $h1['trimestres_acquis_tous']);
+        }
+
+        return $ns;
+    }
+
     public static function fromPayload(array $payload): array
     {
         $client = is_array($payload['client'] ?? null) ? $payload['client'] : [];
