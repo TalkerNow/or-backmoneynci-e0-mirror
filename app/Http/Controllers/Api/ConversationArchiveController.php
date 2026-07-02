@@ -32,6 +32,7 @@ class ConversationArchiveController extends Controller
      * Body attendu:
      * {
      *   "summary": "Résumé ...", (optionnel)
+     *   "source": "eor" | "expert-retraite", (optionnel, défaut "eor")
      *   "messages": [
      *      {"role":"user","content":"..."},
      *      {"role":"assistant","content":"..."}
@@ -42,6 +43,7 @@ class ConversationArchiveController extends Controller
     {
         $data = $request->validate([
             'summary'  => ['nullable', 'string'],
+            'source'   => ['nullable', 'string', 'in:eor,expert-retraite'],
             'messages' => ['required', 'array'],
 
             // Validation douce de la structure
@@ -53,6 +55,7 @@ class ConversationArchiveController extends Controller
 
         $conv = ConversationArchive::create([
             'summary'   => $data['summary'] ?? null,
+            'source'    => $data['source'] ?? 'eor',
             'messages'  => $data['messages'],
             'user_id'   => $data['user_id'] ?? null,
             'invisible' => $data['invisible'] ?? false,

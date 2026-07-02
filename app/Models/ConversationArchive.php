@@ -10,6 +10,7 @@ class ConversationArchive extends Model
 
     protected $fillable = [
         'summary',
+        'source',
         'messages',
         'user_id',
         'invisible',
