@@ -205,6 +205,33 @@ class NamespaceBuilderTest extends TestCase
     }
 
     /** @test */
+    public function it_normalizes_sexe_civility_to_registry_contract(): void
+    {
+        // Le frontend écrit 'M' (Monsieur) / 'F' (Madame) ; le registre teste sexe == "H".
+        $this->assertSame('H', NamespaceBuilder::fromPayload(['client' => ['sexe' => 'M']])['sexe']);
+        $this->assertSame('H', NamespaceBuilder::fromPayload(['client' => ['sexe' => 'Monsieur']])['sexe']);
+        $this->assertSame('H', NamespaceBuilder::fromPayload(['client' => ['sexe' => 'H']])['sexe']);
+        $this->assertSame('F', NamespaceBuilder::fromPayload(['client' => ['sexe' => 'Madame']])['sexe']);
+        $this->assertSame('F', NamespaceBuilder::fromPayload(['client' => ['sexe' => 'F']])['sexe']);
+    }
+
+    /** @test */
+    public function r001_fires_for_a_man_entered_by_civility_M(): void
+    {
+        // Régression : un homme saisi via la civilité ('M', pas 'H' du NIR) doit quand
+        // même déclencher R001. Avant la normalisation, `'M' == "H"` => false => règle morte.
+        $rule = ['code' => 'R001', 'condition' => 'sexe == "H" and trimestres_enfants > 0',
+                 'message' => 'MDA homme', 'niveau' => 'CRITIQUE'];
+        $ns = array_merge(
+            NamespaceBuilder::fromPayload(['client' => ['sexe' => 'M']]),
+            NamespaceBuilder::fromCalcul($this->calculFixture())
+        );
+        $res = (new \App\Services\Registre\RuleEvaluator())->evaluate([$rule], $ns);
+        $this->assertNotNull($res['arret_critique']);
+        $this->assertContains('R001', $res['arret_critique']['codes']);
+    }
+
+    /** @test */
     public function r002_fires_on_age_legal_below_62(): void
     {
         $rule = ['code' => 'R002', 'condition' => 'age_legal < 62',

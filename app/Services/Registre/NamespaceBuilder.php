@@ -97,7 +97,7 @@ class NamespaceBuilder
         ];
 
         if (array_key_exists('sexe', $client) && $client['sexe'] !== null) {
-            $ns['sexe'] = $client['sexe'];
+            $ns['sexe'] = self::normalizeSexe($client['sexe']);
         }
         if (array_key_exists('enfants', $client) && $client['enfants'] !== null) {
             $ns['nombre_enfants'] = $client['enfants'];
@@ -128,5 +128,27 @@ class NamespaceBuilder
         }
 
         return $ns;
+    }
+
+    /**
+     * Normalise le sexe vers le contrat du registre ('H' / 'F').
+     * Le frontend écrit 'M' (civilité Monsieur) ou 'F' (Madame) ; le parseur NIR
+     * produit 'H'. Les règles (ex. R001 : `sexe == "H"`) attendent 'H' pour un homme.
+     * Sans cette normalisation, un homme saisi par civilité ('M') échappait à R001.
+     */
+    private static function normalizeSexe($raw): ?string
+    {
+        $s = strtoupper(trim((string) $raw));
+        if ($s === '') {
+            return null;
+        }
+        if (in_array($s, ['H', 'M', 'MR', 'M.', 'MONSIEUR', 'HOMME', 'MALE'], true)) {
+            return 'H';
+        }
+        if (in_array($s, ['F', 'MME', 'MLLE', 'MADAME', 'MADEMOISELLE', 'FEMME', 'FEMALE'], true)) {
+            return 'F';
+        }
+
+        return $s;
     }
 }
