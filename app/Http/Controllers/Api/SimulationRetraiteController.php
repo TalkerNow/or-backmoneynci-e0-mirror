@@ -316,13 +316,19 @@ class SimulationRetraiteController extends Controller
         // fallback pour les frozen_data historiques sans totaux.sam.
         $samFourni = $totaux['sam'] ?? null;
         if ((! is_numeric($samFourni) || (float) $samFourni <= 0) && ! empty($carriere)) {
-            // Seules les années à salaire revalorisé > 0 comptent : la grille gèle
-            // 65 lignes, les années vides ne doivent pas diluer la moyenne d'une
-            // carrière courte (< 25 années cotisées).
-            $revalos = array_values(array_filter(
-                array_map(static fn ($e) => (float) (is_array($e) ? ($e['salaire_revalo'] ?? 0) : 0), $carriere),
-                static fn ($v) => $v > 0
-            ));
+            // Seules les années à salaire revalorisé > 0 ET à trimestre validé comptent :
+            // la grille gèle 65 lignes ; ni les années vides ni une année de départ
+            // projetée à 0 trimestre (salaire fantôme plafonné PASS) ne doivent entrer
+            // dans le top-25 (règle CNAV). Aligné sur computeSamCnav (front).
+            $revalos = [];
+            foreach ($carriere as $e) {
+                if (!is_array($e)) continue;
+                $trim = (float) ($e['trimestres_cotises'] ?? 0) + (float) ($e['trimestres_assimiles'] ?? 0);
+                $rev  = (float) ($e['salaire_revalo'] ?? 0);
+                if ($trim > 0 && $rev > 0) {
+                    $revalos[] = $rev;
+                }
+            }
             rsort($revalos);
             $top25 = array_slice($revalos, 0, 25);
             $sam = count($top25) ? (int) round(array_sum($top25) / count($top25)) : 0;
