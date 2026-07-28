@@ -119,7 +119,15 @@ class RapportConsultationController extends Controller
                             'taux_liquidation'                => isset($s['taux_cnav']) ? $s['taux_cnav'] / 100 : null,
                             'pension_mensuelle_brute'         => $s['pension_cnav_mensuelle']  ?? null,
                         ],
-                        'AGIRC_ARRCO' => ['pension_mensuelle_brute' => $s['pension_agirc_mensuelle']    ?? null],
+                        'AGIRC_ARRCO' => [
+                            'pension_mensuelle_brute'        => $s['pension_agirc_mensuelle'] ?? null,
+                            // Détail Tranche C (points TC acquis avant 2016, minorés par l'âge) pour
+                            // l'affichage 2 lignes T1/T2 vs TC, comme le livrable Simulation.
+                            'agirc_points_tc'                => $s['agirc_points_tc'] ?? null,
+                            'coeff_tc'                       => $s['coeff_tc'] ?? null,
+                            'pension_agirc_t1t2_avant_majo'  => $s['pension_agirc_t1t2_avant_majo'] ?? null,
+                            'pension_agirc_tc_avant_majo'    => $s['pension_agirc_tc_avant_majo'] ?? null,
+                        ],
                         'IRCANTEC'    => ['pension_mensuelle_brute' => $s['pension_ircantec_mensuelle'] ?? null],
                         'RCI'         => ['pension_mensuelle_brute' => $s['pension_rci_mensuelle']      ?? null],
                         'CIPAV'       => ['pension_mensuelle_brute' => ($s['pension_cipav_base_mensuelle'] ?? 0) + ($s['pension_cipav_compl_mensuelle'] ?? 0)],
