@@ -10,34 +10,47 @@ class ConversationArchiveController extends Controller
 {
     /**
      * Lister toutes les conversations
-     * Option simple: tout renvoyer
-     * Option mieux: pagination
      */
     public function index(Request $request)
     {
-        // Pagination légère par défaut
         $perPage = (int) ($request->get('per_page', 50));
         $perPage = $perPage > 200 ? 200 : $perPage;
 
-        $convs = ConversationArchive::query()
+        $q = ConversationArchive::query()
             ->with('user')
-            ->orderByDesc('id')
-            ->paginate($perPage);
+            ->orderByDesc('id');
+
+        if ($request->has('is_read')) {
+            $raw = $request->get('is_read');
+            if ($raw === '0' || $raw === 0 || $raw === false || $raw === 'false') {
+                $q->where('is_read', false);
+            } elseif ($raw === '1' || $raw === 1 || $raw === true || $raw === 'true') {
+                $q->where('is_read', true);
+            }
+        }
+
+        $convs = $q->paginate($perPage);
 
         return response()->json($convs);
     }
 
     /**
-     * Créer une conversation
-     * Body attendu:
-     * {
-     *   "summary": "Résumé ...", (optionnel)
-     *   "source": "eor" | "expert-retraite", (optionnel, défaut "eor")
-     *   "messages": [
-     *      {"role":"user","content":"..."},
-     *      {"role":"assistant","content":"..."}
-     *   ]
-     * }
+     * GET /api/conversation-archives/unread-count — badge Chatbot
+     * Counts visible (not invisible) unread conversations.
+     */
+    public function unreadCount(Request $request)
+    {
+        $q = ConversationArchive::query()
+            ->where('is_read', false)
+            ->where(function ($w) {
+                $w->whereNull('invisible')->orWhere('invisible', false);
+            });
+
+        return response()->json(['count' => (int) $q->count()]);
+    }
+
+    /**
+     * Créer une conversation — new rows default unread (is_read=0).
      */
     public function store(Request $request)
     {
@@ -46,7 +59,6 @@ class ConversationArchiveController extends Controller
             'source'   => ['nullable', 'string', 'in:eor,expert-retraite'],
             'messages' => ['required', 'array'],
 
-            // Validation douce de la structure
             'messages.*.role'    => ['nullable', 'string'],
             'messages.*.content' => ['nullable', 'string'],
             'user_id'   => ['nullable', 'integer'],
@@ -59,6 +71,8 @@ class ConversationArchiveController extends Controller
             'messages'  => $data['messages'],
             'user_id'   => $data['user_id'] ?? null,
             'invisible' => $data['invisible'] ?? false,
+            'is_read'   => false,
+            'read_at'   => null,
         ]);
 
         $conv->load('user');
@@ -66,9 +80,6 @@ class ConversationArchiveController extends Controller
         return response()->json($conv, 201);
     }
 
-    /**
-     * Voir une conversation par ID
-     */
     public function show(int $id)
     {
         $conv = ConversationArchive::with('user')->find($id);
@@ -82,14 +93,6 @@ class ConversationArchiveController extends Controller
         return response()->json($conv);
     }
 
-    /**
-     * Modifier une conversation
-     * Body possible:
-     * {
-     *   "summary": "Nouveau résumé",
-     *   "messages": [...]
-     * }
-     */
     public function update(Request $request, int $id)
     {
         $conv = ConversationArchive::find($id);
@@ -108,9 +111,9 @@ class ConversationArchiveController extends Controller
             'messages.*.content' => ['nullable', 'string'],
             'user_id'   => ['nullable', 'integer'],
             'invisible' => ['nullable', 'boolean'],
+            'is_read'   => ['sometimes', 'boolean'],
         ]);
 
-        // Update partiel propre
         if (array_key_exists('summary', $data)) {
             $conv->summary = $data['summary'];
         }
@@ -127,6 +130,11 @@ class ConversationArchiveController extends Controller
             $conv->invisible = $data['invisible'];
         }
 
+        if (array_key_exists('is_read', $data)) {
+            $conv->is_read = $data['is_read'];
+            $conv->read_at = $data['is_read'] ? now() : null;
+        }
+
         $conv->save();
         $conv->load('user');
 
@@ -134,8 +142,37 @@ class ConversationArchiveController extends Controller
     }
 
     /**
-     * Supprimer une conversation
+     * PATCH /api/conversation-archives/{id}/read — mark read (auth:api)
      */
+    public function markRead(int $id)
+    {
+        $conv = ConversationArchive::find($id);
+        if (!$conv) {
+            return response()->json(['message' => 'Conversation introuvable.'], 404);
+        }
+        $conv->is_read = true;
+        $conv->read_at = now();
+        $conv->save();
+        $conv->load('user');
+        return response()->json($conv);
+    }
+
+    /**
+     * PATCH /api/conversation-archives/{id}/unread — mark unread (auth:api)
+     */
+    public function markUnread(int $id)
+    {
+        $conv = ConversationArchive::find($id);
+        if (!$conv) {
+            return response()->json(['message' => 'Conversation introuvable.'], 404);
+        }
+        $conv->is_read = false;
+        $conv->read_at = null;
+        $conv->save();
+        $conv->load('user');
+        return response()->json($conv);
+    }
+
     public function destroy(int $id)
     {
         $conv = ConversationArchive::find($id);
@@ -153,4 +190,3 @@ class ConversationArchiveController extends Controller
         ]);
     }
 }
-

@@ -120,6 +120,11 @@ Route::
             Route::prefix('conversation-archives')->group(function () {
                 Route::get('/', 'Api\ConversationArchiveController@index');
                 Route::post('/', 'Api\ConversationArchiveController@store');
+                Route::middleware('auth:api')->group(function () {
+                    Route::get('unread-count', 'Api\ConversationArchiveController@unreadCount');
+                    Route::patch('{id}/read', 'Api\ConversationArchiveController@markRead');
+                    Route::patch('{id}/unread', 'Api\ConversationArchiveController@markUnread');
+                });
                 Route::get('{id}', 'Api\ConversationArchiveController@show');
                 Route::put('{id}', 'Api\ConversationArchiveController@update');
                 Route::delete('{id}', 'Api\ConversationArchiveController@destroy');

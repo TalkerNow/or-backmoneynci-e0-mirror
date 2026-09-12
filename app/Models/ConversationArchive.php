@@ -14,11 +14,15 @@ class ConversationArchive extends Model
         'messages',
         'user_id',
         'invisible',
+        'is_read',
+        'read_at',
     ];
 
     protected $casts = [
         'messages' => 'array',
         'invisible' => 'boolean',
+        'is_read' => 'boolean',
+        'read_at' => 'datetime',
     ];
 
     /**
@@ -29,4 +33,3 @@ class ConversationArchive extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 }
-
