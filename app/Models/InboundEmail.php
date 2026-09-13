@@ -13,6 +13,7 @@ class InboundEmail extends Model
         'gmail_message_id',
         'gmail_thread_id',
         'source',
+        'client_id',
         'from_email',
         'from_name',
         'to_email',

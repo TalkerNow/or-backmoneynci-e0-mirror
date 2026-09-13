@@ -142,6 +142,8 @@ Route::
                 Route::get('inbound-emails/{id}', 'Api\InboundEmailController@show');
                 Route::get('v1/inbound-emails', 'Api\InboundEmailController@index');
                 Route::get('v1/inbound-emails/{id}', 'Api\InboundEmailController@show');
+                Route::post('inbound-emails/{id}/convert-contact', 'Api\InboundEmailController@convertContact');
+                Route::post('v1/inbound-emails/{id}/convert-contact', 'Api\InboundEmailController@convertContact');
             });
 
             // Kanban routes
