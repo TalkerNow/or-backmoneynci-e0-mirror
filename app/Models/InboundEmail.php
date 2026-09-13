@@ -17,6 +17,7 @@ class InboundEmail extends Model
         'to_email',
         'subject',
         'snippet',
+        'body',
         'received_at',
         'gmail_permalink',
     ];

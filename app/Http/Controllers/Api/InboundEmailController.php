@@ -53,6 +53,7 @@ class InboundEmailController extends Controller
             'to_email'         => ['nullable', 'string', 'max:255'],
             'subject'          => ['nullable', 'string', 'max:512'],
             'snippet'          => ['nullable', 'string'],
+            'body'             => ['nullable', 'string'],
             'received_at'      => ['nullable', 'date'],
             'gmail_permalink'  => ['nullable', 'string', 'max:1024'],
         ]);
