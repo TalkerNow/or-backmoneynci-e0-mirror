@@ -138,4 +138,34 @@ class InboundEmailController extends Controller
         }
         return response()->json($row);
     }
+
+    /**
+     * PATCH /api/inbound-emails/{id}/read — mark read (auth:api)
+     */
+    public function markRead(int $id)
+    {
+        $row = InboundEmail::find($id);
+        if (!$row) {
+            return response()->json(['message' => 'Inbound email introuvable.'], 404);
+        }
+        $row->is_read = true;
+        $row->read_at = now();
+        $row->save();
+        return response()->json($row);
+    }
+
+    /**
+     * PATCH /api/inbound-emails/{id}/unread — mark unread (auth:api)
+     */
+    public function markUnread(int $id)
+    {
+        $row = InboundEmail::find($id);
+        if (!$row) {
+            return response()->json(['message' => 'Inbound email introuvable.'], 404);
+        }
+        $row->is_read = false;
+        $row->read_at = null;
+        $row->save();
+        return response()->json($row);
+    }
 }

@@ -21,9 +21,13 @@ class InboundEmail extends Model
         'body',
         'received_at',
         'gmail_permalink',
+        'is_read',
+        'read_at',
     ];
 
     protected $casts = [
         'received_at' => 'datetime',
+        'read_at' => 'datetime',
+        'is_read' => 'boolean',
     ];
 }
