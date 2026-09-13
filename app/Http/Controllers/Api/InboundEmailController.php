@@ -39,13 +39,23 @@ class InboundEmailController extends Controller
     }
 
     /**
-     * POST /api/inbound-emails — upsert by gmail_message_id (n8n Gmail OAuth later)
-     * Public store pattern = conversation-archives (n8n posts without JWT).
+     * POST /api/inbound-emails — upsert by external_id (CF7 webhook) ou gmail_message_id (n8n).
+     * Si OR_INGEST_KEY est défini : header X-OR-Ingest-Key obligatoire.
+     * Si vide : POST public (n8n inchangé).
      */
     public function store(Request $request)
     {
+        $ingestKey = (string) env('OR_INGEST_KEY', '');
+        if ($ingestKey !== '') {
+            $provided = (string) $request->header('X-OR-Ingest-Key', '');
+            if (!hash_equals($ingestKey, $provided)) {
+                return response()->json(['message' => 'Unauthorized ingest.'], 401);
+            }
+        }
+
         $data = $request->validate([
-            'gmail_message_id' => ['required', 'string', 'max:255'],
+            'external_id'      => ['nullable', 'string', 'max:255'],
+            'gmail_message_id' => ['nullable', 'string', 'max:255'],
             'gmail_thread_id'  => ['nullable', 'string', 'max:255'],
             'source'           => ['nullable', 'string', 'in:cf7,chatbot_report,other'],
             'from_email'       => ['nullable', 'string', 'max:255'],
@@ -58,12 +68,44 @@ class InboundEmailController extends Controller
             'gmail_permalink'  => ['nullable', 'string', 'max:1024'],
         ]);
 
+        $externalId = isset($data['external_id']) ? trim((string) $data['external_id']) : '';
+        $gmailId = isset($data['gmail_message_id']) ? trim((string) $data['gmail_message_id']) : '';
+
+        if ($externalId === '' && $gmailId === '') {
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => [
+                    'external_id' => ['At least one of external_id or gmail_message_id is required.'],
+                    'gmail_message_id' => ['At least one of external_id or gmail_message_id is required.'],
+                ],
+            ], 422);
+        }
+
+        if ($externalId === '') {
+            unset($data['external_id']);
+        } else {
+            $data['external_id'] = $externalId;
+        }
+        if ($gmailId === '') {
+            unset($data['gmail_message_id']);
+        } else {
+            $data['gmail_message_id'] = $gmailId;
+        }
+
         $data['source'] = $data['source'] ?? 'other';
 
-        $row = InboundEmail::updateOrCreate(
-            ['gmail_message_id' => $data['gmail_message_id']],
-            $data
-        );
+        // Upsert: priorité external_id (CF7), sinon gmail_message_id (n8n Gmail)
+        if ($externalId !== '') {
+            $row = InboundEmail::updateOrCreate(
+                ['external_id' => $externalId],
+                $data
+            );
+        } else {
+            $row = InboundEmail::updateOrCreate(
+                ['gmail_message_id' => $gmailId],
+                $data
+            );
+        }
 
         $status = $row->wasRecentlyCreated ? 201 : 200;
 

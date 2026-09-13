@@ -9,6 +9,7 @@ class InboundEmail extends Model
     protected $table = 'inbound_emails';
 
     protected $fillable = [
+        'external_id',
         'gmail_message_id',
         'gmail_thread_id',
         'source',
