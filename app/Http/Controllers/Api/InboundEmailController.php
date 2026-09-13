@@ -69,6 +69,24 @@ class InboundEmailController extends Controller
         return response()->json($row, $status);
     }
 
+
+    /**
+     * GET /api/inbound-emails/unread-count?source=cf7 — badge Mails
+     */
+    public function unreadCount(Request $request)
+    {
+        $q = InboundEmail::query()->where(function ($w) {
+            $w->where('is_read', false)->orWhereNull('is_read');
+        });
+        if ($request->filled('source')) {
+            $sources = array_filter(array_map('trim', explode(',', (string) $request->get('source'))));
+            if ($sources) {
+                $q->whereIn('source', $sources);
+            }
+        }
+        return response()->json(['count' => (int) $q->count()]);
+    }
+
     public function show(int $id)
     {
         $row = InboundEmail::find($id);

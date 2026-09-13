@@ -130,6 +130,7 @@ Route::
             Route::post('inbound-emails', 'Api\InboundEmailController@store');
             Route::post('v1/inbound-emails', 'Api\InboundEmailController@store');
             Route::middleware('auth:api')->group(function () {
+                Route::get('inbound-emails/unread-count', 'Api\InboundEmailController@unreadCount');
                 Route::get('inbound-emails', 'Api\InboundEmailController@index');
                 Route::get('inbound-emails/{id}', 'Api\InboundEmailController@show');
                 Route::get('v1/inbound-emails', 'Api\InboundEmailController@index');
