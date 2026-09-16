@@ -99,11 +99,16 @@ class SimulationRetraiteController extends Controller
             // Enforcement Gate #2 — DÉTERMINISTE côté Laravel : on évalue les règles
             // ACTIVES du registre éditable (source unique de vérité =
             // prompts.REGISTRE_ERREURS_COHERENCE) contre un namespace construit depuis
-            // le payload. Pas de dépendance n8n (qui ne renvoie pas calcul_json).
+            // le payload, ENRICHI des variables de calcul quand n8n renvoie calcul_json
+            // (débloque R001/R002/R006 ; sans calcul_json ces règles restent skippées).
             // Une règle CRITIQUE déclenchée => arrêt critique => livraison bloquée.
+            $calculJson  = is_array($body['calcul_json'] ?? null) ? $body['calcul_json'] : null;
             $enforcement = (new \App\Services\Registre\RuleEvaluator())->evaluate(
                 (new \App\Services\Registre\RegistreRules())->selectActiveRules(),
-                \App\Services\Registre\NamespaceBuilder::fromPayload($payload)
+                array_merge(
+                    \App\Services\Registre\NamespaceBuilder::fromPayload($payload),
+                    \App\Services\Registre\NamespaceBuilder::fromCalcul($calculJson)
+                )
             );
             $alertes       = $enforcement['alertes'];
             $arretCritique = $enforcement['arret_critique'];
@@ -305,8 +310,25 @@ class SimulationRetraiteController extends Controller
      */
     private static function enrichTotaux(array $totaux, array $carriere): array
     {
-        if (! empty($carriere)) {
-            $revalos = array_column($carriere, 'salaire_revalo');
+        // SAM : la valeur gelée par le frontend (computeSamCnav — celle affichée
+        // et validée par le consultant) est PRIORITAIRE : le moteur doit recevoir
+        // exactement le chiffre vu à l'écran. Le recalcul ci-dessous n'est qu'un
+        // fallback pour les frozen_data historiques sans totaux.sam.
+        $samFourni = $totaux['sam'] ?? null;
+        if ((! is_numeric($samFourni) || (float) $samFourni <= 0) && ! empty($carriere)) {
+            // Seules les années à salaire revalorisé > 0 ET à trimestre validé comptent :
+            // la grille gèle 65 lignes ; ni les années vides ni une année de départ
+            // projetée à 0 trimestre (salaire fantôme plafonné PASS) ne doivent entrer
+            // dans le top-25 (règle CNAV). Aligné sur computeSamCnav (front).
+            $revalos = [];
+            foreach ($carriere as $e) {
+                if (!is_array($e)) continue;
+                $trim = (float) ($e['trimestres_cotises'] ?? 0) + (float) ($e['trimestres_assimiles'] ?? 0);
+                $rev  = (float) ($e['salaire_revalo'] ?? 0);
+                if ($trim > 0 && $rev > 0) {
+                    $revalos[] = $rev;
+                }
+            }
             rsort($revalos);
             $top25 = array_slice($revalos, 0, 25);
             $sam = count($top25) ? (int) round(array_sum($top25) / count($top25)) : 0;
