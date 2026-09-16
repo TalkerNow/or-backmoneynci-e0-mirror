@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\Auth;
 use App\Http\Controllers\Api\Controller;
 use http\Env\Response;
 use Illuminate\Http\Request;
-use Log;
 
 class LoginController extends Controller
 {
@@ -20,9 +19,7 @@ class LoginController extends Controller
     {
         $creds = $request->only(['email', 'password']);
 
-        Log::info($creds);
         if (!$token = auth()->attempt($creds)) {
-            Log::info('ISSUE');
             return Response()->json(['error' => 'Incorrect email/password'], 401);
         }
         $name = Auth()->user()->name;
