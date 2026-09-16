@@ -25,11 +25,13 @@ class LoginController extends Controller
             Log::info('ISSUE');
             return Response()->json(['error' => 'Incorrect email/password'], 401);
         }
-        $name = Auth()->user()->name;
-        $role = Auth()->user()->role;
+        $authUser = Auth()->user();
+        $name = $authUser->name;
+        $role = $authUser->role;
         $email = $request->email;
-        $id = Auth()->user()->id;
-        return response()->json(['accessToken' => $token, 'user' => ['email' => $email, 'id' => $id, 'name' => $name, 'role' => $role]]);
+        $id = $authUser->id;
+        $permissions = $authUser->permissions()->pluck('permission');
+        return response()->json(['accessToken' => $token, 'user' => ['email' => $email, 'id' => $id, 'name' => $name, 'role' => $role, 'permissions' => $permissions]]);
     }
 
     /**

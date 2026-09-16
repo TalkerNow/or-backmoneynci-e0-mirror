@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Http;
 
 class ConsultantAccessController extends Controller
 {
-    private const AUTHORIZED_IDS = [4, 1271, 1638];
+    private const PERMISSION = 'consultant-access';
 
     private function checkAdminAccess(): ?JsonResponse
     {
@@ -18,7 +18,7 @@ class ConsultantAccessController extends Controller
         if (!$user) {
             return response()->json(['error' => 'Non authentifié.'], 401);
         }
-        if (!in_array((int) $user->id, self::AUTHORIZED_IDS)) {
+        if (!$user->hasPermission(self::PERMISSION)) {
             return response()->json(['error' => 'Accès non autorisé.'], 403);
         }
         return null;

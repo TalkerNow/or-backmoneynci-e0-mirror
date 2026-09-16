@@ -63,6 +63,17 @@ class User extends Authenticatable implements JWTSubject
     {
         return [];
     }
+
+    public function permissions()
+    {
+        return $this->hasMany(UserPermission::class, 'user_id');
+    }
+
+    public function hasPermission(string $permission): bool
+    {
+        return $this->permissions()->where('permission', $permission)->exists();
+    }
+
     public function personalInformation()
     {
         return $this->belongsTo('app\Models\PersonalInformations', 'id');

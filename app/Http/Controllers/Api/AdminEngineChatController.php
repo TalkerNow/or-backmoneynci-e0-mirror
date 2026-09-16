@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 
 class AdminEngineChatController extends Controller
 {
-    private const ADMIN_IDS    = [4, 1271, 1638];
+    private const PERMISSION    = 'admin-moteur';
     private const ENTITY_TYPES = ['prompt', 'system_prompt', 'skill_md', 'skill_regles_json', 'skill_calcul_py'];
     private const MAX_SNAPSHOTS = 50;
 
@@ -31,7 +31,7 @@ class AdminEngineChatController extends Controller
 
     private function assertAdmin($user): void
     {
-        if (!in_array((int) $user->id, self::ADMIN_IDS)) {
+        if (!$user->hasPermission(self::PERMISSION)) {
             abort(403, 'Accès réservé aux administrateurs.');
         }
     }
