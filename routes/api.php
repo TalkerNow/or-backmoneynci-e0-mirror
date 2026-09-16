@@ -120,9 +120,30 @@ Route::
             Route::prefix('conversation-archives')->group(function () {
                 Route::get('/', 'Api\ConversationArchiveController@index');
                 Route::post('/', 'Api\ConversationArchiveController@store');
+                Route::middleware('auth:api')->group(function () {
+                    Route::get('unread-count', 'Api\ConversationArchiveController@unreadCount');
+                    Route::patch('{id}/read', 'Api\ConversationArchiveController@markRead');
+                    Route::patch('{id}/unread', 'Api\ConversationArchiveController@markUnread');
+                });
                 Route::get('{id}', 'Api\ConversationArchiveController@show');
                 Route::put('{id}', 'Api\ConversationArchiveController@update');
                 Route::delete('{id}', 'Api\ConversationArchiveController@destroy');
+            });
+
+            // -------- Inbound Emails (VPS Gmail sync later; TEST tip 2026-09-11) --------
+            // POST public ingest (same pattern as conversation-archives). GET/show behind auth:api.
+            Route::post('inbound-emails', 'Api\InboundEmailController@store');
+            Route::post('v1/inbound-emails', 'Api\InboundEmailController@store');
+            Route::middleware('auth:api')->group(function () {
+                Route::get('inbound-emails/unread-count', 'Api\InboundEmailController@unreadCount');
+                Route::patch('inbound-emails/{id}/read', 'Api\InboundEmailController@markRead');
+                Route::patch('inbound-emails/{id}/unread', 'Api\InboundEmailController@markUnread');
+                Route::get('inbound-emails', 'Api\InboundEmailController@index');
+                Route::get('inbound-emails/{id}', 'Api\InboundEmailController@show');
+                Route::get('v1/inbound-emails', 'Api\InboundEmailController@index');
+                Route::get('v1/inbound-emails/{id}', 'Api\InboundEmailController@show');
+                Route::post('inbound-emails/{id}/convert-contact', 'Api\InboundEmailController@convertContact');
+                Route::post('v1/inbound-emails/{id}/convert-contact', 'Api\InboundEmailController@convertContact');
             });
 
             // Kanban routes

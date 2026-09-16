@@ -120,6 +120,57 @@ class SimulationRetraitePayloadTest extends TestCase
     }
 
     /** @test */
+    public function it_respects_a_frontend_provided_sam(): void
+    {
+        // Le frontend gèle désormais totaux.sam (computeSamCnav — le chiffre affiché
+        // et validé). enrichTotaux ne doit PAS l'écraser par son propre recalcul.
+        $frozen = $this->makeFrozen([
+            'carriere' => [
+                ['annee' => 2020, 'salaire_revalo' => 50000],
+                ['annee' => 2021, 'salaire_revalo' => 52000],
+            ],
+            'totaux' => ['sam' => 33500],
+        ]);
+
+        $payload = SimulationRetraiteController::buildN8nPayload($frozen, 7, 0.0, [], []);
+        $this->assertSame(33500, $payload['totaux']['sam']);
+    }
+
+    /** @test */
+    public function sam_fallback_ignores_empty_grid_years(): void
+    {
+        // La grille gèle 65 lignes dont la plupart à 0 € : une carrière de 10 années
+        // cotisées doit donner la moyenne de CES 10 années, pas une moyenne diluée /25.
+        $carriere = [];
+        for ($i = 0; $i < 10; $i++) {
+            $carriere[] = ['annee' => 2010 + $i, 'salaire_revalo' => 30000];
+        }
+        for ($i = 0; $i < 30; $i++) {
+            $carriere[] = ['annee' => 1980 + $i, 'salaire_revalo' => 0];
+        }
+        $frozen = $this->makeFrozen(['carriere' => $carriere, 'totaux' => []]);
+
+        $payload = SimulationRetraiteController::buildN8nPayload($frozen, 7, 0.0, [], []);
+        $this->assertSame(30000, $payload['totaux']['sam']); // pas 12000 (= 300000/25)
+    }
+
+    /** @test */
+    public function sam_fallback_keeps_only_the_top_25_years(): void
+    {
+        $carriere = [];
+        for ($i = 0; $i < 25; $i++) {
+            $carriere[] = ['annee' => 2001 + $i, 'salaire_revalo' => 40000];
+        }
+        for ($i = 0; $i < 5; $i++) {
+            $carriere[] = ['annee' => 1990 + $i, 'salaire_revalo' => 10000];
+        }
+        $frozen = $this->makeFrozen(['carriere' => $carriere, 'totaux' => []]);
+
+        $payload = SimulationRetraiteController::buildN8nPayload($frozen, 7, 0.0, [], []);
+        $this->assertSame(40000, $payload['totaux']['sam']); // les 5 années faibles exclues
+    }
+
+    /** @test */
     public function it_falls_back_singular_to_array_when_only_legacy_columns_are_set(): void
     {
         $frozen = $this->makeFrozen([

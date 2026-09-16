@@ -52,6 +52,8 @@ class PersonalInformationsController extends Controller
             'maiden_name' => 'nullable',
             'birth_place' => 'nullable',
             'children_number' => 'nullable',
+            'statut_pro' => 'nullable',
+            'nombre_enfants_handicapes' => 'nullable',
             'mobile_number' => 'nullable',
             'office_number' => 'nullable',
             'personal_address' => 'nullable',
@@ -103,6 +105,10 @@ class PersonalInformationsController extends Controller
         $meta['civilite']       = $info->civility       ?? ($meta['civilite']       ?? '');
         $meta['date_naissance'] = $info->birth_date     ?? ($meta['date_naissance'] ?? null);
         $meta['nombre_enfants'] = (int) ($info->children_number ?? ($meta['nombre_enfants'] ?? 0));
+        $statut = strtolower(trim((string) ($info->statut_pro ?? '')));
+        $meta['statut'] = (strpos($statut, 'fonct') === 0 || $statut === 'public') ? 'fonctionnaire'
+            : ($statut !== '' ? 'prive' : ($meta['statut'] ?? 'prive'));
+        $meta['nombre_enfants_handicapes'] = (int) ($info->nombre_enfants_handicapes ?? ($meta['nombre_enfants_handicapes'] ?? 0));
         $meta['sexe']           = $sexe                 ?? ($meta['sexe']           ?? null);
         $meta['nir']            = $info->secu_social    ?? ($meta['nir']            ?? null);
         $meta['valide_le']      = now()->toDateString();

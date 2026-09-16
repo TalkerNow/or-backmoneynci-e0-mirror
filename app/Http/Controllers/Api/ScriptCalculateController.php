@@ -45,9 +45,10 @@ class ScriptCalculateController extends Controller
         'CAVOM'                 => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-regime-simple-v1-test',
         'CRN'                   => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-regime-simple-v1-test',
         'MSA'                   => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-regime-simple-v1-test',
+        'RAFP'                  => 'https://n8n.srv796541.hstgr.cloud/webhook/script-execute-regime-simple-v1-test',
     ];
 
-    private const REGIMES_TIER1 = ['CARMF', 'CARCDSF', 'CARPV', 'CAVP', 'CNBF', 'CAVAMAC', 'CAVOM', 'CRN', 'MSA'];
+    private const REGIMES_TIER1 = ['CARMF', 'CARCDSF', 'CARPV', 'CAVP', 'CNBF', 'CAVAMAC', 'CAVOM', 'CRN', 'MSA', 'RAFP'];
 
     public function __construct(private FrozenDataRepository $frozenRepo) {}
 

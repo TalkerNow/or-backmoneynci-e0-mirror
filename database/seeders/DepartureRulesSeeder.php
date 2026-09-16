@@ -28,14 +28,16 @@ class DepartureRulesSeeder extends Seeder
             ['sort_order' => 11, 'key_max' => 196108, 'age_months' => 744, 'trim' => 168, 'is_default' => false],
             ['sort_order' => 12, 'key_max' => 196112, 'age_months' => 747, 'trim' => 169, 'is_default' => false],
             ['sort_order' => 13, 'key_max' => 196212, 'age_months' => 750, 'trim' => 169, 'is_default' => false],
-            ['sort_order' => 14, 'key_max' => 196312, 'age_months' => 753, 'trim' => 170, 'is_default' => false],
-            ['sort_order' => 15, 'key_max' => 196412, 'age_months' => 753, 'trim' => 170, 'is_default' => false],
-            ['sort_order' => 16, 'key_max' => 196503, 'age_months' => 753, 'trim' => 170, 'is_default' => false],
-            ['sort_order' => 17, 'key_max' => 196512, 'age_months' => 756, 'trim' => 171, 'is_default' => false],
-            ['sort_order' => 18, 'key_max' => 196612, 'age_months' => 759, 'trim' => 172, 'is_default' => false],
-            ['sort_order' => 19, 'key_max' => 196712, 'age_months' => 762, 'trim' => 172, 'is_default' => false],
-            ['sort_order' => 20, 'key_max' => 196812, 'age_months' => 765, 'trim' => 172, 'is_default' => false],
-            ['sort_order' => 21, 'key_max' => null,   'age_months' => 768, 'trim' => 172, 'is_default' => true],
+            // Etat du droit APRES suspension de la reforme (LFSS 2026, loi 2025-1403) — circ. CNAV 2026-07.
+            // Applicable aux retraites a effet >= 01/09/2026 (tout depart planifie). Split au mois pour 1961/1965.
+            ['sort_order' => 14, 'key_max' => 196312, 'age_months' => 753, 'trim' => 170, 'is_default' => false], // 1963 : 62a9m / 170
+            ['sort_order' => 15, 'key_max' => 196412, 'age_months' => 753, 'trim' => 170, 'is_default' => false], // 1964 : 62a9m / 170
+            ['sort_order' => 16, 'key_max' => 196503, 'age_months' => 753, 'trim' => 170, 'is_default' => false], // 1965 jan-mars : 62a9m / 170
+            ['sort_order' => 17, 'key_max' => 196512, 'age_months' => 756, 'trim' => 171, 'is_default' => false], // 1965 avr-dec : 63a0m / 171
+            ['sort_order' => 18, 'key_max' => 196612, 'age_months' => 759, 'trim' => 172, 'is_default' => false], // 1966 : 63a3m / 172
+            ['sort_order' => 19, 'key_max' => 196712, 'age_months' => 762, 'trim' => 172, 'is_default' => false], // 1967 : 63a6m / 172
+            ['sort_order' => 20, 'key_max' => 196812, 'age_months' => 765, 'trim' => 172, 'is_default' => false], // 1968 : 63a9m / 172
+            ['sort_order' => 21, 'key_max' => null,   'age_months' => 768, 'trim' => 172, 'is_default' => true],  // 1969+ : 64a0m / 172
         ];
 
         foreach ($rows as $row) {

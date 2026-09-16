@@ -45,6 +45,8 @@ class PersonalInformations extends Model
         'business_introducer_id',
         'secu_social',
         'secu_social_key',
-        'higher_education_years'
+        'higher_education_years',
+        'statut_pro',
+        'nombre_enfants_handicapes'
     ];
 }

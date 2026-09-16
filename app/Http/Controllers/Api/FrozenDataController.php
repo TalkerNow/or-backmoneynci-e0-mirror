@@ -50,10 +50,21 @@ class FrozenDataController extends Controller
             }
         }
 
-        // SAM : average of the best 25 revalorised salaries
+        // SAM : moyenne des 25 meilleurs salaires revalorisés, en EXCLUANT les années
+        // sans trimestre validé (ex. année de départ projetée à 0 trimestre). Sinon un
+        // salaire fantôme plafonné PASS entre dans le top-25 et gonfle le SAM (règle CNAV :
+        // une année sans trimestre ne compte pas). Aligné sur computeSamCnav (front).
         $carriere = $data['carriere'] ?? [];
         if (!empty($carriere)) {
-            $revalos = array_column($carriere, 'salaire_revalo');
+            $revalos = [];
+            foreach ($carriere as $e) {
+                if (!is_array($e)) continue;
+                $trim = (float) ($e['trimestres_cotises'] ?? 0) + (float) ($e['trimestres_assimiles'] ?? 0);
+                $rev  = (float) ($e['salaire_revalo'] ?? 0);
+                if ($trim > 0 && $rev > 0) {
+                    $revalos[] = $rev;
+                }
+            }
             rsort($revalos);
             $top25  = array_slice($revalos, 0, 25);
             $data['sam'] = count($top25) ? (int) round(array_sum($top25) / count($top25)) : 0;
